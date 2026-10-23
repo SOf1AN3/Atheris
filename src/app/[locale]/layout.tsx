@@ -15,10 +15,13 @@ const inter = Inter({
   variable: "--font-inter",
 });
 
+// PLACEHOLDER: domaine à confirmer par le client
 /** Domaine placeholder documenté (tâche SEO dédiée : sitemap/canonical). */
 const SITE_URL = "https://atherislabs.com";
 /** Identifiant JSON-LD stable référencé par `Service.provider`. */
 const ORGANIZATION_ID = `${SITE_URL}/#organization`;
+/** Contact commercial affiché dans le JSON-LD (`ContactPoint.email`). */
+const CONTACT_EMAIL = "contact@atherislabs.com";
 
 /** Formats `lang_TERRITORY` attendus par OpenGraph (`og:locale`). */
 const OG_LOCALES = {
@@ -55,12 +58,12 @@ export default async function RootLayout({
       {
         "@type": "Organization",
         "@id": ORGANIZATION_ID,
-        name: "ATHERIS LABS",
+        name: `${dict.nav.brand.name} ${dict.nav.brand.suffix}`,
         url: SITE_URL,
         contactPoint: {
           "@type": "ContactPoint",
           contactType: "sales",
-          email: "contact@atherislabs.com",
+          email: CONTACT_EMAIL,
           availableLanguage: [...locales],
         },
       },
@@ -87,7 +90,7 @@ export default async function RootLayout({
   }).replace(/</g, "\\u003c");
 
   return (
-    <html lang={locale} className={inter.variable} suppressHydrationWarning={false}>
+    <html lang={locale} className={inter.variable}>
       <body className="bg-ink text-fg antialiased">
         <script
           type="application/ld+json"
@@ -128,11 +131,14 @@ export async function generateMetadata({
   const alternateLocales = locales.filter((l) => l !== locale);
 
   return {
+    metadataBase: new URL(SITE_URL),
     title: dict.seo.title,
     description: dict.seo.description,
     keywords: dict.seo.keywords,
     alternates: {
-      languages: { fr: "/fr", en: "/en" },
+      languages: Object.fromEntries(
+        locales.map((l) => [l, `/${l}`]),
+      ) as Record<string, string>,
     },
     openGraph: {
       title: dict.seo.title,

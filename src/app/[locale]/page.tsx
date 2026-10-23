@@ -16,7 +16,7 @@ type HomePageProps = {
 };
 
 /**
- * Landing page bilingue : les 10 sections montées dans l'ordre de la spec.
+ * Landing page bilingue : les 8 sections montées dans l'ordre de la spec.
  * Le H1 est fourni par `Hero` (aucun H1 supplémentaire ici).
  */
 export default async function HomePage({ params }: HomePageProps) {

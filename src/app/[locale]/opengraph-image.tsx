@@ -38,7 +38,7 @@ export default async function Image({
   const validLocale: Locale = isValidLocale(locale) ? locale : "fr";
   const dict = await getDictionary(validLocale);
 
-  const title = truncate(dict.seo.title, 96);
+  const title = truncate(dict.seo.title, 72);
   const subtitle = truncate(dict.hero.subtitle, 160);
 
   return new ImageResponse(
@@ -53,6 +53,7 @@ export default async function Image({
           backgroundColor: "#0A0C10",
           color: "#FFFFFF",
           fontFamily: "Inter, Arial, sans-serif",
+          position: "relative",
         }}
       >
         {/* Halo radial subtil identique au hero. */}
@@ -117,13 +118,13 @@ export default async function Image({
         >
           <div
             style={{
-              fontSize: 64,
+              fontSize: 72,
               fontWeight: 800,
               letterSpacing: "-0.02em",
               lineHeight: 1.1,
               color: "#FFFFFF",
               display: "-webkit-box",
-              WebkitLineClamp: 3,
+              WebkitLineClamp: 2,
               WebkitBoxOrient: "vertical",
               overflow: "hidden",
             }}
@@ -143,7 +144,7 @@ export default async function Image({
 
           <div
             style={{
-              fontSize: 26,
+              fontSize: 24,
               lineHeight: 1.4,
               color: "#94A3B8",
               display: "-webkit-box",
