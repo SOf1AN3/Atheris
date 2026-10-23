@@ -137,8 +137,8 @@ export async function generateMetadata({
     keywords: dict.seo.keywords,
     alternates: {
       languages: Object.fromEntries(
-        locales.map((l) => [l, `/${l}`]),
-      ) as Record<string, string>,
+        locales.map((l) => [l, `/${l}`] as const),
+      ),
     },
     openGraph: {
       title: dict.seo.title,

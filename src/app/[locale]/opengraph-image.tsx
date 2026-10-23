@@ -38,7 +38,7 @@ export default async function Image({
   const validLocale: Locale = isValidLocale(locale) ? locale : "fr";
   const dict = await getDictionary(validLocale);
 
-  const title = truncate(dict.seo.title, 72);
+  const title = truncate(dict.seo.title, 46);
   const subtitle = truncate(dict.hero.subtitle, 160);
 
   return new ImageResponse(
