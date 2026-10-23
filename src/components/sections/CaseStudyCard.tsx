@@ -36,7 +36,8 @@ export function CaseStudyCard({
       {/* Zoom du mockup au hover : l'enveloppe porte la transition pour ne pas
           modifier l'API de `CaseStudyMockup` (restée `{ kind }`). */}
       <div className="overflow-hidden">
-        <div className="transition-transform duration-[400ms] ease-out group-hover:scale-[1.02]">
+        {/* DESIGN: v4 — scale compile en propriété « scale » */}
+        <div className="transition-all duration-[400ms] ease-out group-hover:scale-[1.02]">
           <CaseStudyMockup kind={study.mockup} />
         </div>
       </div>

@@ -337,22 +337,25 @@ export function Header({ nav, a11y, className }: HeaderProps): ReactNode {
             {/* Liens */}
             {/* DESIGN: liens de nav sans h3 (hiérarchie de titres respectée — voir §6) */}
             <div className="flex-1 overflow-y-auto px-[clamp(1.25rem,5vw,2.5rem)] py-6">
-              <ul className="flex flex-col gap-2">
-                {nav.items.map((item) => (
-                  <li key={item.href}>
-                    <Link
-                      href={item.href}
-                      onClick={() => closeMenu(false)}
-                      className={cn(
-                        "block border-b border-line py-4 text-[22px] font-semibold text-fg transition-colors duration-150 hover:text-muted",
-                        FOCUS_RING,
-                      )}
-                    >
-                      {item.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+              {/* DESIGN: nav sans libellé (un seul landmark visible à la fois) */}
+              <nav>
+                <ul className="flex flex-col gap-2">
+                  {nav.items.map((item) => (
+                    <li key={item.href}>
+                      <Link
+                        href={item.href}
+                        onClick={() => closeMenu(false)}
+                        className={cn(
+                          "block border-b border-line py-4 text-[22px] font-semibold text-fg transition-colors duration-150 hover:text-muted",
+                          FOCUS_RING,
+                        )}
+                      >
+                        {item.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
             </div>
 
             {/* Pied du panneau : locale + CTA */}

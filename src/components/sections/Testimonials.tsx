@@ -78,7 +78,7 @@ export function Testimonials({ testimonials }: TestimonialsProps): ReactNode {
                   <p className="text-sm font-semibold text-fg">{item.name}</p>
                   <p className="text-[13px] text-muted">{item.role}</p>
                 </div>
-                <Badge variant="verified" className="ml-auto">
+                <Badge variant="verified">
                   {item.verifiedLabel}
                 </Badge>
               </div>

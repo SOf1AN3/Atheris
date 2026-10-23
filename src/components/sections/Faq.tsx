@@ -79,7 +79,7 @@ export function Faq({ faq }: FaqProps): ReactNode {
                             aria-expanded={isOpen}
                             aria-controls={answerId}
                             onClick={() => handleToggle(item.id)}
-                            className="flex w-full items-center justify-between gap-4 py-6 text-left transition-colors duration-150 hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                            className="flex w-full items-center justify-between gap-4 py-6 text-left"
                           >
                             <span className="text-[17px] font-semibold leading-snug text-fg">
                               {item.question}
@@ -90,7 +90,7 @@ export function Faq({ faq }: FaqProps): ReactNode {
                               aria-hidden="true"
                               viewBox="0 0 24 24"
                               className={cn(
-                                "size-5 shrink-0 text-muted transition-transform duration-[220ms] motion-reduce:transition-none",
+                                "size-5 shrink-0 text-muted transition-all duration-[220ms] motion-reduce:transition-none",
                                 isOpen && "rotate-180",
                               )}
                               fill="none"
@@ -113,6 +113,7 @@ export function Faq({ faq }: FaqProps): ReactNode {
                           id={answerId}
                           role="region"
                           aria-labelledby={questionId}
+                          aria-hidden={!isOpen}
                           className="grid transition-[grid-template-rows] duration-[220ms] ease-out motion-reduce:transition-none"
                           style={{ gridTemplateRows: isOpen ? "1fr" : "0fr" }}
                         >
