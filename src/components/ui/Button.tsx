@@ -16,6 +16,10 @@ type ButtonProps = {
   href?: string;
   children: ReactNode;
   className?: string;
+  // Prop littérale : `type` reste omis des deux branches d'attributs ci-dessous
+  // pour éviter tout conflit de typage. Transmise UNIQUEMENT à la branche
+  // `<button>` — sur un `<a>` l'attribut `type` est un MIME-type.
+  type?: "button" | "submit" | "reset";
 } & Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "href" | "type"> &
   Omit<ButtonHTMLAttributes<HTMLButtonElement>, "type">;
 
@@ -36,8 +40,10 @@ const SIZE_CLASSES: Record<ButtonSize, string> = {
   lg: "h-14 text-base px-8",
 };
 
+// Tailwind v4 compile `translate-x-1` vers la propriété `translate` (pas
+// `transform`) : `transition-transform` ne l'interpole pas → `transition-all`.
 const GHOST_ARROW_CLASSES =
-  "inline-block transition-transform duration-200 group-hover:translate-x-1";
+  "inline-block transition-all duration-200 group-hover:translate-x-1";
 
 function GhostArrow(): ReactNode {
   return (
@@ -51,6 +57,7 @@ export function Button({
   variant = "primary",
   size = "md",
   href,
+  type = "button",
   children,
   className,
   ...rest
@@ -95,7 +102,7 @@ export function Button({
   }
 
   return (
-    <button type="button" className={classes} {...rest}>
+    <button type={type} className={classes} {...rest}>
       {children}
       {variant === "ghost" ? <GhostArrow /> : null}
     </button>

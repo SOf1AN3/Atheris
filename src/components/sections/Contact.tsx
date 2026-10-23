@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import type { ReactNode } from "react";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -152,7 +152,6 @@ type ContactProps = {
 export function Contact({ contact }: ContactProps): ReactNode {
   const prefersReducedMotion = useReducedMotion();
   const [sent, setSent] = useState(false);
-  const formRef = useRef<HTMLFormElement>(null);
 
   const {
     register,
@@ -183,13 +182,6 @@ export function Contact({ contact }: ContactProps): ReactNode {
     }
 
     setSent(true);
-  };
-
-  // `Button` force `type="button"` (sa prop `type` est omise, hors périmètre
-  // de modification) : le clic délègue au formulaire natif via `requestSubmit`
-  // pour conserver un seul chemin de validation/soumission (Zod → handleSubmit).
-  const handleButtonClick = (): void => {
-    formRef.current?.requestSubmit();
   };
 
   const handleReset = (): void => {
@@ -282,7 +274,6 @@ export function Contact({ contact }: ContactProps): ReactNode {
                       transition={{ duration: 0.26, ease: EASE_PREMIUM }}
                     >
                       <form
-                        ref={formRef}
                         noValidate
                         onSubmit={handleSubmit(handleValidSubmit)}
                       >
@@ -449,28 +440,19 @@ export function Contact({ contact }: ContactProps): ReactNode {
                           {...register("company_website")}
                         />
 
-                        {/* NOTE: `Button` omits `type` de ses props (forcé
-                            `type="button"`) : le clic appelle `requestSubmit()`
-                            et ce bouton natif masqué assure la soumission
-                            implicite par Entrée (§6.2). */}
+                        {/* Un seul chemin de soumission : `type="submit"` natif
+                            → validation Zod (handleSubmit) au clic ET par
+                            Entrée dans un champ (§6.2), désactivé pendant
+                            `isSubmitting`. */}
                         <Button
+                          type="submit"
                           variant="primary"
                           size="lg"
-                          className="mt-7 w-full disabled:opacity-70"
+                          className="mt-7 w-full"
                           disabled={isSubmitting}
-                          aria-disabled={isSubmitting}
-                          onClick={handleButtonClick}
                         >
                           {contact.form.submitLabel}
                         </Button>
-                        <button
-                          type="submit"
-                          tabIndex={-1}
-                          aria-hidden="true"
-                          className="sr-only"
-                        >
-                          {contact.form.submitLabel}
-                        </button>
 
                         <p className="mt-4 text-center text-[12px] text-faint">
                           {contact.form.note}

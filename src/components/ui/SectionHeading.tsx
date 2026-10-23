@@ -7,6 +7,7 @@ type SectionHeadingProps = {
   align?: "left" | "center";
   className?: string;
   as?: "h1" | "h2";
+  headingId?: string;
 };
 
 export function SectionHeading({
@@ -16,6 +17,7 @@ export function SectionHeading({
   align = "left",
   className,
   as = "h2",
+  headingId,
 }: SectionHeadingProps) {
   const isCenter = align === "center";
   const TitleTag = as;
@@ -36,6 +38,7 @@ export function SectionHeading({
         </p>
       ) : null}
       <TitleTag
+        {...(headingId ? { id: headingId } : {})}
         className={cn(
           "text-fg",
           as === "h1"
