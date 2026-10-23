@@ -36,7 +36,7 @@ export const en: SiteContent = {
     subtitle:
       "Web, Mobile & Desktop applications with high added value. Scalable architectures, excellent code, and premium interface design.",
     primaryCta: "Start a project",
-    secondaryCta: "or book a discovery call →",
+    secondaryCta: "or book a discovery call",
     secondaryCtaHref: "#contact",
     trustStats: [
       { value: "+20", label: "Products delivered" },

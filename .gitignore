@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Artefacts de test & captures E2E
+/.playwright-mcp/
+/atheris-*.png
+/page_fr.html

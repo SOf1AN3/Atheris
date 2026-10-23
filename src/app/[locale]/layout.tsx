@@ -90,7 +90,11 @@ export default async function RootLayout({
   }).replace(/</g, "\\u003c");
 
   return (
-    <html lang={locale} className={inter.variable}>
+    <html
+      lang={locale}
+      className={inter.variable}
+      data-scroll-behavior="smooth"
+    >
       <body className="bg-ink text-fg antialiased">
         <script
           type="application/ld+json"

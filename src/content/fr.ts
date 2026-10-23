@@ -37,7 +37,7 @@ export const fr: SiteContent = {
     subtitle:
       "Applications Web, Mobile & Desktop à forte valeur ajoutée. Architectures scalables, code d’excellence et design d’interface haut de gamme.",
     primaryCta: "Lancer un projet",
-    secondaryCta: "ou réserver un appel découverte →",
+    secondaryCta: "ou réserver un appel découverte",
     secondaryCtaHref: "#contact",
     trustStats: [
       { value: "+20", label: "Produits livrés" },
