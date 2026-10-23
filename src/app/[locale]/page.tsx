@@ -30,7 +30,7 @@ export default async function HomePage({ params }: HomePageProps) {
   const dict = await getDictionary(locale);
 
   return (
-    <main id="main" tabIndex={-1} className="focus:outline-none">
+    <main id="main" tabIndex={-1}>
       <Hero hero={dict.hero} />
       <Services services={dict.services} />
       <CaseStudies cases={dict.cases} filtersLabel={dict.a11y.filtersLabel} />
