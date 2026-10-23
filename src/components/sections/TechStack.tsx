@@ -99,10 +99,15 @@ export function TechStack({
 
   return (
     // DESIGN: `id="technologies"` = ancre de la nav header.
-    <section id="technologies" className="py-[72px] md:py-24 lg:py-[120px]">
+    <section
+      id="technologies"
+      aria-labelledby="techstack-title"
+      className="py-[72px] md:py-24 lg:py-[120px]"
+    >
       <div className="mx-auto max-w-[1200px] px-[clamp(1.25rem,5vw,2.5rem)]">
         <SectionHeading
           align="left"
+          headingId="techstack-title"
           eyebrow={techStack.eyebrow}
           title={techStack.title}
           description={techStack.description}

@@ -39,7 +39,11 @@ export function Faq({ faq }: FaqProps): ReactNode {
   };
 
   return (
-    <section id="faq" className="py-[72px] md:py-24 lg:py-[120px]">
+    <section
+      id="faq"
+      aria-labelledby="faq-title"
+      className="py-[72px] md:py-24 lg:py-[120px]"
+    >
       <div className="mx-auto max-w-[1200px] px-[clamp(1.25rem,5vw,2.5rem)]">
         {/* Split §4.9 : titre `span 2` / accordéon `span 3` en desktop. */}
         <div className="grid grid-cols-1 gap-10 lg:grid-cols-5 lg:gap-16">
@@ -47,6 +51,7 @@ export function Faq({ faq }: FaqProps): ReactNode {
           <div className="lg:col-span-2 lg:sticky lg:top-28 lg:self-start">
             <SectionHeading
               align="left"
+              headingId="faq-title"
               eyebrow={faq.eyebrow}
               title={faq.title}
               description={faq.description}

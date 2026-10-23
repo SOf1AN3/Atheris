@@ -18,10 +18,15 @@ export function Process({ process }: ProcessProps): ReactNode {
   return (
     // DESIGN: `id="methode"` = ancre de la nav header (§4.7).
     // Rythme vertical §2.5 : 72px mobile / 96px tablette / 120px desktop.
-    <section id="methode" className="py-[72px] md:py-24 lg:py-[120px]">
+    <section
+      id="methode"
+      aria-labelledby="process-title"
+      className="py-[72px] md:py-24 lg:py-[120px]"
+    >
       <div className="mx-auto max-w-[1200px] px-[clamp(1.25rem,5vw,2.5rem)]">
         <SectionHeading
           align="center"
+          headingId="process-title"
           eyebrow={process.eyebrow}
           title={process.title}
           description={process.description}

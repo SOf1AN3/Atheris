@@ -33,13 +33,15 @@ type ServicesProps = {
 export function Services({ services }: ServicesProps): ReactNode {
   return (
     // DESIGN: `id="services"` = ancre de la nav header.
-    // `aria-labelledby` non posé : `SectionHeading` n'expose pas d'`id` sur son
-    // <h2> (prop non supportée) → rattachement accessible ajouté au passage
-    // a11y (tâche dédiée).
-    <section id="services" className="py-[72px] md:py-24 lg:py-[120px]">
+    <section
+      id="services"
+      aria-labelledby="services-title"
+      className="py-[72px] md:py-24 lg:py-[120px]"
+    >
       <div className="mx-auto max-w-[1200px] px-[clamp(1.25rem,5vw,2.5rem)]">
         <SectionHeading
           align="center"
+          headingId="services-title"
           eyebrow={services.eyebrow}
           title={services.title}
           description={services.description}

@@ -88,11 +88,16 @@ export function CaseStudies({
 
   return (
     // DESIGN: `id="realisations"` = ancre de la nav header.
-    <section id="realisations" className="py-[72px] md:py-24 lg:py-[120px]">
+    <section
+      id="realisations"
+      aria-labelledby="cases-title"
+      className="py-[72px] md:py-24 lg:py-[120px]"
+    >
       <div className="mx-auto max-w-[1200px] px-[clamp(1.25rem,5vw,2.5rem)]">
         <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
           <SectionHeading
             align="left"
+            headingId="cases-title"
             eyebrow={cases.eyebrow}
             title={cases.title}
             description={cases.description}

@@ -28,10 +28,15 @@ export function Testimonials({ testimonials }: TestimonialsProps): ReactNode {
   return (
     // DESIGN: `id="temoignages"` = ancre utile (footer/liens futurs),
     // même convention que `Services` (`id="services"`).
-    <section id="temoignages" className="py-[72px] md:py-24 lg:py-[120px]">
+    <section
+      id="temoignages"
+      aria-labelledby="testimonials-title"
+      className="py-[72px] md:py-24 lg:py-[120px]"
+    >
       <div className="mx-auto max-w-[1200px] px-[clamp(1.25rem,5vw,2.5rem)]">
         <SectionHeading
           align="center"
+          headingId="testimonials-title"
           eyebrow={testimonials.eyebrow}
           title={testimonials.title}
           description={testimonials.description}
