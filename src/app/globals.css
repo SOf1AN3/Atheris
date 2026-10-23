@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------
+   Design tokens — palette sombre unique (le site est dark-only).
+   Le thème clair du scaffold et son bloc `@media (prefers-color-scheme)`
+   ont été supprimés : aucune variante `dark` conditionnelle nécessaire.
+   ------------------------------------------------------------------ */
+@theme {
+  --color-ink: #0A0C10; /* fond principal */
+  --color-ink-2: #0E1117; /* bande de section */
+  --color-surface: #14171F; /* cartes */
+  --color-surface-2: #191D27; /* interne mockup */
+  --color-line: #242936; /* bordures */
+  --color-fg: #FFFFFF;
+  --color-muted: #94A3B8;
+  --color-faint: #64748B;
+  --color-accent: #3B82F6;
+  --color-accent-hover: #2E6FE0;
+  --color-danger: #F87171;
+  --color-success: #34D399;
+}
+
+/* Variables de police posées par `layout.tsx` sur <body> :
+   `inline` évite une substitution invalide depuis :root. */
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  background-color: var(--color-ink);
+  color: var(--color-fg);
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background-color: #3B82F6;
+  color: #fff;
+}
+
+:focus-visible {
+  outline: 2px solid #3B82F6;
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
