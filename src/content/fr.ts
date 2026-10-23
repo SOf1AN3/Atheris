@@ -108,7 +108,7 @@ export const fr: SiteContent = {
         description:
           "Plateforme SaaS complète de gestion médicale\u00A0: agendas, dossiers patients, facturation et statistiques cabinet, déclinée en multi-tenant sur Next.js et PostgreSQL.",
         tags: ["Next.js", "PostgreSQL", "Multi-tenant", "Stripe"],
-        metric: { value: "+100h", label: "économisées / an / cabinet" },
+        metric: { value: "+100h", label: "économisées/an par cabinet" },
       },
       {
         id: "papernote",
@@ -119,7 +119,7 @@ export const fr: SiteContent = {
         description:
           "Plateforme SaaS d’analyse et de synthèse de documents académiques par IA\u00A0: ingestion, indexation vectorielle et restitutions structurées en quelques secondes.",
         tags: ["Next.js", "OpenAI", "Vector DB", "PostgreSQL"],
-        metric: { value: "8s", label: "de synthèse par document" },
+        metric: { value: "8\u00A0s", label: "de synthèse par document" },
       },
       {
         id: "myks-radio",
@@ -141,7 +141,7 @@ export const fr: SiteContent = {
         description:
           "Solution web de consulting intégrant une messagerie temps réel sécurisée via WebSockets, avec notifications, historique persistant et mise à l’échelle Redis.",
         tags: ["Next.js", "WebSockets", "Redis", "TypeScript"],
-        metric: { value: "<100ms", label: "de latence de livraison" },
+        metric: { value: "<\u00A0100\u00A0ms", label: "de latence de livraison" },
       },
     ],
   },
@@ -370,7 +370,7 @@ export const fr: SiteContent = {
         messageRequired: "Merci de décrire brièvement votre projet.",
         messageMin: "Merci de fournir un message d’au moins 20 caractères.",
       },
-      successTitle: "Merci\u00A0!",
+      successTitle: "Merci\u00A0de votre demande.",
       successMessage: "Votre demande a bien été préparée. Nous revenons vers vous sous 24h ouvrées.",
       successAction: "Envoyer une autre demande",
     },
@@ -385,7 +385,7 @@ export const fr: SiteContent = {
   },
 
   seo: {
-    title: "ATHERIS LABS — Studio d’Ingénierie Logicielle & Produits Digitaux sur-Mesure",
+    title: "ATHERIS LABS — Studio d’Ingénierie Logicielle & Produits Digitaux sur-mesure",
     description:
       "ATHERIS LABS conçoit des produits digitaux sur-mesure\u00A0: applications Web, Mobile & Desktop à forte valeur ajoutée, architectures scalables et code d’excellence.",
     keywords: [
