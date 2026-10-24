@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import type { KeyboardEvent, ReactNode } from "react";
 
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 
 import { CaseStudyCard } from "@/components/sections/CaseStudyCard";
 import { SectionHeading } from "@/components/ui/SectionHeading";
@@ -41,7 +41,8 @@ export function CaseStudies({
   cases,
   filtersLabel,
 }: CaseStudiesProps): ReactNode {
-  const reducedMotion = useReducedMotion() === true;
+  // DESIGN: aucun branchement reduced-motion au premier rendu (hydration) —
+  // délégué à MotionConfig(reducedMotion="user").
   const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
 
   const visibleItems = useMemo(
@@ -142,21 +143,16 @@ export function CaseStudies({
                       : "text-muted hover:text-fg",
                   )}
                 >
-                  {/* Indicateur animé (M5) : premier enfant, derrière le texte. */}
+                  {/* Indicateur animé (M5) : premier enfant, derrière le texte.
+                      Toujours en `motion.span layoutId` — le snap
+                      reduced-motion est neutralisé par MotionConfig. */}
                   {isActive ? (
-                    reducedMotion ? (
-                      <span
-                        aria-hidden="true"
-                        className="absolute inset-0 rounded-lg bg-accent"
-                      />
-                    ) : (
-                      <motion.span
-                        aria-hidden="true"
-                        layoutId="cases-tab-indicator"
-                        className="absolute inset-0 rounded-lg bg-accent"
-                        transition={{ duration: 0.24, ease: EASE_STANDARD }}
-                      />
-                    )
+                    <motion.span
+                      aria-hidden="true"
+                      layoutId="cases-tab-indicator"
+                      className="absolute inset-0 rounded-lg bg-accent"
+                      transition={{ duration: 0.24, ease: EASE_STANDARD }}
+                    />
                   ) : null}
                   <span className="relative z-10">{cases.filters[filter]}</span>
                 </button>
@@ -186,12 +182,12 @@ export function CaseStudies({
               return (
                 // DESIGN: M7 (§5) — entrée 180ms ease-out (opacity + scale
                 // 0.98→1), sortie fade 140ms. `popLayout` évite le reflow pendant
-                // l'exit ; reduced-motion → aucun scale ni layout (état final).
+                // l'exit ; reduced-motion délégué à MotionConfig(user).
                 <motion.div
                   key={item.id}
-                  layout={!reducedMotion}
+                  layout
                   className={cn(isFeatured ? "lg:col-span-7" : spanForIndex(index))}
-                  initial={reducedMotion ? false : { opacity: 0, scale: 0.98 }}
+                  initial={{ opacity: 0, scale: 0.98 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{
                     opacity: 0,

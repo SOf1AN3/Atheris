@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import type { KeyboardEvent, ReactNode } from "react";
 
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import type { TechGroupId, TechStackContent } from "@/content/types";
@@ -37,7 +37,8 @@ export function TechStack({
   techStack,
   tabsLabel,
 }: TechStackProps): ReactNode {
-  const reducedMotion = useReducedMotion() === true;
+  // DESIGN: aucun branchement reduced-motion au premier rendu (hydration) —
+  // délégué à MotionConfig(reducedMotion="user").
 
   // Défensif : `groups[0]` absent (jamais dans le content actuel) → repli
   // "frontend" pour ne jamais initialiser un id orphelin.
@@ -149,21 +150,15 @@ export function TechStack({
                 )}
               >
                 {/* Indicateur M5 : premier enfant du bouton, sous le texte
-                    (z-10). Reduced-motion → trait fixe, sans layout animé. */}
+                    (z-10). Toujours en `motion.span layoutId` — le snap
+                    reduced-motion est neutralisé par MotionConfig. */}
                 {isActive ? (
-                  reducedMotion ? (
-                    <span
-                      aria-hidden="true"
-                      className="absolute -bottom-px left-0 right-0 h-0.5 bg-accent"
-                    />
-                  ) : (
-                    <motion.span
-                      aria-hidden="true"
-                      layoutId="tech-tab-indicator"
-                      className="absolute -bottom-px left-0 right-0 h-0.5 bg-accent"
-                      transition={{ duration: 0.24, ease: EASE_STANDARD }}
-                    />
-                  )
+                  <motion.span
+                    aria-hidden="true"
+                    layoutId="tech-tab-indicator"
+                    className="absolute -bottom-px left-0 right-0 h-0.5 bg-accent"
+                    transition={{ duration: 0.24, ease: EASE_STANDARD }}
+                  />
                 ) : null}
                 <span className="relative z-10">{group.label}</span>
               </button>
@@ -183,12 +178,11 @@ export function TechStack({
         >
           {/* DESIGN: M6 (§5) — entrée 220ms ease-out (opacity + y 8px→0),
               sortie fade 140ms, un seul panneau visible à la fois
-              (`mode="wait"`). Reduced-motion → `initial={false}` (état final
-              immédiat). */}
+              (`mode="wait"`). Reduced-motion délégué à MotionConfig(user). */}
           <AnimatePresence mode="wait">
             <motion.div
               key={activeGroup?.id ?? "empty"}
-              initial={reducedMotion ? false : { opacity: 0, y: 8 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{
                 opacity: 0,
