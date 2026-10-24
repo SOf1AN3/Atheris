@@ -29,11 +29,14 @@ const FOCUS_RING =
   "focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-[3px]";
 
 /** Monogramme « A » constructiviste (DESIGN §3.7) — décoratif. */
-function Monogram(): ReactNode {
+function Monogram({ className }: { className?: string }): ReactNode {
   return (
     <span
       aria-hidden="true"
-      className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-line text-fg"
+      className={cn(
+        "inline-flex h-7 w-7 items-center justify-center rounded-lg border border-line text-fg",
+        className,
+      )}
     >
       <svg
         viewBox="0 0 24 24"
@@ -55,9 +58,12 @@ function Monogram(): ReactNode {
 function BrandLink({
   brand,
   onNavigate,
+  topState = false,
 }: {
   brand: Brand;
   onNavigate?: () => void;
+  /** État « overlay transparent » du header au repos (hero bleue). */
+  topState?: boolean;
 }): ReactNode {
   return (
     <Link
@@ -68,10 +74,12 @@ function BrandLink({
         FOCUS_RING,
       )}
     >
-      <Monogram />
+      <Monogram className={topState ? "border-white/25" : undefined} />
       <span className="text-[15px] font-bold tracking-[-0.02em] text-fg">
         {brand.name}{" "}
-        <span className="text-muted">{brand.suffix}</span>
+        <span className={topState ? "text-white/70" : "text-muted"}>
+          {brand.suffix}
+        </span>
       </span>
     </Link>
   );
@@ -92,6 +100,9 @@ export function Header({ nav, a11y, className }: HeaderProps): ReactNode {
     const handleScroll = (): void => {
       setScrolled(window.scrollY > SCROLL_THRESHOLD_PX);
     };
+    // Sync au montage : une page arrivée déjà scrollée (`/fr#contact`,
+    // restoration de scroll) bascule en état « scrolled » sans attendre
+    // la première interaction de scroll.
     handleScroll();
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
@@ -220,10 +231,13 @@ export function Header({ nav, a11y, className }: HeaderProps): ReactNode {
     <>
       <header
         className={cn(
+          // DESIGN: l'interpolation `bg-transparent → bg-ink/80` (couleur →
+          // couleur) et `border-transparent → border-line` est couverte par la
+          // transition existante sur background-color/border-color.
           "sticky top-0 z-50 h-16 border-b transition-[background-color,border-color,box-shadow,backdrop-filter] duration-[240ms] ease-out md:h-[72px]",
           scrolled
             ? "border-line bg-ink/80 shadow-[0_1px_0_rgba(255,255,255,0.03)] backdrop-blur-[20px] backdrop-saturate-[1.6]"
-            : "border-white/5 bg-ink/55 backdrop-blur-lg",
+            : "border-transparent bg-transparent",
           className,
         )}
       >
@@ -234,7 +248,7 @@ export function Header({ nav, a11y, className }: HeaderProps): ReactNode {
           )}
         >
           {/* Gauche — marque */}
-          <BrandLink brand={nav.brand} />
+          <BrandLink brand={nav.brand} topState={!scrolled} />
 
           {/* Centre — navigation desktop */}
           <nav className="hidden items-center gap-8 lg:flex">
@@ -252,7 +266,13 @@ export function Header({ nav, a11y, className }: HeaderProps): ReactNode {
                   className={cn(
                     "rounded-sm text-sm font-medium transition-colors duration-150",
                     FOCUS_RING,
-                    isActive ? "text-fg" : "text-muted hover:text-fg",
+                    scrolled
+                      ? isActive
+                        ? "text-fg"
+                        : "text-muted hover:text-fg"
+                      : isActive
+                        ? "text-white"
+                        : "text-white/75 hover:text-white",
                   )}
                 >
                   {item.label}
@@ -263,8 +283,17 @@ export function Header({ nav, a11y, className }: HeaderProps): ReactNode {
 
           {/* Droite — locale + CTA */}
           <div className="hidden items-center gap-4 lg:flex">
+            {/* DESIGN: switcher conservé en style sombre (lisible sur bleu,
+                non surchargeable proprement par `className` : seules les
+                classes du conteneur passeraient via twMerge, les pilules
+                internes resteraient en `bg-surface-2`/`text-muted`). */}
             <LocaleSwitcher label={a11y.switchLocale} />
-            <Button variant="primary" size="sm" href="#contact">
+            <Button
+              variant="primary"
+              size="sm"
+              href="#contact"
+              className={cn(!scrolled && "ring-1 ring-white/20")}
+            >
               {nav.ctaLabel}
             </Button>
           </div>
@@ -278,8 +307,11 @@ export function Header({ nav, a11y, className }: HeaderProps): ReactNode {
             aria-controls="mobile-menu"
             onClick={() => setMenuOpen((open) => !open)}
             className={cn(
-              "inline-flex h-11 w-11 items-center justify-center rounded-xl text-fg transition-colors duration-150 hover:text-muted lg:hidden",
+              "inline-flex h-11 w-11 items-center justify-center rounded-xl transition-colors duration-150 lg:hidden",
               FOCUS_RING,
+              scrolled
+                ? "text-fg hover:text-muted"
+                : "text-white hover:text-white/80",
             )}
           >
             <span aria-hidden="true">
