@@ -44,8 +44,8 @@ export function Hero({ hero }: HeroProps) {
         <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_60%,#0A0C10_100%)]" />
       </div>
 
-      {/* CONTENU — aligné à gauche, ancré en bas. */}
-      <div className="relative flex flex-1 flex-col justify-end pt-28 pb-8 md:pt-40">
+      {/* CONTENU — aligné à gauche, centré verticalement. */}
+      <div className="relative flex flex-1 flex-col justify-center pt-20 pb-8 md:pt-24">
         <div className="mx-auto w-full max-w-[1200px] px-[clamp(1.25rem,5vw,2.5rem)]">
           <h1
             id="hero-title"
