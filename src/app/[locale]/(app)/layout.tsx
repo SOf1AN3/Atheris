@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { auth } from "@/auth";
 import { AppShell } from "@/components/app/AppShell";
+import { getDictionary } from "@/i18n/dictionaries";
 import { isValidLocale } from "@/i18n/config";
 import { getPlatformDictionary } from "@/i18n/platform-dictionaries";
 import { isRole } from "@/lib/permissions";
@@ -47,6 +48,9 @@ export default async function AppLayout({
 
   const role = session.user.role;
   const dict = await getPlatformDictionary(locale);
+  // DESIGN §6.4 — libellé du skip-link : clé du dict SITE (`a11y.skipToContent`),
+  // absente du dict plateforme.
+  const { a11y } = await getDictionary(locale);
 
   return (
     <AppShell
@@ -55,6 +59,7 @@ export default async function AppLayout({
       nav={dict.nav}
       user={{ name: session.user.name }}
       roleLabel={dict.statuses.role[role]}
+      skipToContent={a11y.skipToContent}
     >
       {children}
     </AppShell>

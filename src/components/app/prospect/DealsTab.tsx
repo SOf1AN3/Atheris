@@ -17,11 +17,11 @@
  * depuis `auth()` et les actions figées exigent `role === "ceo"`. Tout autre
  * rôle garde exactement l'état lecture seule de FE-5 — **aucun bouton**.
  *
- * LIBELLÉS (dict verrouillé) : montant = valeur seule déjà présente dans
+ * LIBELLÉS (dict) : montant = valeur seule déjà présente dans
  * l'en-tête ; statut = badge `dict.statuses.quote[status]` ; dates = texte
  * `muted` ; encaissement = `dict.client.paid` / `dict.client.due` (repli
- * sémantique documenté par FE-5) ; libellés CEO = dict + replis bilingues
- * **listés dans la page détail** (jamais de string FR/EN en dur ici).
+ * sémantique documenté par FE-5) ; libellés CEO = 100 % dict
+ * **résolus dans la page détail** (jamais de string FR/EN en dur ici).
  */
 
 import { Inbox } from "lucide-react";

@@ -201,7 +201,11 @@ export default async function ProjetPage({
 
   // Le projet vient d'être résolu pour CE viewer via `getProjectOverview`
   // (même accès) : `listMessages` ne peut échouer que sur une erreur
-  // d'infra (propagée en 500) — repli défensif sur fil vide sinon.
+  // d'infra (propagée en 500) — repli défensif sur fil vide sinon,
+  // journalisé (FE-11 · T33 : aucun repli `ok: false` silencieux).
+  if (!messageResult.ok) {
+    console.error("[projet] échec de la lecture du fil de discussion", messageResult.code);
+  }
   const threadItems = messageResult.ok ? messageResult.items : [];
 
   // --- Vues sérialisables (100 % données, libellés/dates résolus ici) -------

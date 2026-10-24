@@ -27,6 +27,8 @@ export type AppShellProps = {
   user: { name: string };
   /** Libellé lisible du rôle — `dict.statuses.role[role]`. */
   roleLabel: string;
+  /** DESIGN §6.4 — libellé du skip-link (`dict.a11y.skipToContent`). */
+  skipToContent: string;
   children: ReactNode;
 };
 
@@ -36,10 +38,20 @@ export function AppShell({
   nav,
   user,
   roleLabel,
+  skipToContent,
   children,
 }: AppShellProps): ReactNode {
   return (
     <>
+      {/* DESIGN §6.4 — skip-link : premier élément focusable de l'espace
+          connecté, visible uniquement au focus, cible `<main id="main">`
+          (pattern repris du layout `(marketing)`). */}
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:border focus:border-line focus:bg-surface focus:px-4 focus:py-2 focus:text-sm focus:text-fg"
+      >
+        {skipToContent}
+      </a>
       <div className="flex min-h-screen bg-ink">
         <Sidebar items={items} locale={locale} brand={nav.brand} />
         <div className="flex min-w-0 flex-1 flex-col">

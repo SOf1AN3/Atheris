@@ -172,4 +172,19 @@ body {
   .animate-accordion-up.animate-accordion-up {
     animation: none;
   }
+
+  /* DESIGN §6.8 (FE-11 · T33) — le bloc ci-dessus ne couvre QUE les entrées
+     shadcn : les transitions Tailwind (`transition-*`, `animate-pulse` des
+     Skeleton, jauges `transition-[width]`…) resteraient actives sous
+     `reduce`. Neutralisation globale ciblée (uniquement pour les utilisateurs
+     demandant le mouvement réduit — aucun effet en rendu nominal), sans
+     `!important` : ces règles sont hors couche `utilities` et l'emportent. */
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
+    transition-duration: 0.01ms;
+    scroll-behavior: auto;
+  }
 }

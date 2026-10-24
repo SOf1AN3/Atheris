@@ -55,7 +55,9 @@ function Field({
 }): React.JSX.Element {
   return (
     <div className="flex min-w-0 flex-col gap-1">
-      <dt className="text-[13px] font-medium text-faint">{label}</dt>
+      {/* DESIGN §6.5 : faint (4,1:1) interdit sur un `dt` (label de champ
+          porteur d'info) → muted. */}
+      <dt className="text-[13px] font-medium text-muted">{label}</dt>
       <dd className="break-words text-[15px] text-fg">{children}</dd>
     </div>
   );

@@ -177,7 +177,9 @@ export function PipelineTable({
                         actif autorisé §2.3 (variante sobre §12.3). */}
                     <Link href={item.href} className={ROW_LINK_CLASSES}>
                       {item.fullName}
-                      <span className="mt-0.5 text-xs font-medium text-faint">
+                      {/* DESIGN §6.5 : faint (4,1:1) interdit sur du texte
+                          porteur d'info → muted (7:1+). */}
+                      <span className="mt-0.5 text-xs font-medium text-muted">
                         {item.companyLabel}
                       </span>
                     </Link>
@@ -236,7 +238,9 @@ export function PipelineTable({
                     <span className="truncate text-[15px] font-semibold text-fg">
                       {item.fullName}
                     </span>
-                    <span className="mt-0.5 truncate text-xs font-medium text-faint">
+                    {/* DESIGN §6.5 : faint (4,1:1) interdit sur du texte
+                        porteur d'info → muted (7:1+). */}
+                    <span className="mt-0.5 truncate text-xs font-medium text-muted">
                       {item.companyLabel}
                     </span>
                   </span>

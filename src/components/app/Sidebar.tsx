@@ -138,7 +138,9 @@ export function SidebarContent({
               aria-current={active ? "page" : undefined}
               onClick={onClose}
               className={cn(
-                "relative flex items-center rounded-lg px-[14px] py-[10px] text-[14px] font-medium transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2",
+                // DESIGN §6.10 : `min-h-11` (44px) — la même nav sert le Sheet
+                // mobile (cible tactile) et la sidebar desktop.
+                "relative flex min-h-11 items-center rounded-lg px-[14px] py-[10px] text-[14px] font-medium transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2",
                 active
                   ? "bg-surface-2 text-fg"
                   : "text-muted hover:bg-surface-2/50 hover:text-fg",

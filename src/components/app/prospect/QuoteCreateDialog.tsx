@@ -21,8 +21,8 @@
  * `role="alert"` (`not_found` / `forbidden` / erreur infra) — aucun code brut
  * ni détail technique côté client.
  *
- * LIBELLÉS : props sérialisables résolues côté serveur (dict verrouillé ou
- * replis bilingues listés dans la page détail) — ce composant n'importe
+ * LIBELLÉS : props sérialisables résolues côté serveur — 100 % dict
+ * (`dict.prospect.deals.*`), ce composant n'importe
  * jamais `@/i18n/*`.
  */
 
@@ -55,13 +55,13 @@ import { Label } from "@/components/ui/label";
 
 /** Libellés i18n résolus côté serveur (props 100 % sérialisables). */
 export type QuoteCreateDialogLabels = {
-  /** Bouton + `DialogTitle` (⚠ clé manquante : repli bilingue server). */
+  /** `dict.prospect.deals.createQuote` — bouton + `DialogTitle`. */
   open: string;
   /** `dict.commissions.amount` — champ montant. */
   amount: string;
-  /** Référence externe (⚠ clé manquante : repli bilingue server). */
+  /** `dict.prospect.deals.externalRef` — référence externe optionnelle. */
   externalRef: string;
-  /** PDF (⚠ clé manquante : repli bilingue server). */
+  /** `dict.prospect.deals.pdf` — champ PDF joint. */
   pdf: string;
   /** `dict.common.optional` — suffixe des champs facultatifs. */
   optional: string;
@@ -73,9 +73,9 @@ export type QuoteCreateDialogLabels = {
   required: string;
   /** `dict.auth.validation.tooLong(100)` résolu server-side. */
   refTooLong: string;
-  /** Montant invalide (⚠ clé manquante : miroir des contraintes serveur). */
+  /** `dict.prospect.deals.amountInvalid` — miroir des contraintes serveur. */
   amountInvalid: string;
-  /** PDF invalide (⚠ clé manquante : ≤ 5 Mo + `%PDF` côté serveur). */
+  /** `dict.prospect.deals.pdfInvalid` — ≤ 5 Mo + `%PDF` côté serveur. */
   pdfInvalid: string;
   /** `dict.auth.login.errors.generic` — échec serveur hors champ. */
   genericError: string;

@@ -184,13 +184,13 @@ export function Topbar({
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              className="hover:bg-surface-2"
+              className="min-h-11 hover:bg-surface-2"
               onSelect={() => router.push(`/${locale}/espace/profil`)}
             >
               {nav.profile}
             </DropdownMenuItem>
             <DropdownMenuItem
-              className="hover:bg-surface-2"
+              className="min-h-11 hover:bg-surface-2"
               onSelect={handleLogout}
             >
               {nav.logout}

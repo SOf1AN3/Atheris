@@ -21,8 +21,8 @@
  * générée(s)` + `onCommissionsGenerated()` (la page détail affiche alors le
  * lien vers `/{locale}/espace/commissions`) ; sinon toast `commissions.paid`.
  *
- * LIBELLÉS : props sérialisables résolus côté serveur (dict verrouillé ou
- * replis bilingues listés dans la page détail).
+ * LIBELLÉS : props sérialisables résolus côté serveur — 100 % dict
+ * (`dict.prospect.deals.*` + `dict.commissions.*`), aucun repli bilingue).
  */
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -54,13 +54,13 @@ import { Input } from "@/components/ui/input";
 
 /** Libellés du formulaire « Ajouter une échéance » (résolus server). */
 export type PaymentPanelLabels = {
-  /** Bouton + `DialogTitle` (⚠ clé manquante : repli bilingue server). */
+  /** `dict.prospect.deals.addPayment` — bouton + `DialogTitle`. */
   add: string;
-  /** Champ libellé (⚠ clé manquante : repli bilingue server). */
+  /** `dict.prospect.deals.paymentLabel` — champ libellé. */
   labelField: string;
   /** `dict.commissions.amount` — champ montant. */
   amount: string;
-  /** Champ date d'échéance (⚠ clé manquante : repli bilingue server). */
+  /** `dict.prospect.deals.paymentDue` — champ date d'échéance. */
   dueField: string;
   /** `dict.common.optional` — la date d'échéance est facultative. */
   optional: string;
@@ -74,7 +74,7 @@ export type PaymentPanelLabels = {
   labelTooShort: string;
   /** `dict.auth.validation.tooLong(120)` résolu server-side. */
   labelTooLong: string;
-  /** Montant invalide (⚠ clé manquante : miroir des contraintes serveur). */
+  /** `dict.prospect.deals.amountInvalid` — miroir des contraintes serveur. */
   amountInvalid: string;
   /** `dict.auth.login.errors.generic` — échec serveur hors champ. */
   genericError: string;
@@ -82,13 +82,13 @@ export type PaymentPanelLabels = {
 
 /** Libellés de l'encaissement (résolus server). */
 export type MarkPaymentPaidLabels = {
-  /** Bouton d'encaissement (⚠ clé manquante : repli bilingue server). */
+  /** `dict.prospect.deals.markPaid` — bouton d'encaissement. */
   markPaid: string;
   /** `dict.prospect.actions.confirmChange` — titre du ConfirmDialog. */
   confirmChange: string;
   /** `dict.common.cancel`. */
   cancel: string;
-  /** Rappel : ce paiement déclenche la génération (⚠ clé manquante). */
+  /** `dict.commissions.generatesWarning` — déclencheur de la génération. */
   triggerWarning: string;
   /** `dict.commissions.noClawbackWarning` — rappel de non-récupération. */
   noClawback: string;
@@ -96,7 +96,7 @@ export type MarkPaymentPaidLabels = {
   paid: string;
   /** `dict.common.retry` — toast d'échec / conflit optimiste. */
   retry: string;
-  /** `{count} commission(s) générée(s)` (⚠ clé manquante : repli server). */
+  /** `dict.commissions.generatedCount` — `{count}` remplacé côté client. */
   generatedTemplate: string;
 };
 

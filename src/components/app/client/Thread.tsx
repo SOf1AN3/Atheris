@@ -162,7 +162,9 @@ export function Thread({
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[13px]">
                     <span className="font-semibold text-fg">{message.senderName}</span>
                     <span className="text-muted">{message.senderRoleLabel}</span>
-                    <span className="text-faint">{message.createdAtLabel}</span>
+                    {/* DESIGN §6.5 : faint (4,1:1) interdit sur la date du
+                        message (info) → muted. */}
+                    <span className="text-muted">{message.createdAtLabel}</span>
                     {/* Pastille « Non lus » : messages REÇUS non encore lus. */}
                     {message.unread ? (
                       <span className="inline-flex items-center rounded-full border border-accent/40 bg-accent/10 px-2 py-0.5 text-[11px] font-semibold text-accent">

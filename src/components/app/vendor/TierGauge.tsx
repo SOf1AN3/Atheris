@@ -75,8 +75,9 @@ export function TierGauge({
             {currentRateLabel}
           </span>
         </p>
-        {/* Prochain palier (masqué au palier maximum). */}
-        <p className="text-[13px] font-medium text-faint">{resolvedNextLabel}</p>
+        {/* Prochain palier (masqué au palier maximum) — DESIGN §6.5 :
+            faint (4,1:1) interdit sur le hint → muted. */}
+        <p className="text-[13px] font-medium text-muted">{resolvedNextLabel}</p>
       </div>
 
       {/* Jauge — piste `surface`, remplissage `accent` (= état actif). */}

@@ -298,26 +298,97 @@ export function CommissionQueue({
           <p className="text-[15px] font-semibold text-fg">{labels.noData}</p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-line bg-surface">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                {readOnly ? null : <TableHead className="w-10" />}
-                <TableHead>{labels.beneficiary}</TableHead>
-                <TableHead>{labels.deal}</TableHead>
-                <TableHead>{labels.tier}</TableHead>
-                <TableHead>{labels.amount}</TableHead>
-                <TableHead>{labels.generatedAt}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((item) => {
-                const isOrphan = item.beneficiaryName === null;
-                const isSelected = selected.has(item.id);
-                return (
-                  <TableRow key={item.id} data-state={isSelected ? "selected" : undefined}>
-                    {readOnly ? null : (
+        <>
+          {/* ------------------------------------------------- Desktop (≥ md) --- */}
+          {/* DESIGN §7 : tableau seul, masqué sous md (la variante mobile
+              ci-dessous porte les mêmes données + la sélection). */}
+          <div className="hidden overflow-hidden rounded-xl border border-line bg-surface md:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  {readOnly ? null : <TableHead className="w-10" />}
+                  <TableHead>{labels.beneficiary}</TableHead>
+                  <TableHead>{labels.deal}</TableHead>
+                  <TableHead>{labels.tier}</TableHead>
+                  <TableHead>{labels.amount}</TableHead>
+                  <TableHead>{labels.generatedAt}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {items.map((item) => {
+                  const isOrphan = item.beneficiaryName === null;
+                  const isSelected = selected.has(item.id);
+                  return (
+                    <TableRow key={item.id} data-state={isSelected ? "selected" : undefined}>
+                      {readOnly ? null : (
+                        <TableCell>
+                          <Checkbox
+                            checked={isSelected}
+                            disabled={isOrphan}
+                            onCheckedChange={() => {
+                              toggle(item.id);
+                            }}
+                            aria-label={`${labels.beneficiary} : ${
+                              item.beneficiaryName ?? labels.noBeneficiary
+                            }`}
+                            title={isOrphan ? labels.noBeneficiary : undefined}
+                          />
+                        </TableCell>
+                      )}
                       <TableCell>
+                        {isOrphan ? (
+                          <Badge variant="tech">{labels.noBeneficiary}</Badge>
+                        ) : (
+                          <span className="text-sm font-medium text-fg">
+                            {item.beneficiaryName}
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <span className="flex flex-col">
+                          <span className="text-sm font-medium text-fg">
+                            {item.prospectName}
+                          </span>
+                          <span className="text-xs tabular-nums text-muted">
+                            {formatCents(item.quoteAmountCents)}
+                          </span>
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-sm tabular-nums text-muted">
+                        {item.rateLabel}
+                      </TableCell>
+                      <TableCell className="text-sm font-semibold tabular-nums text-fg">
+                        {formatCents(item.amountCents)}
+                      </TableCell>
+                      <TableCell className="text-sm tabular-nums text-muted">
+                        {item.generatedLabel}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+
+            {actionBar}
+          </div>
+
+          {/* -------------------------------------------------- Mobile (< md) --- */}
+          {/* DESIGN §7 : cartes empilées, zéro scroll horizontal ; la barre
+              d'action (CEO) reste collée sous les cartes. La checkbox étend sa
+              zone tactile à 44px via un `after` invisible (DESIGN §6.10). */}
+          <ul className="flex flex-col gap-3 md:hidden">
+            {items.map((item) => {
+              const isOrphan = item.beneficiaryName === null;
+              const isSelected = selected.has(item.id);
+              return (
+                <li
+                  key={item.id}
+                  data-state={isSelected ? "selected" : undefined}
+                  className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-4 data-[state=selected]:border-accent"
+                >
+                  <span className="flex items-start justify-between gap-3">
+                    <span className="flex min-w-0 items-start gap-3">
+                      {readOnly ? null : (
                         <Checkbox
                           checked={isSelected}
                           disabled={isOrphan}
@@ -328,45 +399,44 @@ export function CommissionQueue({
                             item.beneficiaryName ?? labels.noBeneficiary
                           }`}
                           title={isOrphan ? labels.noBeneficiary : undefined}
+                          className="relative mt-0.5 after:absolute after:-inset-3.5 after:content-['']"
                         />
-                      </TableCell>
-                    )}
-                    <TableCell>
-                      {isOrphan ? (
-                        <Badge variant="tech">{labels.noBeneficiary}</Badge>
-                      ) : (
-                        <span className="text-sm font-medium text-fg">
-                          {item.beneficiaryName}
-                        </span>
                       )}
-                    </TableCell>
-                    <TableCell>
-                      <span className="flex flex-col">
-                        <span className="text-sm font-medium text-fg">
+                      <span className="flex min-w-0 flex-col gap-1">
+                        {isOrphan ? (
+                          <Badge variant="tech">{labels.noBeneficiary}</Badge>
+                        ) : (
+                          <span className="text-[15px] font-semibold text-fg">
+                            {item.beneficiaryName}
+                          </span>
+                        )}
+                        <span className="truncate text-sm text-muted">
                           {item.prospectName}
                         </span>
                         <span className="text-xs tabular-nums text-muted">
                           {formatCents(item.quoteAmountCents)}
                         </span>
                       </span>
-                    </TableCell>
-                    <TableCell className="text-sm tabular-nums text-muted">
-                      {item.rateLabel}
-                    </TableCell>
-                    <TableCell className="text-sm font-semibold tabular-nums text-fg">
+                    </span>
+                    <span className="shrink-0 text-sm font-semibold tabular-nums text-fg">
                       {formatCents(item.amountCents)}
-                    </TableCell>
-                    <TableCell className="text-sm tabular-nums text-muted">
-                      {item.generatedLabel}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                    </span>
+                  </span>
+                  <span className="flex items-center justify-between gap-3 text-xs text-muted">
+                    <span className="tabular-nums">{item.rateLabel}</span>
+                    <span className="tabular-nums">{item.generatedLabel}</span>
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
 
-          {actionBar}
-        </div>
+          {readOnly ? null : (
+            <div className="overflow-hidden rounded-xl border border-line bg-surface md:hidden">
+              {actionBar}
+            </div>
+          )}
+        </>
       )}
 
       {confirmDialog}
