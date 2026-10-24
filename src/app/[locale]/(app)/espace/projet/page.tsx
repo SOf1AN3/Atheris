@@ -255,13 +255,10 @@ export default async function ProjetPage({
     sizeLabel: formatBytes(row.byteSize, locale),
     dateLabel: formatDate(row.createdAt, locale),
     // Route BK-5 : téléchargement authentifié par cookies de session.
-    // ⚠ ANOMALIE HORS PÉRIMÈTRE (signalée au Lead) : la route est montée à
-    // `/api/documents/[id]` (SANS segment locale) mais le middleware T07
-    // redirige `/api/*` → `/{locale}/api/*` → 404 App Router aujourd'hui.
-    // Le href respecte le format prescrit par la spec FE-9 ; le correctif
-    // (exclure `/api` du middleware ou re-monter la route) appartient à
-    // T07/BK-5, fichiers figés hors de cette tâche.
-    href: `/${locale}/api/documents/${row.id}`,
+    // La route est montée SANS segment de locale (`/api/documents/[id]`) :
+    // le middleware T07 laisse maintenant `/api/*` intact (correctif Lead
+    // après signalement FE-9) — le href pointe donc la route réelle.
+    href: `/api/documents/${row.id}`,
   }));
 
   // Totaux de l'échéancier : encaissé vs à venir (cents → dollars ici).

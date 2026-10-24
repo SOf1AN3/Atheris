@@ -170,6 +170,16 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   const { pathname, search } = request.nextUrl;
   const firstSegment = pathname.split("/")[1] ?? "";
 
+  // --- Routes API : JAMAIS localisées -------------------------------------
+  // `/api/auth/*` (callbacks Auth.js v5) et `/api/documents/[id]` (téléchargement
+  // PDF) vivent sans segment de locale. Les rediriger vers `/{locale}/api/…`
+  // produirait des 404 (ces routes n'existent pas sous `[locale]`) et casserait
+  // la connexion elle-même (POST /api/auth/callback). Passage libre : ces route
+  // handlers font leur propre authentification (404 silencieux côté documents).
+  if (firstSegment === "api") {
+    return NextResponse.next();
+  }
+
   // --- Chemin NON localisé : redirection 307 vers `/{locale}…` (T01) --------
   if (!isValidLocale(firstSegment)) {
     const locale = resolveLocale(request.headers.get("accept-language"));

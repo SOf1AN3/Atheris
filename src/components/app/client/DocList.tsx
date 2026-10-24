@@ -18,7 +18,7 @@ export type DocListItem = {
   sizeLabel: string;
   /** `createdAt` formaté côté serveur (`Africa/Algiers`). */
   dateLabel: string;
-  /** `/{locale}/api/documents/{id}` — téléchargement par cookies (BK-5). */
+  /** `/api/documents/{id}` — téléchargement par cookies (BK-5, sans locale). */
   href: string;
 };
 
