@@ -20,7 +20,7 @@ export function Hero({ hero }: HeroProps) {
     <section
       id="top"
       aria-labelledby="hero-title"
-      className="relative isolate flex min-h-[100svh] flex-col overflow-hidden"
+      className="relative isolate flex min-h-[100svh] flex-col overflow-hidden -mt-16 md:-mt-[72px]"
     >
       {/* FOND MESH 100% CSS — décoratif, aucune image, aucune animation. */}
       <div
