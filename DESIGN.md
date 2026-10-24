@@ -53,7 +53,7 @@ Implémentation : `@theme` dans `src/app/globals.css` (Tailwind v4). Les tokens 
 | `#FFFFFF` sur `#0A0C10` | 19.4:1 | AAA |
 | `#94A3B8` sur `#0A0C10` | 7.2:1 | AAA |
 | `#94A3B8` sur `#14171F` | 6.4:1 | AA+ |
-| `#64748B` sur `#0A0C10` | 4.6:1 | AA (texte ≥ 16px uniquement) |
+| `#64748B` sur `#0A0C10` | 4.1:1 | ❌ sous AA — **réservé au non-essentiel uniquement** (voir note §2.2 bis) |
 | `#FFFFFF` sur `#3B82F6` | 3.7:1 | AA pour texte ≥ 18px bold — **les libellés de bouton SONT ≥ 15px semi-bold + bouton ≥ 44px de haut** (contraste large-text acceptable) |
 | `#F87171` sur `#0A0C10` | 7.0:1 | AAA |
 
@@ -61,7 +61,7 @@ Implémentation : `@theme` dans `src/app/globals.css` (Tailwind v4). Les tokens 
 
 ### 2.3 Règle d'usage de l'accent — NON NÉGOCIABLE
 
-✅ **Autorisé** : bouton CTA primaire, trait de l'onglet actif, point du pill hero, focus ring, courbe/graphique actif dans les mockups, état hover des bordures de carte (en `accent-soft`), lien « réserver un appel découverte → » au hover.
+✅ **Autorisé** : bouton CTA primaire, trait de l'onglet actif, point du pill hero, focus ring, courbe/graphique actif dans les mockups, état hover des bordures de carte (en `accent-soft`), lien « réserver un appel découverte → » au hover, **état checked d'une checkbox** (`data-[state=checked]:bg-primary`), **liseré gauche de la ligne sélectionnée d'un tableau** (2px, §12.3) — ces deux derniers = indicateurs d'**état actif**, jamais du décor.
 ❌ **Interdit** : fonds de section, titres, icônes décoratives, glow/ombre bleue, texte courant, badges tech, footer, dégradés de fond.
 
 ### 2.4 Typographie
@@ -401,6 +401,176 @@ Deux objets : **fenêtre Desktop** + **frame Mobile** chevauchant le coin bas-dr
 - **CTA** : infinitif + objet clair — « Lancer un projet », « Demander un devis », « Envoyer la demande de devis ».
 - **FR** : typographie française respectée (espaces fines `:` `;` `!` `?` insécables — via `&nbsp;` ou `framer` typographique), « e-mail » → « email », pas de anglicisme inutile.
 - **EN** : native business register (« We build… », « Ship… »), US spelling.
+
+---
+
+## 12. UI shadcn/ui — thématisation & piles (T04)
+
+> Complément opérationnel : `components.json` (racine) + variables ajoutées à
+> `src/app/globals.css` + composants de `src/components/ui/`. **Aucun token des
+> §2.x n'a été modifié** — les blocs `@theme` landing et `@theme inline`
+> shadcn coexistent.
+
+### 12.0 Piles retenues (choix documenté)
+
+| Pile | Composants | Règle |
+|---|---|---|
+| **Landing** (existante) | `Button.tsx`, `Badge.tsx`, `SectionHeading.tsx` | **Intacts** : API publique inchangée (`variant="primary\|secondary\|ghost"`, `size`, `href` / `variant="pill\|tech\|verified"`, `dot`). Jamais régénérés. |
+| **Plateforme** (shadcn) | `label · input · textarea · select · table · card · tabs · dialog · dropdown-menu · avatar · separator · skeleton · form · sonner · tooltip · sheet · accordion · checkbox · scroll-area` | Installés depuis le registre, puis **thématisés localement** (fichiers modifiés = fork du registre). |
+
+**Pourquoi deux piles plutôt qu'une fusion** : les composants maison portent
+l'API exacte que 6 fichiers de landing appellent déjà ; les ré-écrire au-dessus
+de shadcn aurait fait dériver (au minimum) les rayons et les hauteurs de bouton.
+Un seul `Button`/`Badge` subsiste dans le projet — **celui de la landing**,
+conforme §3.1/§3.2, réutilisable côté plateforme.
+
+- **`button` et `badge` shadcn ne sont PAS installés.** Sur Windows, le système
+  de fichiers est insensible à la casse : `src/components/ui/button.tsx`
+  désigne *le même fichier* que `Button.tsx`. Vérifié en `--dry-run` : la CLI
+  proposait d'écraser `Button.tsx` et `Badge.tsx` (donc de détruire la landing).
+- `form` du registre dépend de `button` : installation réalisée en déplaçant
+  temporairement `Button.tsx`, puis en supprimant le `button.tsx` généré.
+  **Ne pas relancer `npx shadcn add form` sans précaution.**
+- `cn()` : **uniquement** `src/lib/utils.ts` (clsx + tailwind-merge), pas de doublon.
+- Toute ré-exécution de `shadcn add` sur un nom déjà thématisé **écrasera** les
+  réglages de ce §12 (la CLI propose l'overwrite).
+- `<Toaster />` (sonner) n'est **pas** monté : à faire dans le layout plateforme
+  (hors périmètre T04).
+
+### 12.1 Mapping variable shadcn → token DESIGN
+
+| Variable shadcn (`:root`) | Classe utilitaire | Token DESIGN | Hex |
+|---|---|---|---|
+| `--background` | `bg-background` | `--color-ink` | `#0A0C10` |
+| `--foreground` | `text-foreground` | `--color-fg` | `#FFFFFF` |
+| `--card` / `--card-foreground` | `bg-card` | `--color-surface` / `--color-fg` | `#14171F` / `#FFFFFF` |
+| `--popover` / `--popover-foreground` | `bg-popover` (panneaux, menus, toasts) | `--color-surface` / `--color-fg` | `#14171F` / `#FFFFFF` |
+| `--primary` / `--primary-foreground` | `bg-primary` | `--color-accent` (**sémaphore §2.3**) | `#3B82F6` / `#FFFFFF` |
+| `--secondary` / `--secondary-foreground` | `bg-secondary` | `--color-surface-2` / `--color-muted` | `#191D27` / `#94A3B8` |
+| `--muted` | *non mappé — collision 1* | `--color-surface-2` (sens **fond**) | `#191D27` |
+| `--muted-foreground` | `text-muted-foreground` | `--color-muted` | `#94A3B8` |
+| `--accent` | *non mappé — collision 2* | hover **neutre** (≠ `--color-accent`) | `#191D27` |
+| `--accent-foreground` | `text-accent-foreground` | `--color-fg` | `#FFFFFF` |
+| `--destructive` / `--destructive-foreground` | `text-destructive` | `--color-danger` | `#F87171` / `#FFFFFF` |
+| `--border` | `border-border` (défaut `*` en couche `base`) | `--color-line` | `#242936` |
+| `--input` | `border-input` | `--color-line` | `#242936` |
+| `--ring` | `ring-ring` | `--color-accent` (focus §2.3) | `#3B82F6` |
+| `--radius` | — | *non redéfinie* (classe `rounded` nue = 4px natif, utilisée par les mockups landing) | — |
+
+**Collision 1 — `muted`** : le landing utilise déjà `text-muted` = **#94A3B8**
+(texte). shadcn attend `--muted` comme **fond #191D27** ; une seule classe ne
+peut pas porter les deux sens. Le sens landing (le plus utilisé) est conservé,
+la clé `--color-muted` n'est **pas** redéfinie, et chaque `bg-muted` shadcn a
+été réécrit : `bg-surface-2` (tabs, table, avatar, sonner), `bg-line`
+(séparateurs select/dropdown).
+
+**Collision 2 — `accent`** : le landing utilise déjà `bg-accent`/`text-accent`
+= **#3B82F6** (CTA, onglet actif, point du pill, focus). shadcn utilise
+`bg-accent` pour le **survol neutre** des items de menu : mapper
+`--color-accent: var(--accent)` aurait mis le CTA et les onglets actifs en gris.
+La clé n'est pas redéfinie ; les `bg-accent` shadcn (dropdown, select, bouton de
+fermeture dialog) sont réécrits `bg-surface-2`. **Ne jamais inverser ces deux
+sens.** → ⚠ `--accent` shadcn = hover neutre, `--color-accent` DESIGN = bleu
+sémaphore.
+
+**Rayons** : l'échelle `--radius-sm/md/lg/xl` de Tailwind **n'est pas** modifiée
+(sinon les `rounded-*` de la landing bougeraient) — et la clé `--radius`
+(classe nue `rounded`) **non plus** (mockups de la landing l'utilisent).
+
+Échelle **native réelle de Tailwind v4** (`node_modules/tailwindcss/theme.css` :
+`--radius-sm 0.25rem` · `--radius-md 0.375rem` · `--radius-lg 0.5rem` ·
+`--radius-xl 0.75rem` · `--radius-2xl 1rem` · `--radius-3xl 1.5rem`) :
+
+| DESIGN §2.6 | Valeur | Classe Tailwind v4 |
+|---|---|---|
+| `radius-sm` | 8px | `rounded-lg` |
+| `radius-md` | 12px | `rounded-xl` |
+| `radius-lg` | 20px | `rounded-[20px]` (arbitraire — pas de natif) |
+| `radius-xl` | 24px | `rounded-3xl` |
+| `radius-full` | 9999px | `rounded-full` |
+
+> **Constat vérifié (revue T04)** : la landing est **déjà conforme** —
+> `Button.tsx` (`rounded-xl` = 12px = `radius-md` §3.1), champs `Contact.tsx`
+> (`rounded-xl` = 12px §3.6), `CaseStudies.tsx` (`rounded-xl` 12px /
+> `rounded-lg` 8px), `Badge.tsx` (`rounded-lg` = 8px = `radius-sm`), cartes
+> `rounded-[20px]` = 20px. **Aucune correction landing nécessaire.**
+> Les composants shadcn de la plateforme suivent ce mapping (§12.1/§12.3).
+
+### 12.2 Palette des 10 statuts de prospect (`prospect_status`)
+
+Format badge commun : `radius-sm` (8px → `rounded-lg`), **12px / 600**,
+padding `5px 10px` (§3.2), fond = **couleur @ 12 %** sur `#14171F`, bordure
+`1px` de la même couleur @ 25 % (règle du pill §3.2), texte plein.
+Ratios WCAG 2.1 calculés **sur le fond réel** (teinte 12 % posée sur `#14171F`),
+cible AA = 4,5:1.
+
+| # | `prospect_status` | Texte | Fond (12 %) | Bordure (25 %) | Ratio | Fond 12 % calculé |
+|---|---|---|---|---|---|---|
+| 1 | `nouveau` | `#94A3B8` | `rgba(148,163,184,.12)` | `rgba(148,163,184,.25)` | **5,8:1** ✅ | `#232831` |
+| 2 | `contacte` | `#94A3B8` | `rgba(148,163,184,.12)` | `rgba(148,163,184,.25)` | **5,8:1** ✅ | `#232831` |
+| 3 | `qualifie` | `#FFFFFF` | `rgba(59,130,246,.12)` | `rgba(59,130,246,.25)` | **15,5:1** ✅ | `#192439` |
+| 4 | `devis_envoye` | `#F59E0B` | `rgba(245,158,11,.12)` | `rgba(245,158,11,.25)` | **6,9:1** ✅ | `#2F271D` |
+| 5 | `signe` | `#34D399` | `rgba(52,211,153,.12)` | `rgba(52,211,153,.25)` | **7,4:1** ✅ | `#182E2E` |
+| 6 | `client_actif` | `#34D399` | `rgba(52,211,153,.12)` | `rgba(52,211,153,.25)` | **7,4:1** ✅ | `#182E2E` |
+| 7 | `en_livraison` | `#FFFFFF` | `rgba(59,130,246,.12)` | `rgba(59,130,246,.25)` | **15,5:1** ✅ | `#192439` |
+| 8 | `clos` | `#94A3B8` | `rgba(148,163,184,.12)` | `rgba(148,163,184,.25)` | **5,8:1** ✅ | `#232831` |
+| 9 | `perdu` | `#F87171` | `rgba(248,113,113,.12)` | `rgba(248,113,113,.25)` | **5,5:1** ✅ | `#2F2229` |
+| 10 | `disqualifie` | `#F87171` | `rgba(248,113,113,.12)` | `rgba(248,113,113,.25)` | **5,5:1** ✅ | `#2F2229` |
+
+Classes d'exemple (statut « signé ») :
+`inline-flex items-center rounded-md border border-[#34D399]/25 bg-[#34D399]/12 px-2.5 py-1 text-xs font-semibold text-[#34D399]`
+
+**Arbitrages par rapport à la suggestion d'origine (motivés) :**
+
+1. **`nouveau` et `clos` : `#64748B` → `#94A3B8`.** Le texte `faint` posé sur sa
+   propre teinte 12 % tombe à **3,3:1** (échec AA), et §2.2 interdit explicitement
+   `--color-faint` pour une information essentielle — un statut l'est.
+2. **`qualifie` et `en_livraison` : `#3B82F6` en texte → `#FFFFFF` sur fond bleu
+   12 %.** Deux raisons : (a) le bleu plein sur sa teinte 12 % mesure **4,2:1**
+   (échec AA) ; (b) §2.3 limite le bleu aux CTA/onglets actifs/points/focus — un
+   badge-texte bleu s'en approche. Le signal « état actif » est **conservé** par
+   le fond bleu (usage `--color-accent-faint` déjà autorisé §2.1) et le texte
+   `#FFFFFF` = `fg`, que §2.4 réserve aux **labels actifs**. Ratio 15,5:1.
+3. **`devis_envoye` : `#F59E0B`** conservé — teinte déjà autorisée par la palette
+   des mockups §2.1 (« courbe secondaire »), 6,9:1.
+4. **Doublons assumés** : `contacte`/`clos`/`nouveau` partagent le gris,
+   `signe`/`client_actif` le vert, `perdu`/`disqualifie` le rouge — la couleur
+   code la **famille** d'état, le libellé porte l'information exacte (registre §1).
+5. **`disqualifie`** : identique à `perdu` (rouge) — distinction portée par le
+   libellé ; ne pas créer une 11ᵉ teinte hors palette §2.1.
+
+### 12.3 Sidebar & tableau de la plateforme
+
+**Sidebar** (navigation gauche du dashboard) :
+
+| Élément | Fond | Texte | Remarque |
+|---|---|---|---|
+| Rail global | `#0A0C10` (`bg-ink`) | — | Bordure droite `1px #242936` |
+| Item inactif | transparent | `#94A3B8` | Hover : fond `#191D27` |
+| Item **actif** | `#191D27` (`bg-surface-2`) | `#FFFFFF` | + **point `4px #3B82F6`** à gauche (indicateur actif autorisé §2.3) |
+| Item au survol | `#191D27` | `#FFFFFF` | Transition `150ms` (§3.7) |
+| Groupe / label | transparent | `#64748B` `micro` | `12px/500 uppercase` |
+
+**Tableau** :
+
+| Élément | Spécification |
+|---|---|
+| Bordures (cellules, en-tête, dernière ligne) | `1px #242936` (`border-border`, défaut posé en couche `base`) |
+| En-tête | `micro` **12px/500 uppercase** `#94A3B8` (7,2:1 — AA ✅), `letter-spacing 0.02em`, padding `10px 12px` |
+| Ligne (repos) | fond transparent |
+| Ligne au **hover** | fond `#0E1117` (`bg-ink-2`) |
+| Ligne **sélectionnée** | fond `#191D27` (`bg-surface-2`) + **liseré gauche `2px #3B82F6`** (indicateur d'état actif §2.3) |
+| Texte courant | `14-15px`, `#94A3B8`, chiffres en `#FFFFFF` (§2.4) |
+
+> **Contraste en-tête — arbitré (revue T04)** : `#64748B` sur `#0A0C10` mesure
+> **4,11:1** → sous AA (4,5:1) pour du 12px, et §2.2 interdit `--color-faint`
+> pour l'information essentielle (une colonne de tableau l'est). Les en-têtes
+> utilisent donc **`#94A3B8` (7,2:1 ✅)** — ligne du tableau ci-dessus à jour.
+
+**Contrôles de non-régression attendus** : `tsc --noEmit` · `npm run lint` ·
+`npm run build` vides ; `/fr` et `/en` rendus identiques (à une exception près,
+documentée : les champs du formulaire Contact passent d'une bordure blanche
+implicite à `#242936`, conforme §3.6).
 
 ---
 

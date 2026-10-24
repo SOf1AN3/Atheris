@@ -1,4 +1,8 @@
 @import "tailwindcss";
+/* Utilitaires d'animation shadcn (animate-in/out, accordion) — requis par
+   dialog/sheet/select/dropdown/tooltip/accordion. N'altère aucune utilisation
+   du landing (aucune classe `delay-*`/`animate-*` hors `animate-pulse`). */
+@import "tw-animate-css";
 
 /* ------------------------------------------------------------------
    Design tokens — palette sombre unique (le site est dark-only).
@@ -51,5 +55,121 @@ body {
 @media (prefers-reduced-motion: no-preference) {
   html {
     scroll-behavior: smooth;
+  }
+}
+
+/* ------------------------------------------------------------------
+   Bloc 2 — Variables shadcn/ui (pile « plateforme » : dashboard,
+   formulaires internes, tableaux). Conforme DESIGN.md §2.1 / §2.6.
+   Ces variables COEXISTENT avec le bloc `@theme` landing ci-dessus :
+   aucune clé existante n'est redéfinie (voir les deux collisions de
+   nom commentées plus bas dans `@theme inline`).
+   ------------------------------------------------------------------ */
+:root {
+  /* Fonds & texte — miroir exact des tokens DESIGN. */
+  --background: #0A0C10; /* = --color-ink */
+  --foreground: #FFFFFF; /* = --color-fg */
+  --card: #14171F; /* = --color-surface */
+  --card-foreground: #FFFFFF;
+  --popover: #14171F; /* panneaux flottants = même surface que les cartes */
+  --popover-foreground: #FFFFFF;
+
+  /* `--primary` = accent sémaphore (§2.3) : CTA, état actif, focus. */
+  --primary: #3B82F6; /* = --color-accent */
+  --primary-foreground: #FFFFFF;
+  --secondary: #191D27; /* = --color-surface-2 */
+  --secondary-foreground: #94A3B8; /* = --color-muted */
+
+  /* Surfaces neutres shadcn (`muted`) : fonds de survol / squelettes. */
+  --muted: #191D27; /* = --color-surface-2 */
+  --muted-foreground: #94A3B8; /* = --color-muted */
+
+  /* ⚠ CONFUSION DE NOM À NE JAMAIS INVERSER :
+     `--accent` shadcn est le fond de SURVOL NEUTRE des items de menu
+     (hover/focus), PAS l'accent bleu du DESIGN. Le sémaphore du projet
+     reste porté par `--color-accent` / `--primary` = #3B82F6.
+     Conséquence : aucune carte `--color-accent: var(--accent)` n'est
+     créée dans `@theme inline` plus bas — sinon `bg-accent` du landing
+     (CTA, onglet actif, point du pill) passerait en gris. */
+  --accent: #191D27;
+  --accent-foreground: #FFFFFF;
+
+  --destructive: #F87171; /* = --color-danger */
+  --destructive-foreground: #FFFFFF;
+
+  --border: #242936; /* = --color-line */
+  --input: #242936;
+  --ring: #3B82F6; /* focus ring — sémaphore autorisé §2.3 */
+
+  /* Rayons plateforme — PAS de redéfinition d'échelle.
+     `--radius` (utilisé par la classe nue `rounded`) n'est PAS redéfini non
+     plus : la landing appelle `rounded` nu dans ses mockups (valeur native
+     4px) et le déplacerait visuellement.
+     Mapping utilitaire ↔ DESIGN (échelle native Tailwind v4) :
+     radius-sm 8px → `rounded-lg`, radius-md 12px → `rounded-xl`,
+     radius-lg 20px → `rounded-[20px]`, radius-xl 24px → `rounded-3xl`
+     (voir DESIGN.md §12.1). */
+}
+
+/* Mapping des variables shadcn vers la classe Tailwind utilitaire. */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* COLLISION 1 — `--color-muted` existe déjà dans le `@theme` landing
+     = #94A3B8 (couleur du TEXTE via `text-muted`). Les composants shadcn
+     l'attendent comme FOND (#191D27) : les deux sens sont incompatibles
+     sur une seule clé. On garde le sens landing (le plus utilisé) et les
+     `bg-muted` shadcn sont réécrits `bg-surface-2` (= #191D27) dans les
+     composants générés. `text-muted-foreground` reste disponible. */
+
+  /* COLLISION 2 — `--color-accent` existe déjà = #3B82F6 (sémaphore
+     §2.3). On ne la redéfinit pas : `bg-accent`/`text-accent` du landing
+     restent bleus, et les `bg-accent` shadcn (survol de menu) sont
+     réécrits `bg-surface-2` dans les composants générés. */
+}
+
+@layer base {
+  /* Défaut de bordure : sans cette règle Tailwind v4 part de
+     `currentColor` (blanc) — les composants shadcn (card, dialog,
+     accordéon, tableau) précisent une largeur sans couleur. Les classes
+     utilitaires (`border-line`, `border-transparent`…) restent
+     prioritaires (couche `utilities` > `base`).
+     Effet de bord landing : les champs du formulaire Contact, qui
+     n'avaient pas de couleur explicite, passent de blanc à #242936 —
+     conforme DESIGN §3.6. */
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* DESIGN §6.8 — mouvement réduit : les entrées CSS des panneaux shadcn
+   (tw-animate-css) sont neutralisées. Le sélecteur est doublé pour l'emporter
+   sur l'utilitaire `.animate-in` sans `!important` (interdit §9). */
+@media (prefers-reduced-motion: reduce) {
+  .animate-in.animate-in,
+  .animate-out.animate-out,
+  .animate-accordion-down.animate-accordion-down,
+  .animate-accordion-up.animate-accordion-up {
+    animation: none;
   }
 }
