@@ -27,7 +27,9 @@
 
 import type {
   commissionStatusEnum,
+  documentKindEnum,
   milestoneKeyEnum,
+  milestoneStatusEnum,
   prospectStatusEnum,
   quoteStatusEnum,
   roleEnum,
@@ -55,6 +57,12 @@ export type CommissionStatus = (typeof commissionStatusEnum.enumValues)[number];
 
 /** Les 5 jalons imposés, dérivés de l'enum `milestone_key` (T02). */
 export type MilestoneKey = (typeof milestoneKeyEnum.enumValues)[number];
+
+/** État d'un jalon, dérivé de l'enum `milestone_status` (T02). */
+export type MilestoneStatus = (typeof milestoneStatusEnum.enumValues)[number];
+
+/** Type de document PDF, dérivé de l'enum `document_kind` (T02). */
+export type DocumentKind = (typeof documentKindEnum.enumValues)[number];
 
 /**
  * Codes d'échec de connexion (T03). Union locale **en miroir** de
@@ -192,11 +200,28 @@ export interface ValidationContent {
   tooLong: (max: number) => string;
 }
 
+/** Page de connexion d'un lien d'invitation client (activation de compte). */
+export interface InvitationContent {
+  title: string;
+  submit: string;
+  successTitle: string;
+  successBody: string;
+  /** Jeton expiré (`expiresAt` dépassé). */
+  expired: string;
+  /** Lien déjà consommé (`usedAt` renseigné). */
+  used: string;
+  /** Jeton inconnu ou invalide (aucun détail). */
+  invalid: string;
+  /** Email déjà pourvu d'un compte (refus de takeover). */
+  duplicate: string;
+}
+
 /** Contenu authentification racine. */
 export interface AuthContent {
   login: LoginContent;
   signup: SignupContent;
   validation: ValidationContent;
+  invitation: InvitationContent;
 }
 
 // ---------------------------------------------------------------------------
@@ -209,6 +234,10 @@ export interface StatusesContent {
   quote: Record<QuoteStatus, string>;
   commission: Record<CommissionStatus, string>;
   milestone: Record<MilestoneKey, string>;
+  /** États d'un jalon (enum `milestone_status`, T02). */
+  milestoneStatus: Record<MilestoneStatus, string>;
+  /** Types de document PDF (enum `document_kind`, T02). */
+  document: Record<DocumentKind, string>;
   role: Record<Role, string>;
   userStatus: Record<UserStatus, string>;
 }
@@ -219,6 +248,8 @@ export interface StatusesContent {
 
 /** Contenu de la page pipeline. */
 export interface PipelineContent {
+  /** Libellé du CTA de création (« Nouveau prospect »). */
+  newProspect: string;
   columns: {
     name: string;
     company: string;
@@ -256,6 +287,8 @@ export interface ProspectContent {
   tabs: {
     identity: string;
     brief: string;
+    /** Texte placeholder de l'onglet Fiche avant construction du brief. */
+    briefPlaceholder: string;
     deals: string;
     history: string;
   };
@@ -267,6 +300,20 @@ export interface ProspectContent {
     /** Bénéficiaire du prospect (`prospects.sourceUserId`). */
     owner: string;
     createdAt: string;
+    /** Dernière modification de la fiche (`prospects.updatedAt`). */
+    updatedAt: string;
+  };
+  /** États de la liste / pipeline. */
+  list: {
+    /** Description de l'état vide de la liste prospect. */
+    empty: string;
+  };
+  /** Libellés des champs du formulaire de création (FE-7). */
+  fields: {
+    /** Nom complet ou raison sociale. */
+    fullName: string;
+    /** Note libre jointe à la création. */
+    note: string;
   };
   actions: {
     changeStatus: string;
@@ -276,6 +323,39 @@ export interface ProspectContent {
     confirmChange: string;
     /** Refus d'action si le rôle connecté n'a pas les droits. */
     lockedByRole: string;
+    /** Toast de succès après un changement de statut — `{status}` = libellé du nouveau statut. */
+    statusChanged: string;
+    /** Toast « rechargé » quand l'état est obsolète (conflit de version). */
+    conflict: string;
+  };
+  /** Onglet Devis & paiements (FE-8). */
+  deals: {
+    /** CTA de création d'un devis (CEO). */
+    createQuote: string;
+    /** Champ référence externe optionnelle du devis. */
+    externalRef: string;
+    /** Champ PDF joint au devis. */
+    pdf: string;
+    /** Erreur sous le champ montant. */
+    amountInvalid: string;
+    /** Erreur sous le champ PDF (5 Mo, `%PDF`). */
+    pdfInvalid: string;
+    /** CTA d'ajout d'une échéance de paiement. */
+    addPayment: string;
+    /** Champ libellé d'une échéance (« Acompte »…). */
+    paymentLabel: string;
+    /** Champ date d'échéance. */
+    paymentDue: string;
+    /** Bouton d'encaissement d'une échéance. */
+    markPaid: string;
+    /** Bouton de transition `draft→sent` d'un devis. */
+    markSent: string;
+    /** État vide : aucun devis rattaché au prospect. */
+    empty: string;
+    /** Badge d'échéance encaissée. */
+    paid: string;
+    /** Badge d'échéance à venir. */
+    upcoming: string;
   };
 }
 
@@ -292,6 +372,16 @@ export interface BriefStep {
 /** Contenu de l'assistant fiche projet. */
 export interface BriefContent {
   title: string;
+  /** Toast de confirmation après enregistrement d'un bloc. */
+  savedToast: string;
+  /** Bandeau « lecture seule » (rôle sans droit d'écriture). */
+  readOnlyNotice: string;
+  /** Bouton « Précédent » (recule d'une étape dans l'assistant). */
+  previous: string;
+  /** Lien accessible de retour vers la fiche prospect. */
+  backToProspect: string;
+  /** Libellé du bouton pendant l'enregistrement. */
+  saving: string;
   steps: Record<BriefBlockKey, BriefStep>;
   gauge: {
     /** ex. `"{done}/{total}"` → « 3/5 » — `{done}`/`{total}` remplacés à l'affichage. */
@@ -335,7 +425,36 @@ export interface BriefContent {
 
 /** Contenu des dashboards (titres de blocs + files d'action). */
 export interface DashboardContent {
+  /** Titre de page (`<h1>`) du tableau de bord. */
+  title: string;
   kpi: string;
+  /** Libellés des indicateurs clés (KPI). */
+  kpis: {
+    /** CA encaissé. */
+    collected: string;
+    /** Valeur du pipeline. */
+    pipeline: string;
+    /** Taux de conversion. */
+    conversion: string;
+    /** Sous-ligne pipeline — `{count}` = devis en attente. */
+    quotesSent: string;
+  };
+  /** Agrégats de la vue manager. */
+  totals: {
+    /** Sous-ligne totaux — `{count}` = nombre de versements. */
+    paidCount: string;
+  };
+  /** Colonnes du classement vendeurs (manager). */
+  ranking: {
+    /** Rang d'affichage (1 = tête). */
+    rank: string;
+    /** Prospects ajoutés. */
+    added: string;
+    /** Devis rattachés. */
+    deals: string;
+    /** Taux de conversion. */
+    conversion: string;
+  };
   actionQueues: string;
   recentActivity: string;
   perEmployee: {
@@ -345,6 +464,22 @@ export interface DashboardContent {
     funnel: string;
     activity: string;
     profitability: string;
+    /** Prospects ajoutés. */
+    added: string;
+    /** Prospects qualifiés. */
+    qualified: string;
+    /** Deals signés. */
+    signed: string;
+    /** Taux de conversion. */
+    conversion: string;
+    /** Changements de statut. */
+    changes: string;
+    /** CA généré. */
+    generated: string;
+    /** Coût des commissions. */
+    cost: string;
+    /** Marge. */
+    margin: string;
   };
   /** Libellés des files d'action (chaque file pointe vers sa page). */
   queues: {
@@ -352,6 +487,8 @@ export interface DashboardContent {
     quotesNoAnswer: string;
     commissionsDue: string;
     remindersToday: string;
+    /** Fiches projet incomplètes (dashboard commercial). */
+    incompleteBriefs: string;
   };
 }
 
@@ -381,6 +518,20 @@ export interface CommissionsContent {
   noClawbackWarning: string;
   /** Titre de l'espace gains du vendeur. */
   myEarnings: string;
+  /** Colonne « Réf deal » (uuid court du devis). */
+  dealRef: string;
+  /** Colonne « Bénéficiaire ». */
+  beneficiary: string;
+  /** Colonne « Deal » (nom du prospect + montant). */
+  deal: string;
+  /** Compteur de sélection — `{count}` = lignes sélectionnées. */
+  selectedCount: string;
+  /** Toast après versement groupé ou unitaire. */
+  paidToast: string;
+  /** Rappel affiché avant le 1ᵉʳ encaissement (déclencheur des commissions). */
+  generatesWarning: string;
+  /** Toast explicite après génération — `{count}` = commissions générées. */
+  generatedCount: string;
   tier: {
     label: string;
     current: string;
@@ -414,6 +565,8 @@ export interface ClientContent {
   remaining: string;
   emptyDocuments: string;
   emptyMessages: string;
+  /** État vide : aucun projet actif rattaché au compte client. */
+  emptyProject: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -431,6 +584,62 @@ export interface ApplicationsContent {
   empty: string;
   /** Libellé de la colonne statut. */
   statusLabel: string;
+  /** Libellé de la colonne « Rôle ». */
+  role: string;
+  /** Aide au motif de refus (minimum de caractères). */
+  rejectReasonHint: string;
+  /** Refus d'action (rôle sans droit d'écriture). */
+  forbidden: string;
+}
+
+// ---------------------------------------------------------------------------
+// Journal d'audit (activités).
+// ---------------------------------------------------------------------------
+
+/**
+ * Phrases du journal d'audit, indexées sur les `action` écrites par les
+ * Server Actions (`src/actions/*`). Chaque phrase est un gabarin remplacé à
+ * l'affichage via `String.replace` — `{actor}` = nom de l'auteur, `{from}` /
+ * `{to}` = libellés de statut localisés. `unknown` sert de repli pour toute
+ * action inconnue.
+ */
+export interface ActivitiesContent {
+  /** `{actor}`, `{from}`, `{to}` — transition de statut d'un prospect. */
+  statusChanged: string;
+  /** `{actor}` — création d'un prospect depuis le pipeline. */
+  prospectCreated: string;
+  /** `{actor}` — changement de statut d'un devis. */
+  quoteStatusChanged: string;
+  /** `{actor}` — encaissement d'une échéance. */
+  paymentPaid: string;
+  /** `{actor}` — génération des commissions d'un devis. */
+  commissionsGenerated: string;
+  /** `{actor}` — versement de commissions. */
+  commissionsPaid: string;
+  /** `{actor}` — mise à jour de la fiche projet. */
+  briefUpdated: string;
+  /** `{actor}` — validation d'un jalon. */
+  milestoneValidated: string;
+  /** `{actor}` — clôture d'un projet client. */
+  projectClosed: string;
+  /** `{actor}` — émission d'une invitation client. */
+  invitationCreated: string;
+  /** Activation d'un compte client via invitation (sans auteur). */
+  invitationActivated: string;
+  /** `{actor}` — décision sur une candidature. */
+  applicationDecided: string;
+  /** `{actor}` — mise à jour du profil. */
+  profileUpdated: string;
+  /** `{actor}` — dépôt d'un document. */
+  documentUploaded: string;
+  /** `{actor}` — suppression d'un document. */
+  documentDeleted: string;
+  /** Prospect créé depuis le formulaire de contact (visiteur anonyme). */
+  contactReceived: string;
+  /** Chargement du jeu de données de démonstration. */
+  seedDemo: string;
+  /** Repli pour toute action inconnue. */
+  unknown: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -477,6 +686,10 @@ export interface PlatformSeoContent {
   login: PlatformSeoMeta;
   signup: PlatformSeoMeta;
   dashboard: PlatformSeoMeta;
+  /** Page publique d'activation d'une invitation client. */
+  invitation: PlatformSeoMeta;
+  /** Page projet du portail client. */
+  clientPortal: PlatformSeoMeta;
 }
 
 // ---------------------------------------------------------------------------
@@ -496,6 +709,7 @@ export interface PlatformContent {
   commissions: CommissionsContent;
   client: ClientContent;
   applications: ApplicationsContent;
+  activities: ActivitiesContent;
   profile: ProfileContent;
   footer: PlatformFooterContent;
   seo: PlatformSeoContent;

@@ -111,6 +111,16 @@ export const en = {
       tooShort: (min: number) => `Enter at least ${min} characters.`,
       tooLong: (max: number) => `Enter at most ${max} characters.`,
     },
+    invitation: {
+      title: "Activate your workspace",
+      submit: "Activate my account",
+      successTitle: "Account activated",
+      successBody: "Your client portal is ready. Sign in to follow your project.",
+      expired: "This invitation link has expired. Request a new one.",
+      used: "This invitation link has already been used.",
+      invalid: "This invitation link is invalid.",
+      duplicate: "An account already exists with this email address.",
+    },
   },
 
   statuses: {
@@ -143,6 +153,17 @@ export const en = {
       recette: "Acceptance",
       mise_en_ligne: "Go-live",
     },
+    milestoneStatus: {
+      en_attente: "Pending",
+      en_cours: "In progress",
+      valide: "Validated",
+    },
+    document: {
+      devis: "Quote",
+      contrat: "Contract",
+      facture: "Invoice",
+      livrable: "Deliverable",
+    },
     role: {
       ceo: "CEO",
       manager: "Manager",
@@ -159,6 +180,7 @@ export const en = {
   },
 
   pipeline: {
+    newProspect: "New prospect",
     columns: {
       name: "Name",
       company: "Company",
@@ -185,6 +207,7 @@ export const en = {
     tabs: {
       identity: "Identity",
       brief: "Brief",
+      briefPlaceholder: "Complete the brief from its dedicated assistant to prepare a quote.",
       deals: "Deals",
       history: "History",
     },
@@ -195,6 +218,14 @@ export const en = {
       source: "Source",
       owner: "Owner",
       createdAt: "Added on",
+      updatedAt: "Last updated",
+    },
+    list: {
+      empty: "No prospects match your search. Adjust the filters or add a prospect.",
+    },
+    fields: {
+      fullName: "Name / company",
+      note: "Note",
     },
     actions: {
       changeStatus: "Change status",
@@ -202,11 +233,33 @@ export const en = {
       reasonLabel: "Reason",
       confirmChange: "Confirm this status change?",
       lockedByRole: "Your role does not allow changing this prospect’s status.",
+      statusChanged: "Status updated: {status}.",
+      conflict: "The status has changed, the record was reloaded. Check and try again.",
+    },
+    deals: {
+      createQuote: "Create quote",
+      externalRef: "External reference",
+      pdf: "PDF",
+      amountInvalid: "Invalid amount: above 0, at most 10,000,000 USD, 2 decimals maximum.",
+      pdfInvalid: "Invalid file: a PDF of at most 5 MB.",
+      addPayment: "Add due date",
+      paymentLabel: "Label",
+      paymentDue: "Due date",
+      markPaid: "Mark as paid",
+      markSent: "Mark as sent",
+      empty: "No quotes yet.",
+      paid: "Paid",
+      upcoming: "Upcoming",
     },
   },
 
   brief: {
     title: "Project brief assistant",
+    savedToast: "Change saved.",
+    readOnlyNotice: "Read-only: your role cannot modify this brief.",
+    previous: "Previous",
+    backToProspect: "Back to prospect",
+    saving: "Saving…",
     steps: {
       context: {
         label: "Context",
@@ -263,7 +316,23 @@ export const en = {
   },
 
   dashboard: {
+    title: "Dashboard",
     kpi: "Key metrics",
+    kpis: {
+      collected: "Collected revenue",
+      pipeline: "Pipeline",
+      conversion: "Conversion rate",
+      quotesSent: "{count} quotes awaiting",
+    },
+    totals: {
+      paidCount: "{count} payments",
+    },
+    ranking: {
+      rank: "Rank",
+      added: "Added",
+      deals: "Deals",
+      conversion: "Conversion",
+    },
     actionQueues: "Action queues",
     recentActivity: "Recent activity",
     perEmployee: {
@@ -271,12 +340,21 @@ export const en = {
       funnel: "Funnel",
       activity: "Activity",
       profitability: "Profitability",
+      added: "Added",
+      qualified: "Qualified",
+      signed: "Signed",
+      conversion: "Conversion",
+      changes: "Status changes",
+      generated: "Revenue generated",
+      cost: "Commissions cost",
+      margin: "Margin",
     },
     queues: {
       pendingApplications: "Pending applications",
       quotesNoAnswer: "Quotes awaiting reply",
       commissionsDue: "Commissions due",
       remindersToday: "Reminders due today",
+      incompleteBriefs: "Incomplete briefs",
     },
   },
 
@@ -296,6 +374,13 @@ export const en = {
     paid: "Paid",
     noClawbackWarning: "A paid commission is never clawed back.",
     myEarnings: "My earnings",
+    dealRef: "Deal ref",
+    beneficiary: "Beneficiary",
+    deal: "Deal",
+    selectedCount: "{count} selected",
+    paidToast: "Payment recorded.",
+    generatesWarning: "This action will generate the commissions for this deal.",
+    generatedCount: "{count} commission(s) generated",
     tier: {
       label: "Tier",
       current: "Current tier",
@@ -320,6 +405,7 @@ export const en = {
     remaining: "Remaining balance",
     emptyDocuments: "No documents available yet.",
     emptyMessages: "No messages yet.",
+    emptyProject: "No active project yet.",
   },
 
   applications: {
@@ -330,6 +416,30 @@ export const en = {
     approveConfirm: "Approve this application and activate the account?",
     empty: "No pending applications.",
     statusLabel: "Status",
+    role: "Role",
+    rejectReasonHint: "Reason required, 3 characters minimum.",
+    forbidden: "Not allowed.",
+  },
+
+  activities: {
+    statusChanged: "{actor} changed the status from {from} to {to}",
+    prospectCreated: "{actor} added a prospect to the pipeline",
+    quoteStatusChanged: "{actor} updated a quote status",
+    paymentPaid: "{actor} recorded a payment",
+    commissionsGenerated: "{actor} generated commissions",
+    commissionsPaid: "{actor} paid commissions",
+    briefUpdated: "{actor} updated the project brief",
+    milestoneValidated: "{actor} validated a milestone",
+    projectClosed: "{actor} closed a project",
+    invitationCreated: "{actor} issued a client invitation",
+    invitationActivated: "A client account was activated via invitation",
+    applicationDecided: "{actor} reviewed an application",
+    profileUpdated: "{actor} updated their profile",
+    documentUploaded: "{actor} uploaded a document",
+    documentDeleted: "{actor} deleted a document",
+    contactReceived: "A prospect was created from the contact form",
+    seedDemo: "Demo dataset loaded",
+    unknown: "Unrecognized activity",
   },
 
   profile: {
@@ -368,6 +478,14 @@ export const en = {
       title: "Workspace | ATHERIS LABS",
       description:
         "Run your ATHERIS LABS activity: sales pipeline, quotes, and commissions.",
+    },
+    invitation: {
+      title: "Activate | ATHERIS LABS",
+      description: "Activate your ATHERIS LABS client portal and follow your project online.",
+    },
+    clientPortal: {
+      title: "My project | ATHERIS LABS",
+      description: "Track your ATHERIS LABS project: milestones, documents, and invoices.",
     },
   },
 } satisfies PlatformContent;

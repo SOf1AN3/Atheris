@@ -117,6 +117,16 @@ export const fr: PlatformContent = {
       tooShort: (min: number) => `Saisissez au moins ${min} caractères.`,
       tooLong: (max: number) => `Saisissez au maximum ${max} caractères.`,
     },
+    invitation: {
+      title: "Activation de votre espace",
+      submit: "Activer mon compte",
+      successTitle: "Compte activé",
+      successBody: "Votre espace client est prêt. Connectez-vous pour suivre votre projet.",
+      expired: "Ce lien d’invitation a expiré. Demandez un nouveau lien.",
+      used: "Ce lien d’invitation a déjà été utilisé.",
+      invalid: "Ce lien d’invitation est invalide.",
+      duplicate: "Un compte est déjà enregistré avec cette adresse email.",
+    },
   },
 
   statuses: {
@@ -149,6 +159,17 @@ export const fr: PlatformContent = {
       recette: "Recette",
       mise_en_ligne: "Mise en ligne",
     },
+    milestoneStatus: {
+      en_attente: "En attente",
+      en_cours: "En cours",
+      valide: "Validé",
+    },
+    document: {
+      devis: "Devis",
+      contrat: "Contrat",
+      facture: "Facture",
+      livrable: "Livrable",
+    },
     role: {
       ceo: "CEO",
       manager: "Manager",
@@ -165,6 +186,7 @@ export const fr: PlatformContent = {
   },
 
   pipeline: {
+    newProspect: "Nouveau prospect",
     columns: {
       name: "Nom",
       company: "Entreprise",
@@ -191,6 +213,7 @@ export const fr: PlatformContent = {
     tabs: {
       identity: "Identité",
       brief: "Fiche projet",
+      briefPlaceholder: "Complétez la fiche depuis l’assistant dédié pour préparer le devis.",
       deals: "Devis",
       history: "Historique",
     },
@@ -201,18 +224,48 @@ export const fr: PlatformContent = {
       source: "Source",
       owner: "Responsable",
       createdAt: "Ajouté le",
+      updatedAt: "Dernière mise à jour",
+    },
+    list: {
+      empty: "Aucun prospect ne correspond à votre recherche. Ajustez les filtres ou ajoutez un prospect.",
+    },
+    fields: {
+      fullName: "Nom / entreprise",
+      note: "Note",
     },
     actions: {
       changeStatus: "Changer de statut",
       reasonRequired: "Un motif est requis pour ce changement de statut.",
       reasonLabel: "Motif",
-      confirmChange: "Confirmer ce changement de statut ?",
+      confirmChange: "Confirmer ce changement de statut ?",
       lockedByRole: "Votre rôle ne permet pas de modifier le statut de ce prospect.",
+      statusChanged: "Statut mis à jour : {status}.",
+      conflict: "Le statut a évolué, la fiche a été rechargée. Vérifiez et réessayez.",
+    },
+    deals: {
+      createQuote: "Créer un devis",
+      externalRef: "Référence externe",
+      pdf: "PDF",
+      amountInvalid: "Montant invalide : supérieur à 0, 10 000 000 USD maximum, 2 décimales au plus.",
+      pdfInvalid: "Fichier invalide : un PDF de 5 Mo maximum.",
+      addPayment: "Ajouter une échéance",
+      paymentLabel: "Libellé",
+      paymentDue: "Échéance",
+      markPaid: "Marquer payée",
+      markSent: "Marquer envoyé",
+      empty: "Aucun devis pour l’instant.",
+      paid: "Payée",
+      upcoming: "À venir",
     },
   },
 
   brief: {
     title: "Assistant fiche projet",
+    savedToast: "Modification enregistrée.",
+    readOnlyNotice: "Consultation seule : votre rôle ne permet pas de modifier cette fiche.",
+    previous: "Précédent",
+    backToProspect: "Retour au prospect",
+    saving: "Enregistrement…",
     steps: {
       context: {
         label: "Contexte",
@@ -269,7 +322,23 @@ export const fr: PlatformContent = {
   },
 
   dashboard: {
+    title: "Tableau de bord",
     kpi: "Indicateurs clés",
+    kpis: {
+      collected: "CA encaissé",
+      pipeline: "Pipeline",
+      conversion: "Taux de conversion",
+      quotesSent: "{count} devis en attente",
+    },
+    totals: {
+      paidCount: "{count} versement(s)",
+    },
+    ranking: {
+      rank: "Rang",
+      added: "Ajoutés",
+      deals: "Deals",
+      conversion: "Conversion",
+    },
     actionQueues: "Files d’action",
     recentActivity: "Activité récente",
     perEmployee: {
@@ -277,12 +346,21 @@ export const fr: PlatformContent = {
       funnel: "Funnel",
       activity: "Activité",
       profitability: "Rentabilité",
+      added: "Ajoutés",
+      qualified: "Qualifiés",
+      signed: "Signés",
+      conversion: "Conversion",
+      changes: "Changements",
+      generated: "CA généré",
+      cost: "Coût commissions",
+      margin: "Marge",
     },
     queues: {
       pendingApplications: "Candidatures en attente",
       quotesNoAnswer: "Devis sans réponse",
       commissionsDue: "Commissions à verser",
       remindersToday: "Relances du jour",
+      incompleteBriefs: "Fiches incomplètes",
     },
   },
 
@@ -302,6 +380,13 @@ export const fr: PlatformContent = {
     paid: "Versée",
     noClawbackWarning: "Une commission versée n’est jamais récupérée.",
     myEarnings: "Mes gains",
+    dealRef: "Réf deal",
+    beneficiary: "Bénéficiaire",
+    deal: "Deal",
+    selectedCount: "{count} sélectionné(s)",
+    paidToast: "Versement enregistré.",
+    generatesWarning: "Cette action générera les commissions de ce deal.",
+    generatedCount: "{count} commission(s) générée(s)",
     tier: {
       label: "Palier",
       current: "Palier actuel",
@@ -326,6 +411,7 @@ export const fr: PlatformContent = {
     remaining: "Reste à payer",
     emptyDocuments: "Aucun document disponible pour le moment.",
     emptyMessages: "Aucun message pour le moment.",
+    emptyProject: "Aucun projet actif pour le moment.",
   },
 
   applications: {
@@ -336,6 +422,30 @@ export const fr: PlatformContent = {
     approveConfirm: "Approuver cette candidature et activer le compte ?",
     empty: "Aucune candidature en attente.",
     statusLabel: "Statut",
+    role: "Rôle",
+    rejectReasonHint: "Motif obligatoire, 3 caractères minimum.",
+    forbidden: "Action non autorisée.",
+  },
+
+  activities: {
+    statusChanged: "{actor} a passé le statut de {from} à {to}",
+    prospectCreated: "{actor} a ajouté un prospect au pipeline",
+    quoteStatusChanged: "{actor} a modifié le statut d’un devis",
+    paymentPaid: "{actor} a encaissé un paiement",
+    commissionsGenerated: "{actor} a généré des commissions",
+    commissionsPaid: "{actor} a versé des commissions",
+    briefUpdated: "{actor} a mis à jour la fiche projet",
+    milestoneValidated: "{actor} a validé un jalon",
+    projectClosed: "{actor} a clos un projet",
+    invitationCreated: "{actor} a émis une invitation client",
+    invitationActivated: "Un compte client a été activé via invitation",
+    applicationDecided: "{actor} a examiné une candidature",
+    profileUpdated: "{actor} a mis à jour son profil",
+    documentUploaded: "{actor} a déposé un document",
+    documentDeleted: "{actor} a supprimé un document",
+    contactReceived: "Un prospect a été créé depuis le formulaire de contact",
+    seedDemo: "Jeu de données de démonstration chargé",
+    unknown: "Activité non reconnue",
   },
 
   profile: {
@@ -373,7 +483,17 @@ export const fr: PlatformContent = {
     dashboard: {
       title: "Espace | ATHERIS LABS",
       description:
-        "Pilotage de l’activité ATHERIS LABS : pipeline commercial, devis et commissions.",
+        "Pilotage de l’activité ATHERIS LABS : pipeline commercial, devis et commissions.",
+    },
+    invitation: {
+      title: "Activation | ATHERIS LABS",
+      description:
+        "Activez votre espace client ATHERIS LABS et suivez votre projet en ligne.",
+    },
+    clientPortal: {
+      title: "Mon projet | ATHERIS LABS",
+      description:
+        "Suivez l’avancement de votre projet ATHERIS LABS : jalons, documents et factures.",
     },
   },
 };
