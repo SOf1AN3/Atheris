@@ -2,7 +2,7 @@
 
 /**
  * Atheris — Server Action commissions : GÉNÉRATION des lignes de commission
- * sur un devis signé (T23 · BK-3 · structure.md §3.3).
+ * sur un devis signé (T23 · BK-3 · structure.md §3.3) + VERSEMENT (T24 · BK-4).
  *
  * CONTRAT (figé) :
  * - `generateCommissionsForQuote(quoteId, actor)` →
@@ -12,10 +12,11 @@
  * - codes **bruts uniquement** (dictionnaire i18n verrouillé : jamais de clé ni
  *   de message dans ce fichier) — traduction côté client (T09).
  *
- * PÉRIMÈTRE : **GÉNÉRATION SEULEMENT**. Le VERSEMENT (`paidAt`, `paidBy`,
- * `status → paid`) viendra en BK-4 sur ce même fichier — ne pas paralléliser.
+ * PÉRIMÈTRE : GÉNÉRATION (figée T23/BK-3) **+ VERSEMENT** —
+ * `markCommissionsPaid` (T24 · BK-4 : `paidAt`, `paidBy`, `status → paid`).
  * **Aucune écriture sur `prospects.status` ici** : la bascule vers
- * `client_actif` est portée par `markPaymentPaid` (BK-4, hors périmètre).
+ * `client_actif` est portée par `markPaymentPaid`
+ * (`src/actions/payments.ts`, BK-4).
  *
  * DÉCLENCHEUR MÉTIER : l'acompte **payé** appelle cette action (flux de
  * paiement) — elle n'est jamais exposée à une page publique. Le contrôle
@@ -37,7 +38,7 @@
  * jamais au top-level → `next build` ne lit jamais `DATABASE_URL`.
  */
 
-import { and, asc, eq, ne } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, ne, sql } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import { z } from "zod";
 
@@ -56,6 +57,11 @@ const actorSchema = z.object({
   role: z.enum(roleEnum.enumValues),
 });
 
+/** Versement : 1 à 100 uuid par appel — le dédoublonnage suit le parse. */
+const markPaidInputSchema = z.object({
+  ids: z.array(z.uuid()).min(1).max(100),
+});
+
 // ---------------------------------------------------------------------------
 // Types publics (contrat) — uniquement des `export type` (effacés à la
 // compilation : seules les fonctions async sont exportées à l'exécution,
@@ -69,6 +75,14 @@ export type GenerateCommissionsActor = { id: string; role: Role };
 export type GenerateCommissionsResult =
   | { ok: true; created: number }
   | { ok: false; code: "forbidden" | "not_found" | "not_signed" | "already_generated" | "invalid" };
+
+/** Entrée de `markCommissionsPaid` (dérivée du schéma Zod). */
+export type MarkCommissionsPaidInput = z.input<typeof markPaidInputSchema>;
+
+/** Contrat de `markCommissionsPaid` (union discriminée par `ok`). */
+export type MarkCommissionsPaidResult =
+  | { ok: true; paidCount: number }
+  | { ok: false; code: "forbidden" | "not_found" | "invalid" };
 
 // ---------------------------------------------------------------------------
 // Helpers.
@@ -318,6 +332,134 @@ export async function generateCommissionsForQuote(
     // Erreur d'infra (DB, réseau…) : journalisée puis propagée → 500,
     // jamais transformée en code métier (pas de fuite de détail interne).
     console.error("[commissions] échec de génération des commissions", error);
+    throw error;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// markCommissionsPaid — VERSEMENT des lignes « due » (T24 · BK-4).
+// ---------------------------------------------------------------------------
+
+/**
+ * Marque des lignes de commission comme **versées** (`status → paid`,
+ * `paidAt = now()`, `paidBy = actor.id`) — rôle `ceo` uniquement.
+ *
+ * Étapes :
+ * 1. Validation Zod : `ids` = 1 à 100 uuid ; **dédoublonnage** après le
+ *    parse (`[...new Set(ids)]`) — un double-clic renvoyant les mêmes ids ne
+ *    déclenche jamais deux fois le même update. Tableau > 100 ou malformé →
+ *    `invalid`.
+ * 2. SELECT `WHERE id IN (…) AND status = 'due'` :
+ *    - **aucune des ids en `due`** → `not_found` (sans indiquer lesquelles :
+ *      un id déjà `paid` n'est pas distinguable d'un id inconnu) ;
+ *    - lignes déjà `paid` : **exclues silencieusement** (absentes du résultat
+ *      `due`) — `paidCount` compte réellement les lignes mises à jour ;
+ *    - lignes `due` à `beneficiaryId NULL` : présentes au SELECT (elles
+ *      existent → pas de `not_found`) mais **exclues silencieusement** du
+ *      versement : un montant ne peut être versé sans bénéficiaire —
+ *      l'affectation préalable (`beneficiaryId` renseigné) est requise,
+ *      fonction de future tâche. Si AUCUNE ligne n'est payable →
+ *      `{ ok: true, paidCount: 0 }`.
+ * 3. `totalCents` (audit) = somme des montants des lignes **payables** du
+ *    SELECT, **avant** update (centimes USD).
+ * 4. UPDATE `SET status='paid', paidAt=now(), paidBy=$actor WHERE id IN (…)
+ *    AND status='due' AND beneficiaryId IS NOT NULL` — requêtes
+ *    **paramétrées** (zéro injection) + verrou de ligne : une ligne `due`
+ *    passée `paid` entre le SELECT et l'UPDATE est simplement non retournée
+ *    → `paidCount` = lignes réellement mises à jour.
+ * 5. Audit `commissions.paid` (`meta: { ids, count, actorId, totalCents }`,
+ *    `ids` = lignes réellement versées) — seulement si `paidCount > 0`,
+ *    **non fatale** (convention `status.ts`) : le versement est déjà appliqué,
+ *    une ligne d'audit manquante ne doit pas faire échouer l'opération.
+ *
+ * @param input `ids` : uuid des lignes à verser (validés par Zod).
+ * @param actor `{ id, role }` issu de la session serveur (revalidé par Zod).
+ * @returns `{ ok: true, paidCount }` ; sinon `invalid`, `forbidden` ou
+ *   `not_found` (aucune des ids n'était en attente de versement).
+ * @throws Erreur d'infra (DB indisponible…) — journalisée puis propagée →
+ *   500, jamais masquée derrière un code métier.
+ */
+export async function markCommissionsPaid(
+  input: MarkCommissionsPaidInput,
+  actor: { id: string; role: Role },
+): Promise<MarkCommissionsPaidResult> {
+  // 1. Validation Zod — avant tout accès DB.
+  const parsed = markPaidInputSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, code: "invalid" };
+
+  const parsedActor = actorSchema.safeParse({ id: actor?.id, role: actor?.role });
+  if (!parsedActor.success) return { ok: false, code: "invalid" };
+  // Droit d'écriture : seul le CEO verse des commissions.
+  if (parsedActor.data.role !== "ceo") return { ok: false, code: "forbidden" };
+
+  const { id: actorId } = parsedActor.data;
+  // Dédoublonnage : le même id envoyé deux fois ne verse qu'une fois.
+  const ids = [...new Set(parsed.data.ids)];
+  const db = getDb();
+
+  try {
+    // 2. Lignes en attente (`due`) parmi les ids fournis.
+    const dueRows = await db
+      .select({
+        id: commissions.id,
+        amountCents: commissions.amountCents,
+        beneficiaryId: commissions.beneficiaryId,
+      })
+      .from(commissions)
+      .where(and(inArray(commissions.id, ids), eq(commissions.status, "due")));
+    if (dueRows.length === 0) return { ok: false, code: "not_found" };
+
+    // Lignes PAYABLES : `beneficiaryId` renseigné (les lignes orphelines sont
+    // exclues silencieusement — cf. doc d'étape 2).
+    const payableRows = dueRows.filter((row) => row.beneficiaryId !== null);
+    if (payableRows.length === 0) return { ok: true, paidCount: 0 };
+
+    // 3. Total avant update (audit) — somme des lignes payables du SELECT.
+    const totalCents = payableRows.reduce((sum, row) => sum + row.amountCents, 0);
+    const payableIds = payableRows.map((row) => row.id);
+
+    // 4. UPDATE conditionnel (verrou de ligne) — `paidCount` = retours.
+    const updated = await db
+      .update(commissions)
+      .set({ status: "paid", paidAt: sql`now()`, paidBy: actorId })
+      .where(
+        and(
+          inArray(commissions.id, payableIds),
+          eq(commissions.status, "due"),
+          isNotNull(commissions.beneficiaryId),
+        ),
+      )
+      .returning({ id: commissions.id });
+    const paidCount = updated.length;
+
+    // 5. Audit — seulement si quelque chose a réellement été versé.
+    if (paidCount > 0) {
+      try {
+        await db.insert(activities).values({
+          actorId,
+          action: "commissions.paid",
+          entityType: "commission",
+          entityId: updated[0].id,
+          meta: {
+            ids: updated.map((row) => row.id),
+            count: paidCount,
+            actorId,
+            totalCents,
+          },
+        });
+      } catch (error) {
+        console.error(
+          "[commissions] activité `commissions.paid` non journalisée (versement appliqué)",
+          error,
+        );
+      }
+    }
+
+    return { ok: true, paidCount };
+  } catch (error) {
+    // Erreur d'infra (DB, réseau…) : journalisée puis propagée → 500,
+    // jamais transformée en code métier (pas de fuite de détail interne).
+    console.error("[commissions] échec du versement des commissions", error);
     throw error;
   }
 }
