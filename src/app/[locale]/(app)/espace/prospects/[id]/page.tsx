@@ -7,6 +7,7 @@ import {
   DealsTab,
   type DealPaymentView,
   type DealQuoteView,
+  type DealsCeoLabels,
 } from "@/components/app/prospect/DealsTab";
 import {
   HistoryTab,
@@ -18,6 +19,7 @@ import {
   type StatusTransitionOption,
 } from "@/components/app/prospect/StatusActions";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { QuoteStatus } from "@/content/platform/types";
 import { isValidLocale, type Locale } from "@/i18n/config";
 import { getPlatformDictionary } from "@/i18n/platform-dictionaries";
 import { getDb } from "@/lib/db";
@@ -36,6 +38,12 @@ import {
   type ProspectStatus,
 } from "@/lib/permissions";
 import { STATUS_ORDER } from "@/lib/status-meta";
+
+// Session + lecture DB au rendu : jamais statique (voir `getDb()` — la page
+// n'est jamais pré-rendue au build, aucun `DATABASE_URL` lu à ce moment).
+// `force-dynamic` est exigé par l'en-tête de ce fichier (DB-PENDING) —
+// posé ici, comme sur `prospects/page.tsx` et `fiche/page.tsx`.
+export const dynamic = "force-dynamic";
 
 /**
  * Atheris — fiche détaillée d'un prospect (FE-5 · T18).
@@ -99,6 +107,109 @@ function toStatus(value: unknown): ProspectStatus | null {
   if (typeof value !== "string") return null;
   return STATUS_ORDER.find((status) => status === value) ?? null;
 }
+
+// ---------------------------------------------------------------------------
+// FE-8 (T21 · T22) — onglet Devis enrichi en actions CEO.
+// ---------------------------------------------------------------------------
+
+/**
+ * Graphe des transitions de devis — **MIROIR UI** de `QUOTE_TRANSITIONS` figé
+ * dans `@/actions/quotes` (`draft→sent|lost`, `sent→signed|lost`, `signed` et
+ * `lost` terminaux). Calculé ICI (server) puis transmis en props : le client
+ * ne recalcule aucun droit, et l'action figée re-valide le graphe (transition
+ * interdite → `forbidden`) — un miroir divergent resterait sans effet.
+ */
+const QUOTE_ACTIONS: Record<QuoteStatus, readonly QuoteStatus[]> = {
+  draft: ["sent", "lost"],
+  sent: ["signed", "lost"],
+  signed: [],
+  lost: [],
+};
+
+/** Statuts de devis ouverts à l'ajout d'une échéance (miroir serveur). */
+const PAYABLE_QUOTE_STATUSES: readonly QuoteStatus[] = ["sent", "signed"];
+
+/**
+ * ⚠ CLÉS DICTIONNAIRE MANQUANTES (dict verrouillé T09 — listées en restitution,
+ * **jamais créées**) : aucune clé `prospect.deals.*` / `quotes.*` n'existe pour
+ * les actions CEO (création de devis, échéancier, encaissement, génération de
+ * commissions) → replis bilingues documentés ci-dessous, même arbitrage que
+ * `NEW_PROSPECT_LABEL` (FE-5) et `NOTE_LABEL` (FE-7).
+ * Tout le reste vient du dict : `common.*`, `auth.validation.*`,
+ * `auth.login.errors.generic`, `commissions.*`, `statuses.quote.*`,
+ * `prospect.actions.*`, `client.paid|due`.
+ */
+const CREATE_QUOTE_LABEL: Record<Locale, string> = {
+  fr: "Créer un devis",
+  en: "Create quote",
+};
+
+/** Champ « Référence externe » (`createQuote.externalRef`, optionnel). */
+const EXTERNAL_REF_LABEL: Record<Locale, string> = {
+  fr: "Référence externe",
+  en: "External reference",
+};
+
+/** Champ PDF du devis (fr et en identiques — sigle international). */
+const PDF_LABEL: Record<Locale, string> = { fr: "PDF", en: "PDF" };
+
+/** Erreur sous le champ montant — miroir des contraintes serveur. */
+const AMOUNT_INVALID_LABEL: Record<Locale, string> = {
+  fr: "Montant invalide : supérieur à 0, 10 000 000 USD maximum, 2 décimales au plus.",
+  en: "Invalid amount: above 0, at most 10,000,000 USD, 2 decimals maximum.",
+};
+
+/** Erreur sous le champ PDF — miroir des contraintes serveur (5 Mo, `%PDF`). */
+const PDF_INVALID_LABEL: Record<Locale, string> = {
+  fr: "Fichier invalide : un PDF de 5 Mo maximum.",
+  en: "Invalid file: a PDF of at most 5 MB.",
+};
+
+/** Bouton / titre « Ajouter une échéance ». */
+const ADD_PAYMENT_LABEL: Record<Locale, string> = {
+  fr: "Ajouter une échéance",
+  en: "Add due date",
+};
+
+/** Champ libellé d'une échéance (« Acompte », « Échéance 1 »…). */
+const PAYMENT_LABEL_FIELD: Record<Locale, string> = {
+  fr: "Libellé",
+  en: "Label",
+};
+
+/** Champ date d'une échéance (facultatif). */
+const PAYMENT_DUE_FIELD: Record<Locale, string> = {
+  fr: "Échéance",
+  en: "Due date",
+};
+
+/** Bouton d'encaissement d'une échéance non payée. */
+const MARK_PAID_LABEL: Record<Locale, string> = {
+  fr: "Marquer payée",
+  en: "Mark as paid",
+};
+
+/**
+ * Bouton `draft→sent` (⚠ clé manquante : ni « Marquer envoyé » ni libellé
+ * d'action n'existent dans le dict) — les deux autres transitions
+ * (`signed` / `lost`) réutilisent `statuses.quote.*`, déjà affichés en badge.
+ */
+const MARK_SENT_LABEL: Record<Locale, string> = {
+  fr: "Marquer envoyé",
+  en: "Mark as sent",
+};
+
+/** Rappel affiché avant le 1ᵉʳ encaissement (déclencheur des commissions). */
+const GENERATES_COMMISSIONS_LABEL: Record<Locale, string> = {
+  fr: "Cette action générera les commissions de ce deal.",
+  en: "This action will generate the commissions for this deal.",
+};
+
+/** Toast explicite après génération — `{count}` remplacé côté client. */
+const COMMISSIONS_GENERATED_TEMPLATE: Record<Locale, string> = {
+  fr: "{count} commission(s) générée(s)",
+  en: "{count} commission(s) generated",
+};
 
 type ProspectDetailPageProps = {
   params: Promise<{ locale: string; id: string }>;
@@ -207,8 +318,21 @@ export default async function ProspectDetailPage({
       dueLabel: formatDateOrNull(row.dueAt, locale),
       paidLabel: formatDateOrNull(row.paidAt, locale),
       isPaid: row.paidAt !== null,
+      // Renseigné en seconde passe ci-dessous (dépend de l'échéancier entier).
+      isFirstPayment: false,
     });
     paymentsByQuote.set(row.quoteId, list);
+  }
+  // 2ᵉ passe — déclencheur de commissions : le 1ᵉʳ paiement payé d'un devis
+  // génère les lignes (décision BK-4). Tant qu'aucune échéance n'est encaissée,
+  // chacune des échéances non payées EST ce déclencheur potentiel →
+  // ConfirmDialog + rappels affichés pour chacune (après le premier encaissement,
+  // la page re-fetch et les suivantes passent en exécution directe).
+  for (const list of paymentsByQuote.values()) {
+    const hasPaidPayment = list.some((payment) => payment.isPaid);
+    for (const payment of list) {
+      payment.isFirstPayment = !payment.isPaid && !hasPaidPayment;
+    }
   }
 
   const dealQuotes: DealQuoteView[] = quoteRows.map((row) => {
@@ -219,7 +343,19 @@ export default async function ProspectDetailPage({
       id: row.id,
       amountLabel: usdFormatter.format(row.amountUsdCents / 100),
       statusLabel: dict.statuses.quote[row.status],
+      // État brut → `expectedFrom` (optimistic locking de `changeQuoteStatus`).
+      status: row.status,
       dateLabel: formatDateOrNull(relevantDate, locale),
+      // Miroir server du garde-fou `createPayment` (aucun bouton mort).
+      canAddPayment: PAYABLE_QUOTE_STATUSES.includes(row.status),
+      // Transitions du graphe figé, libellées ici (frontière RSC) :
+      // `label` = libellé de STATUT (badge + toast), `buttonLabel` = intitulé
+      // du bouton d'action (spécifique sur `draft→sent`, cf. repli server).
+      actions: QUOTE_ACTIONS[row.status].map((to) => ({
+        to,
+        label: dict.statuses.quote[to],
+        buttonLabel: to === "sent" ? MARK_SENT_LABEL[locale] : dict.statuses.quote[to],
+      })),
       payments: paymentsByQuote.get(row.id) ?? [],
     };
   });
@@ -248,6 +384,62 @@ export default async function ProspectDetailPage({
 
   const statusLabels = dict.statuses.prospect;
   const companyLabel = prospect.company ?? "—";
+
+  // --- 5. Actions CEO (FE-8) — préparées ICI, jamais recalculées côté client
+  const isCeo = viewer.role === "ceo";
+  const ceoLabels: DealsCeoLabels | undefined = isCeo
+    ? {
+        create: {
+          open: CREATE_QUOTE_LABEL[locale],
+          amount: dict.commissions.amount,
+          externalRef: EXTERNAL_REF_LABEL[locale],
+          pdf: PDF_LABEL[locale],
+          optional: dict.common.optional,
+          submit: dict.common.save,
+          cancel: dict.common.cancel,
+          required: dict.auth.validation.required,
+          refTooLong: dict.auth.validation.tooLong(100),
+          amountInvalid: AMOUNT_INVALID_LABEL[locale],
+          pdfInvalid: PDF_INVALID_LABEL[locale],
+          genericError: dict.auth.login.errors.generic,
+        },
+        payment: {
+          add: ADD_PAYMENT_LABEL[locale],
+          labelField: PAYMENT_LABEL_FIELD[locale],
+          amount: dict.commissions.amount,
+          dueField: PAYMENT_DUE_FIELD[locale],
+          optional: dict.common.optional,
+          submit: dict.common.save,
+          cancel: dict.common.cancel,
+          required: dict.auth.validation.required,
+          labelTooShort: dict.auth.validation.tooShort(2),
+          labelTooLong: dict.auth.validation.tooLong(120),
+          amountInvalid: AMOUNT_INVALID_LABEL[locale],
+          genericError: dict.auth.login.errors.generic,
+        },
+        markPaid: {
+          markPaid: MARK_PAID_LABEL[locale],
+          confirmChange: dict.prospect.actions.confirmChange,
+          cancel: dict.common.cancel,
+          triggerWarning: GENERATES_COMMISSIONS_LABEL[locale],
+          noClawback: dict.commissions.noClawbackWarning,
+          paid: dict.commissions.paid,
+          retry: dict.common.retry,
+          generatedTemplate: COMMISSIONS_GENERATED_TEMPLATE[locale],
+        },
+        status: {
+          changeStatus: dict.prospect.actions.changeStatus,
+          reasonLabel: dict.prospect.actions.reasonLabel,
+          reasonRequired: dict.prospect.actions.reasonRequired,
+          confirmChange: dict.prospect.actions.confirmChange,
+          noClawback: dict.commissions.noClawbackWarning,
+          lockedByRole: dict.prospect.actions.lockedByRole,
+          cancel: dict.common.cancel,
+          retry: dict.common.retry,
+        },
+        viewCommissions: dict.commissions.queue,
+      }
+    : undefined;
 
   return (
     <div className="flex flex-col gap-6">
@@ -337,10 +529,15 @@ export default async function ProspectDetailPage({
           </div>
         </TabsContent>
 
-        {/* --- Devis & paiements (lecture seule — création = FE-8). --- */}
+        {/* --- Devis & paiements : lecture seule (FE-5) + actions CEO (FE-8,
+            `isCeo`/`ceoLabels` préparés server-side ci-dessus). --- */}
         <TabsContent value="deals">
           <DealsTab
+            prospectId={prospect.id}
             quotes={dealQuotes}
+            isCeo={isCeo}
+            ceoLabels={ceoLabels}
+            commissionsHref={`/${locale}/espace/commissions`}
             labels={{
               empty: dict.common.noData,
               paid: dict.client.paid,

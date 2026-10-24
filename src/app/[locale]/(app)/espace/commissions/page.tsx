@@ -1,9 +1,19 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, sum } from "drizzle-orm";
 
 import { auth } from "@/auth";
+import {
+  CommissionHistory,
+  type CommissionHistoryItem,
+  type CommissionHistoryLabels,
+} from "@/components/app/commission/CommissionHistory";
+import {
+  CommissionQueue,
+  type CommissionQueueItem,
+  type CommissionQueueLabels,
+} from "@/components/app/commission/CommissionQueue";
 import {
   EarningsLedger,
   type EarningsLedgerItem,
@@ -11,9 +21,10 @@ import {
   type EarningsLedgerTotals,
 } from "@/components/app/vendor/EarningsLedger";
 import { TierGauge, type TierGaugeProps } from "@/components/app/vendor/TierGauge";
+import type { CommissionStatus } from "@/content/platform/types";
 import { getTier, type CommissionTier } from "@/lib/commission";
 import { getDb } from "@/lib/db";
-import { commissions } from "@/lib/db/schema";
+import { commissions, prospects, quotes, users } from "@/lib/db/schema";
 import { isValidLocale, type Locale } from "@/i18n/config";
 import { getPlatformDictionary } from "@/i18n/platform-dictionaries";
 import { isRole } from "@/lib/permissions";
@@ -23,22 +34,34 @@ import { isRole } from "@/lib/permissions";
 export const dynamic = "force-dynamic";
 
 /**
- * Atheris — page « Mes gains » (vendeur) (FE-7 · T20 · structure.md §3.3).
+ * Atheris — page « Commissions » (FE-7 · T20 + FE-8 · T23/T24 · structure.md §3.3).
  *
- * ─── VUE VENDEUR SEULEMENT ─────────────────────────────────────────────────
- * Pour un rôle ≠ `vendeur` (CEO / manager — la route RBAC `commissions`
- * admet ceo, manager, vendeur), la page rend un **bloc sobre** : titre de
- * nav + `common.noData`, **aucune donnée, aucun bouton de versement**.
- * LE REPLIER EST EXPLICITE : la file CEO « Commissions à verser » (queue,
- * sélection, `markPaidLot`) viendra en **FE-8**, le tableau de bord CEO en
- * **FE-10** — ne rien ajouter ici entre-temps.
+ * ─── TROIS VUES SELON LE RÔLE (décision FE-8) ──────────────────────────────
+ * - `vendeur` : « Mes gains » scopé `WHERE beneficiary_id = $me` (FE-7, inchangé) ;
+ * - `ceo` : **file de versement** (`CommissionQueue` : sélection multi +
+ *   `markCommissionsPaid`) + **historique** (`CommissionHistory`) sur TOUTES
+ *   les lignes, avec les infos deal (JOIN `quotes` → `prospects`) ;
+ * - `manager` : **MÊME SELECT, lecture seule** — aucun bouton de versement,
+ *   aucun checkbox (décision validée : Rayan n'a que la lecture des
+ *   candidatures/commissions) ;
+ * - `client` : `notFound()` (route RBAC `commissions` exclut déjà `client` et
+ *   `commercial` côté middleware).
  *
- * ─── SCOPING ───────────────────────────────────────────────────────────────
- * `WHERE beneficiary_id = $me` (la session serveur, jamais un paramètre
- * client) : un vendeur ne voit **que** ses lignes. Le `viewer` ne transite
- * jamais par le client (page server, lecture directe — pas d'action ici).
+ * ─── SCOPING ────────────────────────────────────────────────────────────────
+ * La page lit directement en RSC (aucune Server Action de lecture) : les
+ * conditions portent la session serveur, jamais un paramètre client. Le
+ * versement, lui, passe par `@/actions/ceo` (acteur reconstruit côté serveur)
+ * puis par l'action figée `markCommissionsPaid` (CEO seul, ids `due`).
  *
- * ─── DÉCISION `paidCount` (documentée) ─────────────────────────────────────
+ * ─── AGRÉGATS CEO ───────────────────────────────────────────────────────────
+ * `totalDueCents` / `count` = Σ et nombre des lignes `due` **complètement**
+ * fetchées (SELECT sans limite) ; lignes à `beneficiaryId NULL` comptées dans
+ * le total mais signalées par `orphanCount` (bannière `noBeneficiary`,
+ * checkboxes désactivées côté client — jamais de versement sans bénéficiaire).
+ * L'historique affiche les **50 dernières** lignes `paid`, mais son total
+ * `paidCents` est un `SUM()` SQL sur TOUTES les lignes versées.
+ *
+ * ─── DÉCISION `paidCount` (documentée — vue vendeur) ───────────────────────
  * `paidCount = COUNT(DISTINCT quote_id)` sur les lignes `kind = 'seller'` du
  * vendeur, **indépendamment de `due`/`paid`** : le palier se base sur les
  * deals **ayant déclenché une commission** (i.e. acompte payé / prospect
@@ -73,6 +96,31 @@ const NEXT_TIER: Record<CommissionTier, { at: number; rate: CommissionTier } | n
 const REFERENCE_LABEL: Record<Locale, string> = {
   fr: "Réf deal",
   en: "Deal ref",
+};
+
+/** Nombre de lignes de l'historique affiché (50 derniers versements). */
+const HISTORY_LIMIT = 50;
+
+/**
+ * ⚠ CLÉS DICTIONNAIRE MANQUANTES FE-8 (dict verrouillé — listées en
+ * restitution, jamais créées) : `commissions.beneficiary`,
+ * `commissions.deal` et `commissions.selectedCount` n'existent pas →
+ * replis bilingues documentés (même arbitrage que `REFERENCE_LABEL` ci-dessus
+ * et `NEW_PROSPECT_LABEL` FE-5). Tous les autres libellés viennent du dict
+ * (`commissions.*`, `common.*`).
+ */
+const BENEFICIARY_LABEL: Record<Locale, string> = {
+  fr: "Bénéficiaire",
+  en: "Beneficiary",
+};
+
+/** Colonne « Deal » (nom du prospect + montant du devis). */
+const DEAL_LABEL: Record<Locale, string> = { fr: "Deal", en: "Deal" };
+
+/** Compteur de sélection de la file — `{count}` remplacé côté client. */
+const SELECTED_COUNT_TEMPLATE: Record<Locale, string> = {
+  fr: "{count} sélectionné(s)",
+  en: "{count} selected",
 };
 
 /** Taux en dixièmes → libellé localisé (125 → « 12,5 % » / « 12.5% »). */
@@ -142,16 +190,127 @@ export default async function CommissionsPage({
   const dict = await getPlatformDictionary(locale);
   const title = resolvePageTitle(dict, role === "commercial" ? "ceo" : role);
 
-  // -----------------------------------------------------------------------
-  // Repli non-vendeur — bloc SOBRE, sans aucune action (voir en-tête §FE-8).
-  // -----------------------------------------------------------------------
   if (role !== "vendeur") {
+    // ---------------------------------------------------------------------
+    // Vue CEO / manager (FE-8) — file de versement + historique sur TOUTES
+    // les lignes, avec les infos deal (JOIN `quotes` → `prospects`).
+    // `manager` : MÊME SELECT mais **lecture seule** (aucun bouton, aucun
+    // checkbox — décision validée, voir en-tête).
+    // ---------------------------------------------------------------------
+    if (role === "ceo" || role === "manager") {
+      const readOnly = role !== "ceo";
+      const db = getDb();
+
+      let dueRows: Awaited<ReturnType<typeof selectCeoCommissions>>;
+      let paidRows: Awaited<ReturnType<typeof selectCeoCommissions>>;
+      let totalPaidCents: number;
+      try {
+        [dueRows, paidRows, totalPaidCents] = await Promise.all([
+          // File : TOUTES les lignes `due` (SELECT sans limite).
+          selectCeoCommissions(db, "due"),
+          // Historique : 50 derniers versements (total réel = agrégat SQL).
+          selectCeoCommissions(db, "paid", HISTORY_LIMIT),
+          selectTotalPaidCents(db),
+        ]);
+      } catch (error) {
+        // Erreur d'infra DB : journalisée puis propagée (500), jamais
+        // présentée comme « aucune donnée » (cohérent avec FE-7).
+        console.error("[commissions] échec de lecture de la file CEO", error);
+        throw error;
+      }
+
+      // --- Agrégats : Σ `due` (SELECT complet) + lignes sans bénéficiaire ---
+      let totalDueCents = 0;
+      let orphanCount = 0;
+      for (const row of dueRows) {
+        totalDueCents += row.amountCents;
+        if (row.beneficiaryId === null) orphanCount += 1;
+      }
+
+      const queueItems: CommissionQueueItem[] = dueRows.map((row) => ({
+        id: row.id,
+        beneficiaryName: row.beneficiaryName,
+        prospectName: row.prospectName,
+        quoteAmountCents: row.quoteAmountCents,
+        rateLabel: formatRate(row.ratePercent, locale),
+        amountCents: row.amountCents,
+        generatedLabel: formatDate(row.createdAt, locale),
+      }));
+
+      const historyItems: CommissionHistoryItem[] = paidRows.map((row) => ({
+        id: row.id,
+        beneficiaryName: row.beneficiaryName,
+        prospectName: row.prospectName,
+        rateLabel: formatRate(row.ratePercent, locale),
+        amountCents: row.amountCents,
+        paidLabel: formatDate(row.paidAt, locale),
+      }));
+
+      // Libellés résolus ICI (frontière RSC : uniquement des strings au client).
+      const sharedLabels = {
+        beneficiary: BENEFICIARY_LABEL[locale],
+        deal: DEAL_LABEL[locale],
+      };
+
+      const queueLabels: CommissionQueueLabels = {
+        title: dict.commissions.queue,
+        ...sharedLabels,
+        tier: dict.commissions.tier.label,
+        amount: dict.commissions.amount,
+        generatedAt: dict.commissions.generatedAt,
+        pending: dict.commissions.pending,
+        noBeneficiary: dict.commissions.noBeneficiary,
+        selectedCount: SELECTED_COUNT_TEMPLATE[locale],
+        markPaidLot: dict.commissions.markPaidLot,
+        lotConfirm: dict.commissions.lotConfirm,
+        noClawback: dict.commissions.noClawbackWarning,
+        markPaid: dict.commissions.markPaid,
+        paid: dict.commissions.paid,
+        cancel: dict.common.cancel,
+        retry: dict.common.retry,
+        noData: dict.common.noData,
+      };
+
+      const historyLabels: CommissionHistoryLabels = {
+        title: dict.commissions.history,
+        ...sharedLabels,
+        rate: dict.commissions.rate,
+        amount: dict.commissions.amount,
+        paidAt: dict.commissions.paidAt,
+        paid: dict.commissions.paid,
+        noData: dict.common.noData,
+      };
+
+      return (
+        <div className="flex flex-col gap-6">
+          <h1 className="text-2xl font-bold tracking-[-0.02em] text-fg">{title}</h1>
+
+          <CommissionQueue
+            items={queueItems}
+            totals={{ totalDueCents, count: dueRows.length }}
+            orphanCount={orphanCount}
+            readOnly={readOnly}
+            labels={queueLabels}
+          />
+
+          <CommissionHistory
+            items={historyItems}
+            totals={{ paidCents: totalPaidCents }}
+            labels={historyLabels}
+          />
+        </div>
+      );
+    }
+
+    // ---------------------------------------------------------------------
+    // Repli sobre conservé (FE-7) : `commercial` n'accède jamais à cette page
+    // (`ROUTE_ACCESS.commissions` = ceo | manager | vendeur → middleware 404).
+    // ---------------------------------------------------------------------
     return (
       <div className="flex flex-col gap-6">
         <h1 className="text-2xl font-bold tracking-[-0.02em] text-fg">{title}</h1>
         <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-line bg-surface px-6 py-16 text-center">
           <p className="text-[15px] font-semibold text-fg">{dict.common.noData}</p>
-          {/* Aucun bouton de versement ici : FE-8 (queue CEO) / FE-10 (dashboard). */}
         </div>
       </div>
     );
@@ -272,4 +431,62 @@ async function selectMyCommissions(
     // paramètre monté du client (pas de paramètre client sur cette page).
     .where(eq(commissions.beneficiaryId, beneficiaryId))
     .orderBy(desc(commissions.createdAt));
+}
+
+/**
+ * Lignes de commissions **avec le contexte deal**, pour la vue CEO/manager
+ * (FE-8) : `JOIN quotes → prospects` (nom du prospect + montant du devis) et
+ * `LEFT JOIN users` (bénéficiaire facultatif — `beneficiaryId NULL` → ligne
+ * orpheline, signalée à l'affichage, jamais versée).
+ *
+ * Aucune condition de rôle ici (page serveur déjà filtrée par route RBAC) :
+ * seule la lecture est faite — l'écriture passe obligatoirement par
+ * `@/actions/ceo` puis l'action figée `markCommissionsPaid`.
+ *
+ * @param status `due` (file complète) ou `paid` (historique).
+ * @param limit Dernières lignes à renvoyer (`undefined` = tout).
+ */
+async function selectCeoCommissions(
+  db: ReturnType<typeof getDb>,
+  status: CommissionStatus,
+  limit?: number,
+) {
+  const query = db
+    .select({
+      id: commissions.id,
+      ratePercent: commissions.ratePercent,
+      amountCents: commissions.amountCents,
+      createdAt: commissions.createdAt,
+      paidAt: commissions.paidAt,
+      beneficiaryId: commissions.beneficiaryId,
+      beneficiaryName: users.name,
+      prospectName: prospects.fullName,
+      quoteAmountCents: quotes.amountUsdCents,
+    })
+    .from(commissions)
+    .innerJoin(quotes, eq(commissions.quoteId, quotes.id))
+    .innerJoin(prospects, eq(quotes.prospectId, prospects.id))
+    .leftJoin(users, eq(commissions.beneficiaryId, users.id))
+    .where(eq(commissions.status, status));
+
+  if (limit === undefined) {
+    // File : ordre de génération, décroissant (les plus fraîches en tête).
+    return query.orderBy(desc(commissions.createdAt));
+  }
+  // Historique : derniers versements d'abord.
+  return query.orderBy(desc(commissions.paidAt)).limit(limit);
+}
+
+/**
+ * Σ de **TOUTES** les commissions versées (agrégat SQL) — l'historique
+ * n'affiche que les 50 dernières lignes mais son total ne doit pas être
+ * tronqué. `Number()` absorbe le codec JSON de Neon (bigint → number|string).
+ */
+async function selectTotalPaidCents(db: ReturnType<typeof getDb>): Promise<number> {
+  const rows = await db
+    .select({ totalCents: sum(commissions.amountCents) })
+    .from(commissions)
+    .where(eq(commissions.status, "paid"))
+    .limit(1);
+  return Number(rows[0]?.totalCents ?? 0);
 }
