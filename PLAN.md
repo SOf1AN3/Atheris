@@ -1,277 +1,305 @@
-# PLAN.md — Plateforme ATHERIS LABS (CRM, commissions & portail client)
+# PLAN.md — Plateforme ATHERIS LABS (v2 — exécution parallélisée)
 
-> **Statut : ✅ VALIDÉ par l'utilisateur le 24/10/2026 (feu vert accordé)** — exécution séquentielle autorisée.
-> Version 1.1 — 24/10/2026 · Remplace l'ancien plan (landing page, livrée).
-> **Compagnons obligatoires** : `structure.md` (théorie métier), `DESIGN.md` (charte design), **`TACHES.md` (détail exécutable des tâches)**.
+> **Statut : ✅ VALIDÉ (v1.1) — repris en v2 pour le nouveau modèle d'exécution.**
+> Version 2.0 — 24/10/2026 · Compagnons : `structure.md` (théorie), `DESIGN.md` (design), `TACHES.md` (détail exécutable T01→T36).
 
 ---
 
 ## Contexte & besoin métier
 
-**ATHERIS LABS** est une agence de développement multi-plateformes (Web, Mobile, Desktop) boostée à l'IA, à délais courts. Sa croissance repose sur une équipe de vente à la commission (Lead Generators + manager) et bientôt sur de la pub.
+**ATHERIS LABS** = studio de développement multi-plateformes boosté à l'IA, à délais courts. Croissance portée par une force de vente à la commission (LDG + manager Rayan) et bientôt la pub.
 
-**Objectif de cette v1** : construire la **plateforme interne** qui transforme un prospect en client payant, en gérant automatiquement le pipeline commercial, les **devis, paiements et commissions** (barème progressif, plafond 25 %), et en donnant au **client un portail de suivi** (jalons, documents, factures, messagerie).
+**Objectif v1 de la plateforme** : transformer un prospect en client payant — pipeline commercial, **devis / paiements / commissions** (barème progressif, plafond 25 %), et un **portail client** (jalons, documents, factures, messagerie). La landing existante est livrée et **ne doit pas régresser**.
 
-**Landing existante est livrée et ne doit pas régresser.** La plateforme s'ajoute à côté, avec le même design (`DESIGN.md`) et la même exigence i18n.
+### Modèle d'exécution (v2 — nouveau)
 
-### Décisions validées par l'utilisateur
+- **Pas d'agent Reviewer** : chaque sous-agent **s'auto-valide** et termine sa réponse par **`AUTO-OK`** ou **`AUTO-KO`** (+ liste exacte des correctifs). `AUTO-KO` → le Lead renvoie une tâche corrigée isolée.
+- Le Lead lance les sous-agents **`Database` / `Backend` / `Frontend` en arrière-plan**, en **un seul tour** pour lancer simultanément.
+- **Partition stricte des fichiers** (§Partition) : aucun fichier dans deux pistes simultanément. Une tâche partagée = elle est **sérialisée** ou remise à **une seule piste**.
+- **Contrats inter-pistes figés** (§Contrats) : les pistes codent **contre le contrat**, pas contre le code des autres.
+- Micro-commit Conventional Commits (français) après chaque `AUTO-OK`, **jamais de push**.
+- 2 `AUTO-KO` identiques sur la même tâche → escalade utilisateur.
+
+### Décisions validées (inchangées)
 
 | Sujet | Décision |
 |---|---|
-| Base | **Neon (Postgres)** + **Drizzle ORM** |
-| UI | **shadcn/ui** thématisé sur les tokens `DESIGN.md` (ink `#0A0C10`, surface `#14171F`, line `#242936`, accent `#3B82F6`) |
-| Langue plateforme | **FR + EN dès la v1** (dictionnaires dédiés, distincts de la landing) |
-| Paiements | **Saisie manuelle par le CEO** — zéro intégration Stripe en v1 |
-| Devis | **Hors plateforme** (outil externe du CEO) + **PDF joint** au dossier + statuts gérés sur la plateforme |
-| Barème vendeur | Paliers par cumul de clients payés : **0-4 → 10 % · 5-9 → 12,5 % · 10-19 → 15 % · 20+ → 20 %** |
-| Plafond | **25 % max par deal** (part vendeur + 5 % manager Rayan confondus) → part CEO garantie ≥ 75 % |
-| Rayan | **5 % fixes sur chaque deal** + part vendeur (barème) sur les prospects qu'il génère lui-même |
-| Attribution | Dédoublonnage strict à l'ajout (email/téléphone) ; **le canal d'origine l'emporte** ; leads Ads = commission type LDG |
-| Commissions | Déclencheur = devis signé **ET** acompte encaissé ; **aucune commission si non-signature** ; **aucun clawback** |
-| Portail client | **Dans le périmètre initial** (invitation, jalons, documents, factures, messagerie) |
-| Candidatures | Validation des inscriptions par le **CEO seul** — Rayan n'a **que la lecture** de la file |
-| Formulaire landing | **Câblé au CRM** (T34 activé) : la landing crée des prospects source `landing` |
+| Base | **Neon (Postgres)** + **Drizzle ORM** + `jose` (JWT edge) |
+| UI | **shadcn/ui** thématisé `DESIGN.md` (landing = composants maison conservés, pile double assumée T04) |
+| Langue | **FR + EN plateforme** (dictionnaires dédiés T06) |
+| Paiements | **Saisie manuelle CEO** (zéro Stripe v1) |
+| Devis | **Hors plateforme + PDF joint** |
+| Barème | 0-4 → 10 % · 5-9 → 12,5 % · 10-19 → 15 % · 20+ → 20 % (vendeur) |
+| Plafond | **25 % max/deal** (vendeur + 5 % Rayan) → CEO ≥ 75 % |
+| Rayan | 5 % fixes tout deal + part vendeur (barème) sur ses propres prospects |
+| Candidatures | **CEO seul** valide ; Rayan = lecture seule |
+| Attribution | Anti-doublon strict (email/téléphone), canal d'origine prioritaire, Ads = commission type LDG |
+| Commissions | Déclencheur = signé **ET** acompte encaissé ; **aucun clawback** |
+| Formulaire landing | **Câblé au CRM** (T34, validé) |
+| Portail client | **Périmètre initial** |
 
-### Améliorations proposées des structures de pages (retenu dans ce plan)
+### ⚠ Règle DB-PENDING (accord utilisateur)
 
-1. **Séparation marketing / application par route groups** — la landing garde Header/Footer dans un groupe `(marketing)` ; l'espace connecté a son propre shell (sidebar + topbar) sans casser les URLs `/fr`, `/en`.
-2. **Détail prospect en page + onglets** (et non en modale) : URL partageable, retour navigateur propre, utilisable sur mobile.
-3. **Un seul composant « pipeline » réutilisé** par CEO / Manager / Commercial / Vendeur, avec colonnes et actions configurées par rôle → moins de code, UX homogène.
-4. **Filtres dans l'URL** (statut, recherche, relance) : les vues se partagent et survivent au refresh.
-5. **Dashboards = files d'action, pas des stats mortes** : le CEO voit en premier « 2 inscriptions à valider, 3 devis à envoyer, 4 commissions à payer ».
-6. **Fiche projet en assistant 5 étapes** avec jauge de complétion (données partielles sauvegardées à chaque étape) plutôt qu'un formulaire géant.
-7. **Espace vendeur pensé mobile** : ajout de prospect en 1 écran (3 champs), liste en cartes.
-8. **Raison obligatoire** pour les statuts terminaux *Perdu / Disqualifié* → statistiques fiables.
-9. **File « commission sans bénéficiaire »** côté CEO (ex. lead Ads sans responsable) — cas non prévu dans le brief initial.
-10. **Toutes les pages d'espace en `noindex`**, et les statuts/couleurs de badge ajoutés au `DESIGN.md` avant usage (le `DESIGN.md` prime et doit être versionné `docs(design)`).
+`DATABASE_URL` fourni **à la fin du plan** (`.env.local` = placeholder). Conséquences :
+- Les pistes **écrivent et auto-valident** normalement (typecheck/lint/build).
+- **Reportées** à l'arrivée de la chaîne Neon (liste `DB-PENDING`) : application des migrations, seed réel, requêtes DB réelles, E2E complet.
+- `DB-PENDING` : **T12** (seed exécuté), **T36** (E2E complet avec comptes réels), toutes les vérifications runtime impliquant `getDb()`.
 
 ---
 
-## Questions / décisions en attente
+## 1. Base de données (DB) → sous-agent `Database`
 
-1. ~~Formulaire contact landing~~ → **VALIDÉ** : T34 est **dans le périmètre** (le formulaire crée un prospect source `landing`, sans bénéficiaire → file de commissions CEO).
-2. ~~Validation des candidatures~~ → **VALIDÉ** : **CEO seul**, Rayan lecture seule (T11 vs T31).
-3. ~~Paliers~~ → **VALIDÉ** : 0-4 / 5-9 / 10-19 / 20+ confirmés.
-4. **Stockage des PDF** : solution retenue = **fichiers en base (bytea), 5 Mo max, servis par route handler authentifiée** (zéro service externe). Migration Vercel Blob notée en phase 2 si le volume grandit.
-5. Non bloquants : domaine de prod, email/WhatsApp réels, contenu réel des espaces, `DATABASE_URL` Neon + `AUTH_SECRET` (à fournir en .env.local).
+**Statut : T01/T02 LIVRÉS** (connexion Drizzle commitée `f813768`, 13 tables + migration `0000` commitée `4d1da83`). Le schéma est **figé** (voir §Contrats) — toute évolution passe par une tâche `Database` dédiée + `db:generate`.
 
-> **⚠ Règle d'exécution liée au `DATABASE_URL` (accord utilisateur)** : la chaîne Neon sera fournie **à la fin du plan**. En attendant, `.env.local` contient un placeholder : les tâches DB (T01, T02…) sont **écrites et relues normalement**, `drizzle-kit generate` (génération des fichiers de migration, sans connexion) est vérifié, mais **l'application des migrations sur Neon et toute requête DB réelle sont reportées** à la rubrique « Validation finale » (liste `DB-PENDING` ci-dessous) avant le passage de `Tester` (T36).
->
-> **`DB-PENDING`** : T01 (vrai `db:migrate`), T02 (13 tables en base), T12 (seed), T14/T15 (anti-doublon réel, transitions réelles), T23 (génération commission réelle), T36 (E2E complet).
+### DB-1 (T12) — Seed de démarrage (script non exécuté tant que placeholder)
+- **Fichiers** : `src/lib/db/seed.ts` (nouveau), `package.json` (script `db:seed`).
+- Idempotent (upsert email) : CEO, Rayan (manager), 2 vendeurs, 1 commercial, 1 client de démo + 6 prospects répartis sur les 10 statuts + 1 fiche projet + 1 devis `signed` + 1 acompte payé.
+- Env `SEED_DEMO=1` obligatoire (jamais en prod sans confirmation).
+- **Critère AUTO-OK** : script écrit, `tsc` vert, **non exécuté** (DB-PENDING), `npm run db:seed ×2` documenté comme idempotent.
 
----
-
-## 0. Architecture cible & conventions
-
-### Arborescence (ajouts et déplacements)
-
-```
-src/
-├── middleware.ts                  # locale (existant) + garde grossière des routes d'espace
-├── auth.ts                        # config Auth.js v5 (credentials, JWT 7j, rôles)
-├── lib/
-│   ├── db/
-│   │   ├── index.ts               # client Drizzle (Neon)
-│   │   └── schema.ts              # 13 tables (§1.2)
-│   ├── permissions.ts             # rôle → routes + actions autorisées (source de vérité RBAC)
-│   ├── commission.ts              # barème progressif + plafond 25 % (pur, testé)
-│   ├── prospect-dedup.ts          # normalisation email/téléphone
-│   └── password.ts                # scrypt (Node crypto, zéro dépendance native)
-├── actions/                       # Server Actions (une par domaine, "use server")
-│   ├── auth.ts · profile.ts · prospects.ts · status.ts
-│   ├── quotes.ts · payments.ts · commissions.ts
-│   ├── invitations.ts · project.ts · messages.ts
-├── content/platform/
-│   ├── types.ts · fr.ts · en.ts   # dictionnaires de la plateforme (≠ landing)
-├── app/[locale]/
-│   ├── layout.tsx                 # racine : <html>, fonts, MotionConfig (Header/Footer sortis)
-│   ├── (marketing)/               # landing : layout Header+Footer+JSON-LD, page, opengraph-image
-│   ├── (auth)/                    # layout carte centrée (pas de header)
-│   │   ├── connexion/page.tsx · inscription/page.tsx
-│   ├── (app)/                     # layout shell (sidebar+topbar+garde rôle) — tout en noindex
-│   │   ├── layout.tsx
-│   │   ├── espace/page.tsx        # ⚠ NE PAS créer (app)/page.tsx (conflit avec la landing)
-│   │   ├── espace/tableau-de-bord/page.tsx
-│   │   ├── espace/prospects/page.tsx · prospects/nouveau · prospects/[id]
-│   │   ├── espace/commissions/page.tsx · equipe/page.tsx · projet/page.tsx · profil/page.tsx
-├── components/app/                # shell, StatusBadge, ProspectTable, FilterBar, StatCard,
-│                                  # EmptyState, ProspectWizard, MilestoneTimeline, AuditLog…
-```
-
-### Conventions
-
-- TypeScript **strict**, `import type`, zéro `any`, zéro `@ts-ignore`.
-- **Toute mutation passe par une Server Action** avec validation **Zod** + vérification de rôle **côté serveur** (le middleware ne fait qu'une garde grossière).
-- Montants en **cents (entier)**, devise **USD uniquement** ; dates en **UTC** stockées, affichage `Africa/Algiers`.
-- Tout texte visible vient de `src/content/platform/{fr,en}.ts` (comme la landing).
-- Mots de passe : **scrypt** (Node crypto), format `salt:hash`, comparaison à temps constant.
-- Composants serveur par défaut ; `"use client"` seulement pour les formulaires/filtres/tableaux interactifs.
+### DB-2 (fin de plan) — Application réelle des migrations (DB-PENDING)
+- `npm run db:migrate` sur la vraie chaîne + vérif des 13 tables + seed → **tâche finale d'ouverture des gates** avant T36.
 
 ---
 
-## 1. Base de données (DB)
+## 2. API Routes / Server Actions → sous-agent `Backend`
 
-### 1.1 Mise en place — `Backend`
+**Statut : T03 (auth) LIVRÉ** (`f9c1371`) · **T07 RBAC : `src/lib/permissions.ts` LIVRÉ (figé, contrat), `src/middleware.ts` RESTE À FAIRE.**
 
-**Fichiers** : `drizzle.config.ts`, `src/lib/db/index.ts`, `src/lib/db/schema.ts`, `.env.local` (`DATABASE_URL`, `AUTH_SECRET`), `package.json` (scripts `db:generate` / `db:migrate` / `db:seed`).
-**Dépendances** : `drizzle-orm`, `@neondatabase/serverless`, `drizzle-kit`.
-**Critère « fait »** : `npm run db:migrate` crée les 13 tables sur Neon ; un `SELECT` de contrôle renvoie des lignes.
+### BK-1 (T07 fin) — Middleware de garde edge
+- **Fichiers** : `src/middleware.ts` **uniquement**.
+- Étendre la logique locale existante (ne pas casser) : (a) `/{locale}/espace/*` sans cookie → 307 `/{locale}/connexion?callbackUrl=` ; (b) JWT `authjs.session-token` **vérifié avec `jose`** (`AUTH_SECRET`) — `status !== "active"` ou rôle invalide (`isRole`) → hors espace ; (c) `isRouteAllowed(suffix, role)` false → redirect `HOME_BY_ROLE[role]` ; (d) `/{locale}/connexion|inscription` avec session valide → redirect home rôle.
+- **Critère AUTO-OK** : 3 scénarios dev vérifiés (`/fr/espace` sans cookie → connexion ; `/fr/connexion` sans cookie → 200 ; `/` → `/fr`), build edge OK, zéro import lourd.
 
-### 1.2 Schéma (13 tables) — `Backend`
+### BK-2 (T14+T15) — Cœur prospects : anti-doublon + machine à états + audit
+- **Fichiers** : `src/lib/prospect-dedup.ts` (+ `src/lib/prospect-dedup.test.ts`), `src/actions/prospects.ts`, `src/actions/status.ts`.
+- `normalizeEmail` (trim/minuscules) + `normalizePhone` (`+213`/`00213`/`213` → `0`, chiffres) ; `createProspect()` : Zod + SELECT préalable sur `email_norm`/`phone_norm` → `{ error: "duplicate" }` + filet index unique ; journal `activities`.
+- `changeProspectStatus({ id, to, expectedFrom, reason? })` : `canChangeStatus(role, …)` + **transaction** `UPDATE … WHERE status = expectedFrom` (0 ligne = conflit) + `reason` obligatoire si `isTerminalStatus(to)` + `activities`.
+- **Critère AUTO-OK** : tests dedup verts (≥6 cas), tsc/lint/build verts.
 
-| Table | Rôle | Champs clés |
-|---|---|---|
-| `users` | comptes | `email` unique, `password_hash`, `name`, `phone`, `role` (`ceo`/`manager`/`commercial`/`vendeur`/`client`), `status` (`pending`/`active`/`rejected`/`disabled`), `created_at` |
-| `prospects` | pipeline | `full_name`, `company`, `email`, `phone`, **`email_norm` + `phone_norm` uniques** (dédoublonnage), `source` (`ldg`/`ads`/`landing`/`rayan`/`ceo`), `source_user_id`, `status` (10 statuts §structure.md), `disqualify_reason`, `next_reminder_at` |
-| `prospect_briefs` | fiche projet 1-1 | 5 blocs (identité/contexte, besoin, contraintes, technique, suivi) + `completed_blocks` |
-| `quotes` | devis | `prospect_id`, `amount_usd_cents`, `status` (`draft`/`sent`/`signed`/`lost`), `pdf_document_id`, `sent_at`, `signed_at`, `created_by` |
-| `payments` | encaissements | `quote_id`, `label` (acompte/échéance), `amount_usd_cents`, `due_at`, `paid_at`, `method`, `created_by` |
-| `commissions` | barème | `quote_id`, `beneficiary_id`, `kind` (`seller`/`manager`), `rate_percent` (snapshot), `base_cents`, `amount_cents`, `status` (`due`/`paid`), `paid_at` — **unique (`quote_id`,`beneficiary_id`,`kind`)** = anti-double-génération |
-| `client_projects` | livraison | `quote_id`, `name`, `status` (`en_livraison`/`clos`) |
-| `milestones` | 5 jalons | `project_id`, `order`, `key` (`cadrage`/`design`/`dev`/`recette`/`mise_en_ligne`), `status`, `validated_at`, `validated_by` |
-| `documents` | PDF | `owner_type` (`prospect`/`project`), `owner_id`, `kind` (`devis`/`contrat`/`facture`/`livrable`), `filename`, `bytes` (bytea ≤ 5 Mo), `mime`, `uploaded_by` |
-| `invitations` | portail client | `email`, `token` unique, `project_id`, `expires_at`, `used_at` |
-| `activities` | journal/audit | `actor_id`, `action`, `entity_type`, `entity_id`, `meta` jsonb |
-| `messages` | messagerie projet | `project_id`, `sender_id`, `body`, `read_at` |
-| `login_attempts` | rate-limit | `email`, `ip`, `created_at` (≥ 5 échecs / 15 min → blocage) |
+### BK-3 (T23) — Moteur de commissions + tests
+- **Fichiers** : `src/lib/commission.ts` (pur), `src/lib/commission.test.ts`, `src/actions/commissions.ts` (génération).
+- `getTier(paidCount)` (10|125|150|200 en **dixièmes** — convention schéma), `computeDealShares()` (garde-fou 25 % cumul, arrondi centime, assert CEO ≥ 75 %), `generateCommissionsForQuote()` en transaction (snapshot taux, lignes seller + manager 5 %, **cas sans bénéficiaire** → `beneficiary_id: null`, **idempotent** via contrainte unique + SELECT préalable car l'index unique traite les NULL comme distincts).
+- Tests vitest ≥ 10 cas (paliers, arrondis, plafond, Rayan vendeur, sans bénéficiaire, idempotence, gros deal).
+- **Critère AUTO-OK** : `npx vitest run` vert (installe `vitest` en devDep si absent), fonctions pures sans DB.
 
-### 1.3 Règles métier encodées — `Backend`
+### BK-4 (T21+T22+T24 actions) — Devis, encaissements, versements (server-side)
+- **Fichiers** : `src/actions/quotes.ts`, `src/actions/payments.ts`, `src/actions/commissions.ts` (versement — à **sérialiser** avec BK-3 sur ce fichier : BK-3 d'abord, BK-4 ensuite, ou fusion en une tâche si plus simple).
+- CEO seul : `createQuote` (cents, `toCents()`), statuts `draft→sent→signed|lost` (lost = motif + rétrograde prospect), `markPaymentPaid` (acompte → **appel `generateCommissionsForQuote`** + prospect `client_actif`, idempotent), `markCommissionsPaid` (individuel/lot, `paid_by`).
+- **Critère AUTO-OK** : transitions refusées hors CEO, tsc/lint/build verts.
 
-- **Dédoublonnage** : normaliser (`email` → minuscules/trim ; `phone` → chiffres, `+213`/`00213` → `0`) puis contrainte unique → l'ajout d'un doublon **échoue côté DB**, message « prospect déjà existant ».
-- **Machine à états** : les 10 statuts de `structure.md` §4.1 avec transitions autorisées par rôle (`src/lib/permissions.ts`), appliquées dans une transaction avec contrôle du statut attendu (anti-course).
-- **Commissions** : à l'enregistrement d'un paiement **acompte** marqué payé → génère une ligne `seller` (taux du palier du vendeur **au moment du déclencheur**, figé en snapshot) + une ligne `manager` 5 % (Rayan), **si `beneficiary_id` nul → ligne créée avec bannière « sans bénéficiaire »** dans la file CEO. Contrainte unique = idempotence.
-- **Paliers** : cumul des deals du vendeur ayant atteint `client_actif` **avant** ce deal (jamais rétroactif).
+### BK-5 (T25+T26) — Documents PDF + invitations client
+- **Fichiers** : `src/lib/documents.ts`, `src/actions/documents.ts`, `src/app/api/documents/[id]/route.ts`, `src/actions/invitations.ts`.
+- Upload : MIME **`application/pdf`** (magic bytes `%PDF`), ≤ 5 Mo, stockage **bytea** (migration Vercel Blob notée) ; `GET /api/documents/[id]` : session + **droit vérifié** (owner accessible au rôle), 403 sinon, `Content-Disposition: attachment`.
+- Invitations : token 32 B hex, 48 h, `used_at` ; activation = choix mdp (scrypt) → compte `client` actif lié au projet.
+- **Critère AUTO-OK** : rejet JPG/6 Mo, 403 sans session et cross-client (logique écrite + tsc vert ; runtime = DB-PENDING).
 
----
+### BK-6 (T27+T29 actions) — Jalons & messagerie (server-side)
+- **Fichiers** : `src/actions/project.ts`, `src/actions/messages.ts`.
+- `validateMilestone()` (appartenance au projet du client), `postMessage()` (Zod ≤ 2000, appartenance), `read_at` idempotent.
+- **Critère AUTO-OK** : scoping vérifié par construction, tsc/lint/build verts.
 
-## 2. API Routes / Server Actions
+### BK-7 (T30-T32 actions) — Agrégats dashboards
+- **Fichiers** : `src/actions/dashboard.ts`.
+- Agrégats SQL : stats globales CEO, files d'action, stats par employé (funnel/activité/rentabilité), classement vendeurs, relances du jour, ledger gains.
+- **Critère AUTO-OK** : requêtes agrégées écrites, division par zéro → `null` (jamais NaN), tsc vert.
 
-### 2.1 Actions par domaine — `Backend`
-
-| Fichier | Actions | Rôles autorisés |
-|---|---|---|
-| `actions/auth.ts` | connexion, déconnexion, rate-limit | public |
-| `actions/profile.ts` | changer email / téléphone / mot de passe (**pas le nom**) | tout rôle authentifié |
-| `actions/prospects.ts` | ajouter (anti-doublon), lire (scopé par rôle), filtrer | vendeur+ (ajout), lecture selon rôle |
-| `actions/status.ts` | changer de statut + **raison obligatoire** si `perdu`/`disqualifie` | matrice §structure.md 4.2 |
-| `actions/quotes.ts` | créer devis (montant TTC + PDF), statuts `draft→sent→signed/lost` | CEO uniquement |
-| `actions/payments.ts` | enregistrer acompte/échéance, marquer payé → **déclenche commissions** | CEO uniquement |
-| `actions/commissions.ts` | marquer payée(s) (individuel ou lot), historique | CEO uniquement |
-| `actions/invitations.ts` | générer lien client (48 h), révoquer | CEO uniquement |
-| `actions/project.ts` | valider un jalon, messages de projet | client (ses jalons) + CEO/commercial |
-| `actions/audit.ts` | écriture systématique dans `activities` | interne |
-
-### 2.2 Garde d'accès — `Backend`
-
-- **Middleware** : présence du cookie de session sur `/[locale]/espace/*` et `/[locale]/connexion` (redirection propre) — garde *grossière*.
-- **Layout `(app)`** : `auth()` serveur → rôle → redirige vers la page d'accueil du rôle.
-- **Chaque Server Action** : `requireRole(...)` + `zod` + vérification d'appartenance (un vendeur ne lit/modifie que **ses** prospects ; un client ne lit que **son** projet).
-- Toute la zone `(app)` : `robots: { index: false }`.
+### BK-8 (T34) — Câblage formulaire contact → CRM
+- **Fichiers** : `src/actions/contact.ts` (**Backend**) + `src/components/sections/Contact.tsx` (**Frontend — sérialisé : dernière tâche, après toute tâche Frontend touchant la landing**).
+- `submitContact()` : schéma `src/lib/form-schema.ts` existant + honeypot → `createProspect({ source: "landing", source_user_id: null })`, rate-limit 3/h/IP.
+- **Critère AUTO-OK** : landing non régressée (E2E ciblé), FR/EN intacts.
 
 ---
 
-## 3. UI Components
+## 3. UI Components → sous-agent `Frontend`
 
-### 3.1 Shell & primitives — `Frontend`
+**Statut : T04 (shadcn + DESIGN §12) LIVRÉ** (`b396d8f`) · **T05 (route groups) LIVRÉ** (`246a869`) · **T06 (dictionnaires i18n) LIVRÉ** (`11eecdc`) · T08-T33 + T10/T11/T13 pages = à faire.
 
-- **Shadcn/ui installé et re-thématisé** : mapping `background→ink`, `card→surface`, `border→line`, `primary→accent #3B82F6`, `destructive→#F87171`, `muted-foreground→#94A3B8` (radius 12/20 px conformes §2.6 DESIGN.md).
-- **Ajout au `DESIGN.md`** (commit `docs(design)`, validation utilisateur) : palette des **statuts de badge** — `Nouveau` gris · `Contacté` bleu discret · `Qualifié` bleu · `Devis envoyé` ambre `#F59E0B` · `Signé` vert `#34D399` · `Perdu`/`Disqualifié` rouge `#F87171` + règles sidebar/tableau (fond `ink-2`, lignes `line`, hover `surface-2`, accent = sélection active uniquement).
-- `AppShell` (sidebar par rôle + topbar : profil, switch FR/EN), `StatusBadge`, `ProspectTable`, `FilterBar` (état dans l'URL), `StatCard`, `EmptyState` (avec CTA), `ConfirmDialog`.
+> Rappel T05 : **jamais de `(app)/page.tsx`** (conflit de chemin avec la landing) — les pages vivent sous `(app)/espace/…`. Placeholders actuels : `(auth)/connexion/page.tsx`, `(app)/espace/page.tsx`.
 
-### 3.2 Pages par espace — `Frontend`
+### FE-1 (T08) — Shell de l'espace connecté
+- **Fichiers** : `src/app/[locale]/(app)/layout.tsx`, `src/app/[locale]/(app)/espace/page.tsx`, `src/components/app/{AppShell,Sidebar,Topbar}.tsx`, `src/content/platform/{fr,en}.ts` (ajustements aria/nav si besoin).
+- `auth()` serveur → `isRouteAllowed` par route → `redirect(HOME_BY_ROLE[role])` ; sidebar = `dict.nav[role]` (hrefs T06 figés) ; topbar : switch FR/EN (conserve chemin), menu profil/déconnexion ; mobile `Sheet` (focus trap, `Escape`, verrou scroll — DESIGN §4.11) ; noindex conservé.
+- **Critère AUTO-OK** : chaque rôle ne voit que ses items, URL forcée interdite → redirection, 360 px utilisable, tsc/lint/build verts.
 
-| Espace | Pages | Contenu clé |
-|---|---|---|
-| `(auth)` | `connexion`, `inscription` | formulaire Zod + RHF, erreurs i18n, inscription = **candidature en attente** |
-| CEO | `tableau-de-bord`, `prospects`, `prospects/[id]`, `commissions`, `equipe`, `profil` | **files d'action** + KPIs ; détail = onglets (Identité · Fiche · Devis & paiements · Historique) ; file de versement en **lot** ; stats par employé (funnel + activité + rentabilité) ; journal d'audit |
-| Manager | mêmes routes, vues scopées | classement des LDG, commissions de l'équipe, **lecture seule** des candidatures (validation = CEO seul), actions commerciales complètes |
-| Commercial | `tableau-de-bord`, `prospects`, `prospects/[id]`, `profil` | pipeline complet, **assistant fiche projet 5 étapes**, relances du jour, plafond : actions jusqu'à `devis_envoye` |
-| Vendeur | `tableau-de-bord`, `prospects`, `prospects/nouveau`, `commissions` (= mes gains), `profil` | **mobile-first** : ajout 1 écran, liste en cartes, **jauge de palier** (« 3/5 → 12,5 % »), ledger gains (en attente/versées) |
-| Client | `projet`, `profil` | **timeline de 5 jalons en héros** + bouton « Valider cette étape », onglets Documents / Factures / Messagerie |
+### FE-2 (T09) — Page connexion (FR/EN)
+- **Fichiers** : `src/app/[locale]/(auth)/connexion/page.tsx`, `src/components/app/LoginForm.tsx`, `src/content/platform/{fr,en}.ts` (clés `auth.login` si compléments), `(auth)/layout.tsx` (+ `generateMetadata` + `<main>` — mineur T05).
+- RHF + Zod, `useActionState` → `login()` (T03), codes i18n (`invalid`/`rate_limited`/`pending`/`rejected`/`generic`), états idle/submitting/erreur, lien inscription, `callbackUrl`.
+- **Critère AUTO-OK** : 4 erreurs différenciées testables (logique), focus/labels AA, tsc/lint/build verts.
 
-### 3.3 Intégration landing — `Frontend`
+### FE-3 (T10+T13) — Inscription candidature + profil unifié
+- **Fichiers** : `src/app/[locale]/(auth)/inscription/page.tsx`, `src/components/app/CandidateForm.tsx`, `src/app/[locale]/(app)/espace/profil/page.tsx`, `src/components/app/ProfileForms.tsx`, `src/actions/profile.ts` (**Backend** — créée ici si BK-1 libère, sinon Frontend écrit la page contre le contrat BK-profile ci-dessous).
+- Inscription : nom figé, email normalisé (consigne T02/T03), mdp + confirmation, honeypot, écran « candidature transmise » honnête. Profil : email/téléphone/mdp (confirm actuel), nom lecture seule.
+- **Contrat action (figé)** : `applyAsCandidate(input) → { ok: true } | { ok: false; code: "duplicate" | "invalid" }` ; `updateProfile(input) → { ok: true } | { ok: false; code: "wrong_password" | "duplicate" | "invalid" }`.
+- **Critère AUTO-OK** : tsc/lint/build verts, i18n FR/EN, AA.
 
-- Déplacement de `page.tsx` + `opengraph-image.tsx` + layout Header/Footer/JSON-LD dans `(marketing)` **sans changer les URLs** ; `sitemap.ts`/`robots.ts` inchangés.
-- Ajout d'un lien **« Connexion »** discret dans le header landing (FR/EN) et « Espace client » dans le footer.
+### FE-4 (T16) — PipelineTable (composant clé réutilisé)
+- **Fichiers** : `src/components/app/{PipelineTable,StatusBadge,FilterBar}.tsx`, `src/lib/status-meta.ts` (couleurs depuis `DESIGN.md` §12.2).
+- Filtres **dans l'URL** (`useSearchParams`, debounce 300 ms), colonnes/actions selon `capabilities` (props), badge statut AA, mobile → cartes, skeleton + `EmptyState` avec CTA.
+- **Critère AUTO-OK** : 1 composant pour 4 rôles, filtres survivent au refresh, 360 px sans overflow.
+
+### FE-5 (T17+T18) — Liste scopée + détail 4 onglets
+- **Fichiers** : `src/app/[locale]/(app)/espace/prospects/page.tsx`, `…/prospects/[id]/page.tsx`, `src/components/app/prospect/*` (`IdentityTab`, `BriefTab`, `DealsTab`, `HistoryTab`, `StatusActions`).
+- Contrat lecture (figé) : `listProspects(filters, viewer)` (scoping serveur vendeur) ; détail : sélecteur de transitions = options issues de `canChangeStatus(role, from, to)`, 404 propre.
+- **Critère AUTO-OK** : transitions illégales absentes de l'UI **et** refusées côté serveur (double filet), tsc/lint/build verts.
+
+### FE-6 (T19) — Assistant fiche projet 5 étapes
+- **Fichiers** : `…/prospects/[id]/fiche/page.tsx`, `src/components/app/prospect/BriefWizard.tsx` (+ 5 `*Step.tsx`), `src/actions/prospects.ts` (upsert brief — **sérialisé** avec BK-2 sur ce fichier).
+- Sauvegarde par bloc (contrat `saveBriefBlock(prospectId, blockKey, data)`), jauge X/5, « Prêt pour devis » à 5/5.
+- **Critère AUTO-OK** : quitter sans perte, navigation clavier, tsc/lint/build verts.
+
+### FE-7 (T20+T32) — Espace vendeur mobile-first + dashboards Commercial/Vendeur
+- **Fichiers** : `…/espace/prospects/nouveau/page.tsx`, `src/components/app/vendor/{AddProspectForm,TierGauge,EarningsLedger}.tsx`, `…/espace/tableau-de-bord/page.tsx` (+ branches rôles), `src/components/app/dashboards/{CommercialDashboard,VendorDashboard}.tsx`.
+- Contrat gains (figé) : `getMyEarnings()` → `{ pendingCents, paidCents, items[], tier: { paidCount, rateTenths, nextTierAt } }`.
+- **Critère AUTO-OK** : ajout 1 écran à 360 px, jauge conforme aux 4 paliers, dashboards distincts par rôle.
+
+### FE-8 (T21+T22+T24 UI) — Cœur CEO : devis, encaissements, file de commissions
+- **Fichiers** : `…/prospects/[id]/page.tsx` (onglet Devis étendu — **sérialisé** avec FE-5), `src/app/[locale]/(app)/espace/commissions/page.tsx`, `src/components/app/commission/{CommissionQueue,CommissionHistory}.tsx`.
+- Rappel no-clawback avant chaque déclencheur, versement en **lot** avec `ConfirmDialog` total, bannière « sans bénéficiaire », stats têtes.
+- **Critère AUTO-OK** : lot cohérent, rôle non-CEO sans bouton, tsc/lint/build verts.
+
+### FE-9 (T26 UI + T27 + T28 + T29 UI) — Portail client complet
+- **Fichiers** : `…/espace/projet/page.tsx` (timeline + onglets), `src/components/app/client/{MilestoneTimeline,DocumentsPanel,InvoicesPanel,Thread,MessageForm}.tsx`, `…/espace/invitation/[token]/page.tsx` (activation publique — sous `(auth)`).
+- Timeline = pattern §4.7 landing (pastilles/filet), « Valider cette étape » si `en_cours`, docs/factures lecture seule, messagerie avec accusé.
+- **Critère AUTO-OK** : scoping client par construction, séquence non sautable, 360 px OK.
+
+### FE-10 (T11+T30+T31) — Espace équipe (candidatures + stats employé) + dashboards CEO/Manager
+- **Fichiers** : `…/espace/equipe/page.tsx`, `…/espace/tableau-de-bord/page.tsx` (**sérialisé** avec FE-7 sur ce fichier — FE-7 d'abord), `src/components/app/dashboards/{CeoDashboard,ManagerDashboard}.tsx`, `src/components/app/applications/{ApplicationList,ApplicationCard}.tsx`.
+- Ordre d'affichage CEO : **files d'action** → KPIs → activité ; stats employé dépliables (funnel/activité/rentabilité) ; manager : classement vendeurs + commissions équipe **lecture seule** (aucun bouton de versement, pas même désactivé) + candidatures lecture seule (**CEO seul** approuve/refuse).
+- **Critère AUTO-OK** : manager sans action de versement/validation, clic file d'action → bonne page filtrée, tsc/lint/build verts.
+
+### FE-11 (T33) — Passe a11y + responsive + états (toute plateforme)
+- **Fichiers** : composants/pages app concernés + `globals.css` (ajustements ciblés).
+- Checklist DESIGN §6 appliquée partout, 360/768/1440 sans overflow, skeleton/EmptyState/erreur systématiques, hiérarchie H1.
+- **Critère AUTO-OK** : audit clavier 5 espaces sans piège, build sans warning.
 
 ---
 
-## 4. Tests
+## 4. Tests → sous-agent `Tester` (fin de module)
 
-- **Unitaires (vitest)** : `lib/commission.ts` (paliers, plafond 25 %, idempotence, Rayan vendeur), `lib/prospect-dedup.ts` (normalisation), transitions de statut.
-- **Statique** : `npm run lint` · `npx tsc --noEmit` · `npm run build` sans erreur.
-- **E2E (Tester, Playwright)** : connexion par rôle, ajout anti-doublon, déclenchement commission à l'acompte, lot de versement, validation de jalon côté client, FR/EN, responsive 360/768/1440, non-régression de la landing.
+- **T36 (fin de plan, après gates DB-PENDING)** : parcours E2E par rôle via MCP Playwright sur `npm run dev` — landing `/fr`+`/en` (non-régression), 5 connexions rôles, anti-doublon, fiche 5 étapes, devis→acompte→**commissions au bon barème**→versement lot, invitation client→jalons→messagerie, cross-client 403, i18n FR↔EN, responsive 360/768/1440. → rapport `VALIDÉ` ou liste de correctifs précis.
+- **T35 (préalable)** : lint + `tsc --noEmit` + build production verts (piste Backend).
+
+---
+
+## Partition des fichiers (obligatoire pour le parallélisme)
+
+| Fichier | Piste |
+|---|---|
+| `src/lib/db/seed.ts`, `package.json` (script db:seed) | **Database** |
+| `src/lib/db/schema.ts` | **Database** (figé — évolution = tâche dédiée) |
+| `src/middleware.ts` | **Backend** |
+| `src/lib/prospect-dedup.ts` (+test), `src/lib/commission.ts` (+test) | **Backend** |
+| `src/actions/*.ts` (auth/profile/prospects/status/quotes/payments/commissions/invitations/project/messages/dashboard/contact) | **Backend** |
+| `src/lib/documents.ts`, `src/app/api/documents/[id]/route.ts` | **Backend** |
+| `src/app/[locale]/(app)/**`, `src/app/[locale]/(auth)/**`, `src/components/app/**` | **Frontend** |
+| `src/content/platform/{fr,en,types}.ts` | **Frontend** (Backend n'y touche jamais) |
+| `src/components/sections/Contact.tsx` | **Frontend** (tâche BK-8, sérialisée en fin de plan) |
+| `src/lib/permissions.ts` | **FIGÉ** (livré T07) — aucune piste n'y touche sans tâche dédiée |
+| `src/auth.ts`, `src/lib/password.ts`, `src/actions/auth.ts`, `src/types/next-auth.d.ts` | **FIGÉS** (T03) — sauf tâche dédiée |
+| `src/lib/db/index.ts`, `drizzle.config.ts`, `drizzle/**` | **FIGÉS** (T01/T02) |
+| Landing `(marketing)/**`, `src/i18n/dictionaries.ts`, `src/content/{fr,en,types}.ts`, `globals.css` (hors ajustements ciblés T33), `sitemap.ts`, `robots.ts` | **INTERDITS** (hors périmètre) |
+
+**Collisions gérées (sérialisation explicite)** :
+1. `src/actions/prospects.ts` : **BK-2** (création) → **FE-6** (upsert brief) — jamais en même temps.
+2. `src/actions/commissions.ts` : **BK-3** (génération) → **BK-4** (versement) — une seule tâche Backend à la fois.
+3. `…/espace/tableau-de-bord/page.tsx` : **FE-7** → **FE-10**.
+4. `…/prospects/[id]/page.tsx` : **FE-5** → **FE-8**.
+5. `src/components/sections/Contact.tsx` : **BK-8** = dernière tâche du plan (après toute Frontend).
 
 ---
 
 ## Sécurité & edge cases à couvrir
 
-| Risque | Mesure |
+| Risque | Mesure (piste) |
 |---|---|
-| Escalade de rôle (client qui lit le pipeline) | RBAC `permissions.ts` vérifié **dans chaque Server Action** + tests E2E par rôle |
-| Doublon de prospect en écriture concurrente | index unique `email_norm`/`phone_norm` → message propre |
-| Double génération de commission (double clic/paiement) | contrainte unique `(quote_id, beneficiary_id, kind)` |
-| Deal sans bénéficiaire (Ads sans responsable) | statut `due` + bannière « sans bénéficiaire » dans la file CEO |
-| Commission sur deal annulé | **pas de clawback** (choix assumé) → note dans l'écran CEO avant paiement |
-| Force brute connexion | table `login_attempts` : 5 échecs / 15 min par email+IP |
-| Fichier malveillant | type/extension/taille vérifiés (PDF, ≤ 5 Mo), nom aléatoire, **téléchargement par route handler authentifiée** (jamais en public) |
-| Statut modifié en double (2 onglets) | transaction avec `WHERE status = attendu` → erreur « recharger » |
-| Course sur changement de statut | idem, + `activities` journalise l'auteur |
-| Fuite de données entre vendeurs | scoping systématique `WHERE source_user_id = moi` |
-| PII (coordonnées prospects) | accès scopé, `noindex`, pas d'export en v1 |
-| Invitation client expirée/réutilisée | `expires_at` 48 h + `used_at` |
-| Fuseau | stockage UTC, rendu `Africa/Algiers` (pas de comparaison de dates côté client) |
+| Escalade de rôle | RBAC serveur dans **chaque** Server Action (`canChangeStatus`, scoping) — Backend |
+| Middleware edge = garde grossière seulement | Le layout `(app)` + les actions revalident — Frontend/Backend |
+| JWT corrompu/ancien schéma | `isRole()` + `jwtVerify` complet (`jose`) — Backend |
+| Doublon prospect en course | index unique + SELECT préalable + message propre — Backend |
+| Double génération de commission (double clic) | contrainte unique **+ SELECT préalable** (NULL distincts dans l'index) — Backend |
+| Deal sans bénéficiaire (Ads/Landing) | `beneficiary_id: null` + bannière CEO — Backend/Frontend |
+| Commission sur annulation | **pas de clawback** (choix assumé) → rappel UI avant paiement — Frontend |
+| Fichier malveillant | magic bytes `%PDF` + ≤ 5 Mo + route d'upload authentifiée + download à droit vérifié — Backend |
+| Force brute login | `login_attempts` 5/15 min (T03, livré) | 
+| Statut modifié en double | `UPDATE … WHERE status = expectedFrom` → erreur « recharger » — Backend |
+| Fuite entre vendeurs | `WHERE source_user_id = moi` côté serveur — Backend |
+| Invitation expirée/réutilisée | `expires_at` 48 h + `used_at` — Backend |
+| PII prospects | scoping + `noindex` + pas d'export v1 — transversal |
+| Fuseau | UTC en DB, rendu `Africa/Algiers` — Frontend |
+| Landing non régressée | fichiers interdits + E2E ciblé fin de plan — transversal |
 
 ---
 
-## Ordre d'exécution (séquentiel — détail dans `TACHES.md`)
+## Contrats inter-pistes (schéma DB + types partagés, figés ici)
 
-| # | Tâche (titre explicite) | Agent | TACHES.md |
-|---|---|---|---|
-| 1 | T01 — Connecter Neon + Drizzle et créer la base locale/migrée | Backend | T01 |
-| 2 | T02 — Créer les 13 tables du schéma (users, prospects, devis, paiements, commissions, jalons, documents…) + migration | Backend | T02 |
-| 3 | T03 — Installer Auth.js v5 : connexion credentials, sessions JWT 7j, hachage scrypt | Backend | T03 |
-| 4 | T04 — Installer shadcn/ui et mapper son thème sur les tokens DESIGN.md + ajouter la palette des statuts au DESIGN.md | Frontend | T04 |
-| 5 | T05 — Restructurer les routes en groupes (marketing)/(auth)/(app) sans casser la landing `/fr` et `/en` | Frontend | T05 |
-| 6 | T06 — Créer la couche i18n de la plateforme (types + dictionnaires FR/EN) | Frontend | T06 |
-| 7 | T07 — Écrire la matrice RBAC (`permissions.ts`) et le middleware de garde des routes d'espace | Backend | T07 |
-| 8 | T08 — Construire le shell de l'espace (sidebar par rôle, topbar, redirection rôle, noindex) | Frontend | T08 |
-| 9 | T09 — Page de connexion (FR/EN) avec erreurs i18n et blocage après 5 échecs | Frontend | T09 |
-| 10 | T10 — Page d'inscription candidature LDG → compte en attente de validation | Frontend | T10 |
-| 11 | T11 — Espace CEO : valider ou refuser les candidatures (avec motif) | Frontend | T11 |
-| 12 | T12 — Script de seed : comptes CEO + Rayan + prospects de démonstration | Backend | T12 |
-| 13 | T13 — Page profil unifiée (email, téléphone, mot de passe — nom figé) | Frontend | T13 |
-| 14 | T14 — Action serveur d'ajout de prospect avec anti-doublon (normalisation + index unique) | Backend | T14 |
-| 15 | T15 — Machine à états des 10 statuts + journal d'audit (`activities`) + raison obligatoire sur statut terminal | Backend | T15 |
-| 16 | T16 — Composant PipelineTable réutilisable (filtres URL, badges, colonnes/actions par rôle) | Frontend | T16 |
-| 17 | T17 — Pages liste prospects scopées par rôle (vendeur : les siens, autres : tous) | Frontend | T17 |
-| 18 | T18 — Page détail prospect en 4 onglets (Identité, Fiche, Devis & paiements, Historique) | Frontend | T18 |
-| 19 | T19 — Assistant fiche projet en 5 étapes avec jauge de complétion | Frontend | T19 |
-| 20 | T20 — Espace vendeur mobile-first : ajout 1 écran, liste en cartes, jauge de palier, ledger « mes gains » | Frontend | T20 |
-| 21 | T21 — Espace CEO : création de devis (montant USD TTC + PDF joint) et avancement de ses statuts | Frontend | T21 |
-| 22 | T22 — Encaissements CEO : acompte + échéances (saisie manuelle) avec confirmation explicite | Frontend | T22 |
-| 23 | T23 — Moteur de commissions (barème progressif, plafond 25 %, snapshots, idempotence) + tests unitaires | Backend | T23 |
-| 24 | T24 — Espace CEO : file de versement des commissions (individuel ou en lot) + historique | Frontend | T24 |
-| 25 | T25 — Stockage & téléchargement sécurisé des PDF (devis, contrats, factures, livrables) | Backend | T25 |
-| 26 | T26 — Portail client : invitations (lien 48 h) et activation du compte | Backend | T26 |
-| 27 | T27 — Portail client : timeline des 5 jalons + validation d'étape en 1 clic | Frontend | T27 |
-| 28 | T28 — Portail client : onglets Documents & Factures | Frontend | T28 |
-| 29 | T29 — Portail client : messagerie projet avec accusé de lecture | Frontend | T29 |
-| 30 | T30 — Dashboard CEO : KPIs globaux + 3 files d'action + stats par employé (funnel/activité/rentabilité) | Frontend | T30 |
-| 31 | T31 — Espace Manager (Rayan) : classement des LDG + historique des commissions de l'équipe | Frontend | T31 |
-| 32 | T32 — Dashboards Commercial (relances du jour) et Vendeur (palier + prospects) | Frontend | T32 |
-| 33 | T33 — Passe a11y + responsive 360/768/1440 + états vides/chargement/erreur sur toute la plateforme | Frontend | T33 |
-| 34 | T34 — Câbler le formulaire contact de la landing → prospect source `landing` (validé) | Backend | T34 |
-| 35 | T35 — Qualité statique : lint + tsc + build production sans erreur | Backend | T35 |
-| 36 | T36 — Validation E2E par rôle (Playwright) + non-régression de la landing | Tester | T36 |
+> Les pistes codent contre ces contrats. **Toute divergence = AUTO-KO.**
 
-**Règles d'exécution** : une tâche à la fois, prompt isolé (2-3 fichiers), `Reviewer` après chaque tâche Frontend/Backend, micro-commit Conventional Commits en français après `APPROUVE`, **aucun `git push`**. `REJETE` → correction puis revue ; 2 échecs identiques → escalade utilisateur.
+### C-1 — Schéma DB (T02, figé) — `src/lib/db/schema.ts`
+13 tables : `users`, `prospects`, `prospect_briefs`, `quotes`, `payments`, `commissions`, `client_projects`, `milestones`, `documents`, `invitations`, `activities`, `messages`, `login_attempts`. Enums : `role` (5), `user_status` (4), `prospect_status` (10 : `nouveau…disqualifie`), `prospect_source` (5), `quote_status` (4), `commission_status` (2), `commission_kind` (2), `milestone_key` (5), `milestone_status` (3), `document_kind` (4), `document_owner` (2).
+**Conventions** : timestamps `timestamptz` (helper `tstz`) · `ratePercent` en **dixièmes** (100 = 10,0 %) · montants en **cents** · `commissions` unique `(quote_id, beneficiary_id, kind)` · `email_norm`/`phone_norm` uniques · SQL snake_case explicite · `bytes` = `bytea` customType.
+
+### C-2 — Permissions (T07, **livré, figé**) — `src/lib/permissions.ts`
+Exports : `Role`, `ProspectStatus` (dérivés schéma), `HOME_BY_ROLE`, `ROUTE_ACCESS`, `isRouteAllowed(pathname, role)`, `isEspacePath(pathname)`, `TRANSITIONS`, `canChangeStatus(role, from, to)`, `isTerminalStatus(status)`, `canViewAllProspects(role)`, `isRole(value)`.
+
+### C-3 — Auth (T03, figé)
+`@/auth` → `auth()`, `login(input) → { ok: true } | { ok: false; code: "invalid"|"rate_limited"|"pending"|"rejected" }`, `logout()`. Session : `session.user = { id, role, name, status }`. `@/lib/password` → `hashPassword`, `verifyPassword`.
+
+### C-4 — Dictionnaire (T06, figé, extensible)
+`getPlatformDictionary(locale) → PlatformContent` — sections : `common`, `nav` (hrefs **figés** : ceo/manager `tableau-de-bord|prospects|commissions|equipe`, commercial `tableau-de-bord|prospects`, vendeur `tableau-de-bord|prospects|commissions`, client `projet`), `auth`, `statuses` (10+4+2+5+5+4), `pipeline`, `prospect`, `brief`, `dashboard`, `commissions`, `client`, `applications`, `profile`, `footer`, `seo`. Toute clé manquante = erreur TS. **Ajouts possibles par Frontend ; retraits = AUTO-KO.**
+
+### C-5 — Contrats d'actions à venir (signatures figées, impl Backend, conso Frontend)
+```
+applyAsCandidate(input)                     → { ok: true } | { ok: false; code: "duplicate"|"invalid" }
+updateProfile(input)                        → { ok: true } | { ok: false; code: "wrong_password"|"duplicate"|"invalid" }
+createProspect(input, viewer)               → { ok: true; id: string } | { ok: false; code: "duplicate"|"forbidden"|"invalid" }
+changeProspectStatus(input, viewer)         → { ok: true } | { ok: false; code: "conflict"|"forbidden"|"reason_required"|"invalid" }
+listProspects(filters, viewer)              → { items: ProspectListItem[]; total: number }
+saveBriefBlock(prospectId, blockKey, data)  → { ok: true; completedBlocks: number } | { ok: false; code: … }
+markCommissionsPaid(ids[], actorId)         → { ok: true; paidCount: number } | { ok: false; code: … }
+getMyEarnings(viewer)                       → { pendingCents, paidCents, items[], tier: { paidCount, rateTenths, nextTierAt } }
+```
+Codes d'erreur **en clair** (jamais de message) — l'i18n est côté Frontend.
+
+### C-6 — Barème (T23, figé : `src/lib/commission.ts`)
+`getTier(paidCount) → 100 | 125 | 150 | 200` (dixièmes) pour 0-4 / 5-9 / 10-19 / 20+ · manager = 50 dixièmes · garde-fou cumul 250 · part CEO ≥ 75 % · palier **snapshot** à la génération · deal antérieur `client_actif` avant ce deal.
 
 ---
 
-## Validation finale (Reviewer → Tester)
+## Ordre d'exécution (parallèle, par lots)
 
-1. Les 36 tâches (T01→T36) cochées et commitées.
-2. `Reviewer` : diff complet conforme (RBAC serveur, zéro `any`, palette DESIGN.md, i18n FR/EN, landing non régressée).
-3. `Tester` : E2E des 5 rôles + responsive + non-régression landing → rapport.
-4. Synthèse utilisateur : fichiers créés, statut revues/tests, points restants (domaine, contenu réel, décision T34).
+**Lot 0 — LIVRÉ** : T01 (DB), T02 (schéma), T03 (auth), T04 (shadcn), T05 (route groups), T06 (i18n) · T07 partiel (`permissions.ts` ✅).
+
+**Lot 1** *(lancement simultané, fichiers disjoints)* :
+- `Backend` **BK-1** (middleware) ∥ `Frontend` **FE-1** (shell) ∥ `Database` **DB-1** (seed).
+
+**Lot 2** *(après BK-1, qui libère le terrain de garde)* :
+- `Backend` **BK-2** (dedup + statuts) ∥ `Frontend` **FE-2** (connexion) et **FE-3** (inscription + profil).
+
+**Lot 3** :
+- `Backend` **BK-3** (moteur commissions) ∥ `Frontend` **FE-4** (PipelineTable).
+
+**Lot 4** :
+- `Backend` **BK-4** (devis/acompte/versement) ∥ `Frontend` **FE-5** (liste + détail) puis **FE-6** (brief wizard, après BK-2 sur `actions/prospects.ts`).
+
+**Lot 5** :
+- `Backend` **BK-5** (documents + invitations) ∥ `Frontend` **FE-7** (vendeur + dashboards bas).
+
+**Lot 6** :
+- `Backend` **BK-6** (jalons + messages) ∥ `Frontend` **FE-8** (UI CEO, après FE-5) puis **FE-9** (portail client, après BK-5/BK-6).
+
+**Lot 7** :
+- `Backend` **BK-7** (agrégats) ∥ `Frontend` **FE-10** (équipe + dashboards CEO/Manager, après FE-7).
+
+**Lot 8** *(sérialisés, fin de module)* :
+- `Frontend` **FE-11** (passe a11y) → `Backend` **T35** (qualité statique) → `Backend` **BK-8** (câblage Contact — dernière) → `Database` **DB-2** (migrations réelles + seed : **gates DB-PENDING**, nécessite la chaîne Neon) → `Tester` **T36** (E2E complet).
+
+---
+
+## Validation finale (auto-revue → Tester)
+
+1. Chaque tâche cochée `AUTO-OK` et commitée (micro-commit Conventional Commits FR).
+2. **Auto-revue Lead** (remplace l'ancien Reviewer) : dernier diff conforme — RBAC serveur dans chaque action, zéro `any`, palette `DESIGN.md`, i18n FR/EN, partition respectée, landing intacte.
+3. **Gates DB-PENDING** : `DATABASE_URL` fourni → `db:migrate` + `db:seed` + smoke login réel.
+4. `Tester` (T36) : E2E des 5 rôles + responsive + non-régression landing → rapport.
+5. Synthèse utilisateur : fichiers créés, statut auto-revues/tests, points restants.
