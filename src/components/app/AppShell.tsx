@@ -1,0 +1,65 @@
+import type { ReactNode } from "react";
+
+import { Sidebar } from "@/components/app/Sidebar";
+import { Topbar } from "@/components/app/Topbar";
+import { Toaster } from "@/components/ui/sonner";
+import type { PlatformNavItem, PlatformNavContent } from "@/content/platform/types";
+import type { Locale } from "@/i18n/config";
+
+/**
+ * Shell de l'espace connecté (T08 · Server Component).
+ *
+ * Structure : `flex min-h-screen` → sidebar desktop (masquée < lg) + colonne
+ * droite (topbar collante + `<main id="main">`). Le menu mobile n'existe qu'à
+ * un seul endroit : il est monté par `Topbar`, qui porte l'état de son `Sheet`
+ * (note de choix détaillée dans `src/components/app/Topbar.tsx`).
+ *
+ * `<Toaster />` (sonner) est monté ici pour tous les futurs toasts de
+ * l'espace ; thème sombre forcé (site dark-only, aucun ThemeProvider).
+ */
+export type AppShellProps = {
+  /** Entrées du rôle connecté — `dict.nav[role]`, href SANS préfixe locale. */
+  items: readonly PlatformNavItem[];
+  locale: Locale;
+  /** Libellés partagés de la nav (`dict.nav`). */
+  nav: PlatformNavContent;
+  /** Identité affichée dans le menu avatar. */
+  user: { name: string };
+  /** Libellé lisible du rôle — `dict.statuses.role[role]`. */
+  roleLabel: string;
+  children: ReactNode;
+};
+
+export function AppShell({
+  items,
+  locale,
+  nav,
+  user,
+  roleLabel,
+  children,
+}: AppShellProps): ReactNode {
+  return (
+    <>
+      <div className="flex min-h-screen bg-ink">
+        <Sidebar items={items} locale={locale} brand={nav.brand} />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <Topbar
+            items={items}
+            locale={locale}
+            nav={nav}
+            user={user}
+            roleLabel={roleLabel}
+          />
+          <main
+            id="main"
+            tabIndex={-1}
+            className="flex-1 overflow-y-auto p-6 lg:p-8"
+          >
+            {children}
+          </main>
+        </div>
+      </div>
+      <Toaster theme="dark" />
+    </>
+  );
+}
