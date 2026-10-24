@@ -1,4 +1,4 @@
-import { jwtVerify } from "jose";
+import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
 import { defaultLocale, isValidLocale, locales, type Locale } from "@/i18n/config";
 import {
@@ -12,18 +12,24 @@ import {
 /**
  * Atheris — middleware edge : résolution de locale (T01) + garde JWT/RBAC (T07).
  *
- * EDGE-RUNTIME : seuls `jose` (vérification de signature/expiration) et les
- * modules purs `@/lib/permissions` / `@/i18n/config` sont importés — aucun
- * import DB, aucun `@/auth` (Auth.js complet est incompatible/poids mort côté
- * edge). Les `import type` (dont ceux de `permissions.ts` vers le schéma
- * Drizzle) sont effacés à la compilation : zéro runtime DB ici.
+ * EDGE-RUNTIME : seuls `next-auth/jwt` (décryptage JWE officiel), les modules
+ * purs `@/lib/permissions` / `@/i18n/config` sont importés — aucun import DB,
+ * aucun `@/auth` (Auth.js complet = poids mort côté edge). Les `import type`
+ * (dont ceux de `permissions.ts` vers le schéma Drizzle) sont effacés à la
+ * compilation : zéro runtime DB ici.
+ *
+ * ⚠ FORMAT DU JETON : Auth.js v5 **chiffre** ses JWT de session (JWE
+ * A256CBC-HS512, clé dérivée HKDF avec `salt = nom du cookie`) — une simple
+ * vérification de signature (JWS, `jose.jwtVerify`) échouerait systématiquement
+ * et bloquerait tout utilisateur connecté. `getToken` de `next-auth/jwt` est
+ * l'API de décodage officielle (edge-compatible) : elle déchiffre ET valide
+ * l'expiration (`clockTolerance: 15 s`), et renvoie `null` sur tout échec.
  *
  * NOTE DEV (DB-PENDING) : `AUTH_SECRET` est un placeholder dans `.env.local`
- * tant que la DB n'existe pas → `jwtVerify` échoue **systématiquement**, ce qui
- * est attendu : le comportement observable est « non connecté » (redirection
- * vers /connexion sur /espace). Le scénario « session valide → redirection
- * home » est donc invérifiable en dev sans DB (impossible de fake-couter un
- * JWT cohérent avec un secret placeholder) — il sera validé avec la DB (T04+).
+ * tant que la DB n'existe pas → le déchiffrement échoue **systématiquement**,
+ * ce qui est attendu : le comportement observable est « non connecté »
+ * (redirection vers /connexion sur /espace). Le scénario « session valide →
+ * redirection home » est invérifiable en dev sans DB — validé plus tard (T36).
  */
 
 // ---------------------------------------------------------------------------
@@ -70,11 +76,11 @@ const SESSION_COOKIE_CANDIDATES = [
 
 /**
  * Claims utiles du payload JWT, typés `unknown` **volontairement** : le jeton
- * est signé (donc intégre), mais son contenu n'est jamais fait foi tel quel —
- * `role` doit repasser le type guard `isRole()` et `status` doit valoir
- * explicitement `active` avant tout usage (jeton d'ancien schéma possible après
- * évolution du schéma DB : la signature seule ne prouve pas la validité des
- * valeurs portées).
+ * est chiffré/authentifié (donc intégre), mais son contenu n'est jamais fait foi
+ * tel quel : `role` doit repasser le type guard `isRole()` et `status` doit
+ * valoir explicitement `active` avant tout usage (jeton d'ancien schéma possible
+ * après évolution du schéma DB : l'intégrité du jeton ne prouve pas la validité
+ * des valeurs portées).
  */
 interface SessionClaims {
   readonly role: unknown;
@@ -82,28 +88,27 @@ interface SessionClaims {
 }
 
 /** Lit le cookie de session, quelle que soit sa variante de nom. */
-function readSessionCookie(request: NextRequest): string | null {
+function readSessionCookie(request: NextRequest): { name: string; value: string } | null {
   for (const name of SESSION_COOKIE_CANDIDATES) {
     const value = request.cookies.get(name)?.value;
     if (value) {
-      return value;
+      return { name, value };
     }
   }
   return null;
 }
 
 /**
- * Vérifie la signature ET l'expiration (`exp`) du JWT de session et en extrait
- * les claims bruts.
+ * Déchiffre et valide le JWT de session (JWE Auth.js) puis en extrait les
+ * claims bruts.
  *
  * @returns `null` (= non connecté) si : aucun cookie ; `AUTH_SECRET` absent
- *   (placeholder ou non renseigné — toute vérification échoue, comportement
- *   « non connecté » attendu en dev sans DB) ; jeton corrompu, contrefait ou
- *   expiré (`jwtVerify` throw → catch silencieux, aucun détail fuité).
+ *   (placeholder ou non renseigné) ; jeton corrompu, contrefait ou expiré
+ *   (`getToken` renvoie `null` silencieusement — aucun détail fuité).
  */
 async function readSessionClaims(request: NextRequest): Promise<SessionClaims | null> {
-  const token = readSessionCookie(request);
-  if (token === null) {
+  const cookie = readSessionCookie(request);
+  if (cookie === null) {
     return null;
   }
 
@@ -113,11 +118,20 @@ async function readSessionClaims(request: NextRequest): Promise<SessionClaims | 
   }
 
   try {
-    const { payload } = await jwtVerify(token, new TextEncoder().encode(secret));
+    // `salt = cookie.name` : c'est la dérivation exacte utilisée par Auth.js à
+    // l'encodage (options.cookies.sessionToken.name) — sans ce salt, le
+    // déchiffrement HKDF échouerait même sur un jeton parfaitement valide.
+    const payload = await getToken({
+      req: request,
+      secret,
+      cookieName: cookie.name,
+    });
+    if (payload === null) {
+      return null;
+    }
     return { role: payload.role, status: payload.status };
   } catch {
-    // Échec de vérification (mauvaise signature, expiration…) : traité comme
-    // « non connecté », sans distinction ni log côté client.
+    // Dernier filet (jamais atteint en principe) : tout échec = non connecté.
     return null;
   }
 }
