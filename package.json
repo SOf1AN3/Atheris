@@ -9,7 +9,8 @@
     "lint": "eslint",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "db:seed": "tsx src/lib/db/seed.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^6.0.0",
@@ -30,6 +31,7 @@
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.4",
     "framer-motion": "^14.6.0",
+    "jose": "^6.2.13",
     "lucide-react": "^1.61.0",
     "next": "15.5.28",
     "next-auth": "^5.0.0-beta.32",
@@ -53,6 +55,7 @@
     "eslint": "^9",
     "eslint-config-next": "15.5.28",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5"
   }
 }
