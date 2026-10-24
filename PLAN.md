@@ -55,6 +55,10 @@
 4. **Stockage des PDF** : solution retenue = **fichiers en base (bytea), 5 Mo max, servis par route handler authentifiée** (zéro service externe). Migration Vercel Blob notée en phase 2 si le volume grandit.
 5. Non bloquants : domaine de prod, email/WhatsApp réels, contenu réel des espaces, `DATABASE_URL` Neon + `AUTH_SECRET` (à fournir en .env.local).
 
+> **⚠ Règle d'exécution liée au `DATABASE_URL` (accord utilisateur)** : la chaîne Neon sera fournie **à la fin du plan**. En attendant, `.env.local` contient un placeholder : les tâches DB (T01, T02…) sont **écrites et relues normalement**, `drizzle-kit generate` (génération des fichiers de migration, sans connexion) est vérifié, mais **l'application des migrations sur Neon et toute requête DB réelle sont reportées** à la rubrique « Validation finale » (liste `DB-PENDING` ci-dessous) avant le passage de `Tester` (T36).
+>
+> **`DB-PENDING`** : T01 (vrai `db:migrate`), T02 (13 tables en base), T12 (seed), T14/T15 (anti-doublon réel, transitions réelles), T23 (génération commission réelle), T36 (E2E complet).
+
 ---
 
 ## 0. Architecture cible & conventions
