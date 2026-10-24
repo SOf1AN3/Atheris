@@ -1,8 +1,8 @@
 "use server";
 
 /**
- * Atheris — Server Actions prospects : création anti-doublon + lecture scopée
- * (T14 · contrat C-5 · PLAN.md §Sécurité).
+ * Atheris — Server Actions prospects : création anti-doublon, lecture scopée
+ * et sauvegarde du brief (T14 · contrat C-5 · FE-6 T19 · PLAN.md §Sécurité).
  *
  * CONTRAT C-5 (figé) :
  * - `createProspect(input, viewer)` → `{ ok: true; id }` |
@@ -39,6 +39,7 @@ import { z } from "zod";
 import { getDb } from "@/lib/db";
 import {
   activities,
+  prospectBriefs,
   prospectSourceEnum,
   prospects,
   prospectStatusEnum,
@@ -406,6 +407,264 @@ export async function listProspects(
     return { items: rows, total };
   } catch (error) {
     console.error("[prospects] échec de lecture de la liste", error);
+    throw error;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 3. saveBriefBlock — sauvegarde d'un bloc de la fiche projet (FE-6 · T19).
+// ---------------------------------------------------------------------------
+
+/**
+ * Les 5 blocs de la fiche — miroir **local** de `BriefBlockKey`
+ * (`src/content/platform/types.ts`, figé). Le serveur valide l'appartenance
+ * d'une clé à un bloc, jamais son libellé i18n : le dictionnaire n'est jamais
+ * lu ici (aucune dépendance au contenu).
+ */
+const BRIEF_BLOCK_KEYS = ["context", "need", "constraints", "tech", "followUp"] as const;
+
+type BriefBlockKey = (typeof BRIEF_BLOCK_KEYS)[number];
+
+/**
+ * Miroir des clés de `dict.brief.fields.*` (dictionnaire verrouillé) : toute
+ * clé absente de ce tableau est refusée (`invalid`) — le serveur ne fait
+ * jamais confiance au client. Ajouter un champ au dict impose de le déclarer
+ * ici en même temps (revue délibérée, jamais un refus silencieux).
+ */
+const ALLOWED_BRIEF_KEYS: Record<BriefBlockKey, readonly string[]> = {
+  context: ["businessProblem", "productType"],
+  need: ["scope", "targetUsers"],
+  constraints: ["deadline", "budget", "decisionMakers", "references"],
+  tech: ["forcedTech", "integrations", "hosting", "security"],
+  followUp: ["nextStep", "reminderDate", "notes"],
+};
+
+/**
+ * Rôles habilités à ÉCRIRE la fiche (le `vendeur` est en lecture seule côté
+ * page, refusé ici) — identique au plafond d'écriture du pipeline.
+ *
+ * NOTE SÉCURITÉ (choix assumé) : **aucun contrôle `sourceUserId`** n'est
+ * appliqué. Le brief est un outil de l'équipe commerciale (commercial /
+ * manager / CEO) : un membre interne habilité peut renseigner la fiche de
+ * n'importe quel prospect de l'entreprise, y compris porté par un autre
+ * commercial. Le scoping vendeur (`source_user_id`) ne s'applique qu'à la
+ * LISTE des prospects, pas à la fiche projet.
+ */
+const BRIEF_WRITE_ROLES: readonly Role[] = ["ceo", "manager", "commercial"];
+
+const saveBriefBlockSchema = z.object({
+  prospectId: z.uuid(),
+  block: z.enum(BRIEF_BLOCK_KEYS),
+  // 30 clés max × 2000 caractères : borne le payload d'un bloc (le serveur
+  // revalide ensuite chaque clé contre `ALLOWED_BRIEF_KEYS`).
+  data: z
+    .record(z.string().max(128), z.string().max(2000))
+    .refine((value) => Object.keys(value).length <= 30),
+});
+
+/** Entrée de `saveBriefBlock` (contrat T19). */
+export type SaveBriefBlockInput = {
+  prospectId: string;
+  block: BriefBlockKey;
+  data: Record<string, string>;
+};
+
+/** Contrat de `saveBriefBlock` (union discriminée par `ok`). */
+export type SaveBriefBlockResult =
+  | { ok: true; completedBlocks: number }
+  | { ok: false; code: "forbidden" | "not_found" | "invalid" };
+
+/** Ligne de `prospect_briefs` (dérivée du schéma Drizzle, jamais recopiée). */
+type ProspectBriefRow = typeof prospectBriefs.$inferSelect;
+
+/** Insert partiel de `prospect_briefs`. */
+type ProspectBriefInsert = typeof prospectBriefs.$inferInsert;
+
+/**
+ * Patch du bloc jsonb concerné — `switch` **exhaustif** plutôt qu'une clé
+ * dynamique : TypeScript vérifie qu'ajouter un bloc au schéma fait échouer la
+ * compilation ici (zéro index `[block]` non typé).
+ */
+function briefBlockPatch(
+  block: BriefBlockKey,
+  data: Record<string, string>,
+): Partial<ProspectBriefInsert> {
+  switch (block) {
+    case "context":
+      return { blockContext: data };
+    case "need":
+      return { blockNeed: data };
+    case "constraints":
+      return { blockConstraints: data };
+    case "tech":
+      return { blockTech: data };
+    case "followUp":
+      return { blockFollowUp: data };
+  }
+}
+
+/**
+ * Blocs renseignés = blocs portant **au moins 1 valeur non blanche après
+ * trim** (les valeurs non-string héritées du jsonb sont ignorées).
+ */
+function countCompletedBlocks(
+  blocks: Record<BriefBlockKey, Record<string, unknown>>,
+): number {
+  let completed = 0;
+  for (const key of BRIEF_BLOCK_KEYS) {
+    const hasValue = Object.values(blocks[key]).some(
+      (value) => typeof value === "string" && value.trim().length > 0,
+    );
+    if (hasValue) completed += 1;
+  }
+  return completed;
+}
+
+/** Extrait `completedBlocks` d'un RETURNING (garde anti-ligne absente). */
+function completedFromRows(rows: { completedBlocks: number }[]): number {
+  const row = rows[0];
+  if (row === undefined) {
+    throw new Error("saveBriefBlock : écriture sans ligne retournée");
+  }
+  return row.completedBlocks;
+}
+
+/**
+ * Sauvegarde UN bloc de la fiche projet (5 blocs, liaison 1-1 avec le
+ * prospect) et recompte les blocs complétés.
+ *
+ * @param input `prospectId` (uuid), `block` (enum des 5 blocs), `data`
+ *   (≤ 30 clés, valeurs ≤ 2000 caractères — chaque clé doit appartenir à
+ *   `ALLOWED_BRIEF_KEYS[block]`, sinon `invalid`).
+ * @param actor `{ id, role }` chargé depuis la session par la page appelante
+ *   (revalidé ici : uuid + enum rôle — un actor forgé est refusé).
+ * @returns `{ ok: true, completedBlocks }` ; sinon `forbidden` (rôle hors
+ *   `ceo|manager|commercial`), `not_found` (prospect inexistant — même code
+ *   si le brief n'existe pas encore : c'est le cas nominal d'upsert),
+ *   `invalid` (entrée malformée, clé inconnue ou actor forgé).
+ * @throws Erreur d'infra DB — journalisée puis propagée → 500.
+ *
+ * ATELIER (driver `neon-http`, constat DB-1) : **aucune `db.transaction()`**.
+ * Séquence en requêtes séparées : SELECT prospect → SELECT brief →
+ * INSERT/UPDATE (merge mémoire des 5 blocs) → audit non fatal. La ligne est
+ * unique par `prospect_id` : le re-SELECT puis l'INSERT/UPDATE suivant sont
+ * assez rapprochés ; une course sur un brief inexistant est rattrapée par le
+ * repli unique (`23505`) → UPDATE. Le `completedBlocks` relu au RETURNING est
+ * la valeur réellement écrite (merge des 5 blocs en mémoire, pas une valeur
+ * envoyée par le client).
+ *
+ * L'audit `activities` (`brief.updated`) est **non fatal** : un brief déjà
+ * enregistré ne doit pas être refait faute d'une ligne de journal manquante.
+ */
+export async function saveBriefBlock(
+  input: SaveBriefBlockInput,
+  actor: { id: string; role: Role },
+): Promise<SaveBriefBlockResult> {
+  // 1. Validation Zod de l'entrée — avant tout accès DB.
+  const parsed = saveBriefBlockSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, code: "invalid" };
+
+  // 2. Droit d'écriture : rôle valide mais non habilité (vendeur/client) ou
+  //    rôle forgé (JWT ancien schéma) → refus identique, aucun détail.
+  const parsedRole = roleSchema.safeParse(actor?.role);
+  if (!parsedRole.success) return { ok: false, code: "forbidden" };
+  const role = parsedRole.data;
+  if (!BRIEF_WRITE_ROLES.includes(role)) return { ok: false, code: "forbidden" };
+
+  // 3. Actor : id doit être uuid (FK `updated_by` / `actor_id`).
+  if (!viewerIdSchema.safeParse(actor?.id).success) return { ok: false, code: "invalid" };
+
+  const { prospectId, block, data } = parsed.data;
+
+  // 4. Appartenance des clés au bloc (miroir du dict — pas de libellé lu ici).
+  const allowedKeys = ALLOWED_BRIEF_KEYS[block];
+  for (const key of Object.keys(data)) {
+    if (!allowedKeys.includes(key)) return { ok: false, code: "invalid" };
+  }
+
+  const db = getDb();
+
+  try {
+    // 5. Le prospect doit exister (le brief lui est cascade 1-1).
+    const prospectRows = await db
+      .select({ id: prospects.id })
+      .from(prospects)
+      .where(eq(prospects.id, prospectId))
+      .limit(1);
+    if (prospectRows.length === 0) return { ok: false, code: "not_found" };
+
+    // 6. Relecture de la ligne brief (merge mémoire des 5 blocs).
+    const briefRows = await db
+      .select()
+      .from(prospectBriefs)
+      .where(eq(prospectBriefs.prospectId, prospectId))
+      .limit(1);
+    const existing: ProspectBriefRow | undefined = briefRows[0];
+
+    const merged: Record<BriefBlockKey, Record<string, unknown>> = {
+      context: existing?.blockContext ?? {},
+      need: existing?.blockNeed ?? {},
+      constraints: existing?.blockConstraints ?? {},
+      tech: existing?.blockTech ?? {},
+      followUp: existing?.blockFollowUp ?? {},
+    };
+    merged[block] = data;
+    const completedBlocks = countCompletedBlocks(merged);
+
+    const patch: Partial<ProspectBriefInsert> = {
+      ...briefBlockPatch(block, data),
+      completedBlocks,
+      updatedBy: actor.id,
+    };
+
+    let written: number;
+    if (existing !== undefined) {
+      const updated = await db
+        .update(prospectBriefs)
+        .set(patch)
+        .where(eq(prospectBriefs.id, existing.id))
+        .returning({ completedBlocks: prospectBriefs.completedBlocks });
+      written = completedFromRows(updated);
+    } else {
+      try {
+        const inserted = await db
+          .insert(prospectBriefs)
+          .values({ prospectId, ...patch })
+          .returning({ completedBlocks: prospectBriefs.completedBlocks });
+        written = completedFromRows(inserted);
+      } catch (error) {
+        // Course possible entre le SELECT et l'INSERT : l'index UNIQUE
+        // `prospect_briefs_prospect_id_unique` lève `23505` → on passe en
+        // UPDATE (la ligne existe maintenant), mêmes garanties.
+        if (!isUniqueViolation(error)) throw error;
+        const retried = await db
+          .update(prospectBriefs)
+          .set(patch)
+          .where(eq(prospectBriefs.prospectId, prospectId))
+          .returning({ completedBlocks: prospectBriefs.completedBlocks });
+        written = completedFromRows(retried);
+      }
+    }
+
+    // 7. Audit — séparé et NON FATAL (le brief est déjà enregistré ; une
+    //    ligne d'audit manquante vaut mieux qu'un 500 sur une écriture juste).
+    try {
+      await db.insert(activities).values({
+        actorId: actor.id,
+        action: "brief.updated",
+        entityType: "prospect",
+        entityId: prospectId,
+        meta: { block, completedBlocks: written, actorId: actor.id },
+      });
+    } catch (error) {
+      console.error("[prospects] activité `brief.updated` non journalisée (brief enregistré)", error);
+    }
+
+    return { ok: true, completedBlocks: written };
+  } catch (error) {
+    // Erreur d'infra (DB, réseau…) : journalisée puis propagée → 500,
+    // jamais transformée en code métier (pas de fuite de détail interne).
+    console.error("[prospects] échec d'enregistrement du brief", error);
     throw error;
   }
 }
