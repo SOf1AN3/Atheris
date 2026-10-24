@@ -44,3 +44,6 @@ next-env.d.ts
 /.playwright-mcp/
 /atheris-*.png
 /page_fr.html
+
+# Asset de travail préexistant (maquette landing)
+/hero.png
