@@ -8,6 +8,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ChevronDown, Mail, MapPin, MessageCircle } from "lucide-react";
 import { useForm } from "react-hook-form";
 
+import { submitContact } from "@/actions/contact";
 import { Reveal } from "@/components/motion/Reveal";
 import { Button } from "@/components/ui/Button";
 import { SectionHeading } from "@/components/ui/SectionHeading";
@@ -146,17 +147,26 @@ type ContactProps = {
  * infos (SectionHeading + 3 canaux), colonne droite carte `surface` contenant
  * le formulaire §3.6 (Zod + React Hook Form, messages i18n via les props).
  *
- * **Frontend-only** : aucun `fetch`, aucun `router` — le succès est simulé
- * localement (M10), l'envoi sera branché ultérieurement.
+ * **Envoi réel** (BK-8 · T34) : `submitContact` (Server Action) crée un
+ * prospect `source = "landing"` côté serveur. Le contrat ne renvoie que des
+ * **codes bruts** — l'affichage réutilise exclusivement les chaînes du dict
+ * landing (aucune clé ajoutée, aucun libellé modifié) :
+ * - succès → écran de succès existant (inchangé) ;
+ * - `duplicate` / `invalid` → erreur sous le champ email ;
+ * - `rate_limited` (ou erreur d'infra) → message global sous le bouton.
  */
 export function Contact({ contact }: ContactProps): ReactNode {
   const prefersReducedMotion = useReducedMotion();
   const [sent, setSent] = useState(false);
+  // Erreur globale (rate-limit / infra) — distincte des erreurs de champ
+  // gérées par React Hook Form via `setError`.
+  const [formError, setFormError] = useState<string | null>(null);
 
   const {
     register,
     handleSubmit,
     reset,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm<ContactFormValues>({
     resolver: zodResolver(createContactSchema(contact.form.errors)),
@@ -171,21 +181,49 @@ export function Contact({ contact }: ContactProps): ReactNode {
     },
   });
 
-  // SECURITY/TODO: brancher l'envoi (Resend ou DB) ultérieurement —
-  // décision frontend-only : aucun appel réseau, aucun routage.
-  const handleValidSubmit = (values: ContactFormValues): void => {
-    // SECURITY: honeypot `company_website` pré-câblé (le backend future doit
-    // rejeter toute soumission où il est rempli — signalement de bot).
-    if (values.company_website) {
-      setSent(true);
-      return;
-    }
+  /**
+   * Soumission réelle (BK-8 · T34) : la Server Action renvoie des **codes
+   * bruts**, traduits ici avec le dict landing FIGÉ — pas de clé dédiée au
+   * doublon ni au rate-limit, on réutilise les chaînes existantes les plus
+   * proches (voir restitution : clés manquantes).
+   *
+   * Le honeypot `company_website` part TOUJOURS avec le payload : c'est le
+   * serveur qui décide (faux succès silencieux, aucune écriture).
+   */
+  const handleValidSubmit = async (values: ContactFormValues): Promise<void> => {
+    setFormError(null);
 
-    setSent(true);
+    try {
+      const result = await submitContact(values);
+
+      if (result.ok) {
+        // Écran de succès existant, strictement identique (M10).
+        setSent(true);
+        return;
+      }
+
+      if (result.code === "rate_limited") {
+        // Dict sans clé `rateLimited` → repli sur la ligne global `form.note`
+        // (seule chaîne globale du formulaire, déjà sous le bouton).
+        setFormError(contact.form.note);
+        return;
+      }
+
+      // `duplicate` (déjà contacté) et `invalid` (entrée refusée côté serveur)
+      // → erreur sous le champ email : pas de clé `emailDuplicate` non plus,
+      // on rejoue l'erreur générique du champ (`emailInvalid`), jamais de
+      // message serveur ni de détail sur le prospect existant.
+      setError("email", { type: "server", message: contact.form.errors.emailInvalid });
+    } catch {
+      // Erreur d'infra (DB indisponible…) propagée par la Server Action →
+      // 500 sans détail côté client : message global de repli uniquement.
+      setFormError(contact.form.note);
+    }
   };
 
   const handleReset = (): void => {
     reset();
+    setFormError(null);
     setSent(false);
   };
 
@@ -428,8 +466,9 @@ export function Contact({ contact }: ContactProps): ReactNode {
 
                         {/* SECURITY: honeypot §3.6 — hors flux visuel (absolute
                             off-screen), non focalisable au clavier, ignoré des
-                            lecteurs d'écran. Le backend future doit rejeter
-                            toute soumission où il est rempli. */}
+                            lecteurs d'écran. Envoyé avec le payload : le
+                            serveur (`submitContact`) répond un faux succès
+                            silencieux sans aucune écriture s'il est rempli. */}
                         <input
                           id="contact-company-website"
                           type="text"
@@ -453,6 +492,14 @@ export function Contact({ contact }: ContactProps): ReactNode {
                         >
                           {contact.form.submitLabel}
                         </Button>
+
+                        {/* État d'erreur global (rate-limit / infra) —
+                            rendu UNIQUEMENT en erreur (zéro changement du
+                            rendu nominal) : composant `FieldError` existant,
+                            classes et palette inchangées. */}
+                        {formError !== null ? (
+                          <FieldError id="contact-submit" message={formError} />
+                        ) : null}
 
                         <p className="mt-4 text-center text-[12px] text-faint">
                           {contact.form.note}
