@@ -1,283 +1,201 @@
-# PLAN.md — Landing Page Premium « ATHERIS LABS »
+# PLAN.md — Plateforme ATHERIS LABS (CRM, commissions & portail client)
 
-> **Statut : EN ATTENTE DE VALIDATION UTILISATEUR** — aucune ligne de code applicatif ne sera écrite avant le feu vert explicite.
-> Version : 1.0 — 23/10/2026
-> Projet : `C:\Users\Sofiane\Desktop\ATHERIS` (dossier vide, greenfield)
+> **Statut : ✅ VALIDÉ par l'utilisateur le 24/10/2026 (feu vert accordé)** — exécution séquentielle autorisée.
+> Version 1.1 — 24/10/2026 · Remplace l'ancien plan (landing page, livrée).
+> **Compagnons obligatoires** : `structure.md` (théorie métier), `DESIGN.md` (charte design), **`TACHES.md` (détail exécutable des tâches)**.
 
 ---
 
 ## Contexte & besoin métier
 
-**Objectif** : créer la landing page de conversion B2B d'une agence d'ingénierie logicielle premium (**ATHERIS LABS**) spécialisée dans les produits digitaux sur-mesure (Web, Mobile, Desktop). La page doit projeter une image d'**autorité, d'élite et de rigueur** (direction artistique type Apple product page) et transformer les visiteurs en **demandes de devis qualifiées**.
+**ATHERIS LABS** est une agence de développement multi-plateformes (Web, Mobile, Desktop) boostée à l'IA, à délais courts. Sa croissance repose sur une équipe de vente à la commission (Lead Generators + manager) et bientôt sur de la pub.
 
-**Fondamental** : ce n'est pas une « belle page », c'est un **actif commercial**. Chaque section sert un maillon de la chaîne de conversion : *Crédibilité → Preuve → Méthode → Confiance → Action*.
+**Objectif de cette v1** : construire la **plateforme interne** qui transforme un prospect en client payant, en gérant automatiquement le pipeline commercial, les **devis, paiements et commissions** (barème progressif, plafond 25 %), et en donnant au **client un portail de suivi** (jalons, documents, factures, messagerie).
+
+**Landing existante est livrée et ne doit pas régresser.** La plateforme s'ajoute à côté, avec le même design (`DESIGN.md`) et la même exigence i18n.
 
 ### Décisions validées par l'utilisateur
-| Point | Décision |
+
+| Sujet | Décision |
 |---|---|
-| Marque | **ATHERIS LABS** — monogramme « A » SVG minimaliste |
-| Stack | Next.js 15 (App Router, RSC) + Tailwind CSS v4 + TypeScript strict |
-| Langue | **Bilingue FR / EN** — URLs `/fr` et `/en`, FR par défaut |
-| Formulaire | **Frontend uniquement** — validation locale, état succès simulé, ZÉRO backend/DB |
-| Animations | **Framer Motion** (retenue « Apple » : reveals sobres, jamais de glow néon) |
-| Contenu | **Placeholder fictif** mais crédible, centralisé dans `src/content/` (remplacement ultérieur isolé) |
+| Base | **Neon (Postgres)** + **Drizzle ORM** |
+| UI | **shadcn/ui** thématisé sur les tokens `DESIGN.md` (ink `#0A0C10`, surface `#14171F`, line `#242936`, accent `#3B82F6`) |
+| Langue plateforme | **FR + EN dès la v1** (dictionnaires dédiés, distincts de la landing) |
+| Paiements | **Saisie manuelle par le CEO** — zéro intégration Stripe en v1 |
+| Devis | **Hors plateforme** (outil externe du CEO) + **PDF joint** au dossier + statuts gérés sur la plateforme |
+| Barème vendeur | Paliers par cumul de clients payés : **0-4 → 10 % · 5-9 → 12,5 % · 10-19 → 15 % · 20+ → 20 %** |
+| Plafond | **25 % max par deal** (part vendeur + 5 % manager Rayan confondus) → part CEO garantie ≥ 75 % |
+| Rayan | **5 % fixes sur chaque deal** + part vendeur (barème) sur les prospects qu'il génère lui-même |
+| Attribution | Dédoublonnage strict à l'ajout (email/téléphone) ; **le canal d'origine l'emporte** ; leads Ads = commission type LDG |
+| Commissions | Déclencheur = devis signé **ET** acompte encaissé ; **aucune commission si non-signature** ; **aucun clawback** |
+| Portail client | **Dans le périmètre initial** (invitation, jalons, documents, factures, messagerie) |
+| Candidatures | Validation des inscriptions par le **CEO seul** — Rayan n'a **que la lecture** de la file |
+| Formulaire landing | **Câblé au CRM** (T34 activé) : la landing crée des prospects source `landing` |
 
-### Améliorations proposées et retenues (hors brief initial)
-- **A — SEO technique** : métadonnées par locale, OpenGraph/Twitter, JSON-LD (`Organization` + `Service` + `FAQPage`), `sitemap.xml`, `robots.txt`, image OG générée.
-- **B — Accessibilité WCAG 2.1 AA** : contrastes vérifiés (gris `#94A3B8` sur `#0A0C10` ≈ 7:1 ✅), focus visibles, navigation clavier des onglets (`role="tablist"`), `prefers-reduced-motion` respecté.
-- **C — Section FAQ** (5 questions : délais, budget, propriété du code, maintenance, confidentialité) → levier de conversion + riche snippet Google.
-- **D — Performance** : `next/font` (Inter auto-hébergée, 0 requête tierce), SVG inline, mockups 100% CSS, RSC par défaut. Cible Lighthouse ≥ 95.
-- **E — Robustesse formulaire** : honeypot anti-bot (pré-câblé), validation Zod stricte, messages d'erreur i18n, aucun état de chargement mort.
-- **F — Micro-interactions sobres** : reveal au scroll, hover des cartes (bordure `#3B82F6` à 40% d'opacité), transitions d'onglets fluides.
-- **G — Architecture maintenable** : contenu 100% découplé du JSX, composants sectionnés et typés, tokens de design centralisés.
+### Améliorations proposées des structures de pages (retenu dans ce plan)
 
-### Améliorations volontairement reportées (hors périmètre actuel)
-- Backend d'envoi du formulaire (Resend / stockage DB) — décision utilisateur « frontend only ».
-- Blog, pages services dédiées, portfolio détaillé, animations 3D/WebGL, analytics (à discuter : Plausible vs Vercel Analytics).
+1. **Séparation marketing / application par route groups** — la landing garde Header/Footer dans un groupe `(marketing)` ; l'espace connecté a son propre shell (sidebar + topbar) sans casser les URLs `/fr`, `/en`.
+2. **Détail prospect en page + onglets** (et non en modale) : URL partageable, retour navigateur propre, utilisable sur mobile.
+3. **Un seul composant « pipeline » réutilisé** par CEO / Manager / Commercial / Vendeur, avec colonnes et actions configurées par rôle → moins de code, UX homogène.
+4. **Filtres dans l'URL** (statut, recherche, relance) : les vues se partagent et survivent au refresh.
+5. **Dashboards = files d'action, pas des stats mortes** : le CEO voit en premier « 2 inscriptions à valider, 3 devis à envoyer, 4 commissions à payer ».
+6. **Fiche projet en assistant 5 étapes** avec jauge de complétion (données partielles sauvegardées à chaque étape) plutôt qu'un formulaire géant.
+7. **Espace vendeur pensé mobile** : ajout de prospect en 1 écran (3 champs), liste en cartes.
+8. **Raison obligatoire** pour les statuts terminaux *Perdu / Disqualifié* → statistiques fiables.
+9. **File « commission sans bénéficiaire »** côté CEO (ex. lead Ads sans responsable) — cas non prévu dans le brief initial.
+10. **Toutes les pages d'espace en `noindex`**, et les statuts/couleurs de badge ajoutés au `DESIGN.md` avant usage (le `DESIGN.md` prime et doit être versionné `docs(design)`).
 
 ---
 
 ## Questions / décisions en attente
 
-**Aucune question bloquante restante.** Points à fournir par l'utilisateur *après* le développement (non bloquants) :
-1. Contenu réel définitif (noms clients, métriques, témoignages, email/WhatsApp, logos) → remplacement dans `src/content/fr.ts` et `src/content/en.ts`.
-2. Adresse email de réception et numéro WhatsApp réels.
-3. Choix du domaine de production (impacte les métadonnées `metadataBase`).
+1. ~~Formulaire contact landing~~ → **VALIDÉ** : T34 est **dans le périmètre** (le formulaire crée un prospect source `landing`, sans bénéficiaire → file de commissions CEO).
+2. ~~Validation des candidatures~~ → **VALIDÉ** : **CEO seul**, Rayan lecture seule (T11 vs T31).
+3. ~~Paliers~~ → **VALIDÉ** : 0-4 / 5-9 / 10-19 / 20+ confirmés.
+4. **Stockage des PDF** : solution retenue = **fichiers en base (bytea), 5 Mo max, servis par route handler authentifiée** (zéro service externe). Migration Vercel Blob notée en phase 2 si le volume grandit.
+5. Non bloquants : domaine de prod, email/WhatsApp réels, contenu réel des espaces, `DATABASE_URL` Neon + `AUTH_SECRET` (à fournir en .env.local).
 
 ---
 
 ## 0. Architecture cible & conventions
 
-### Arborescence
-```
-ATHERIS/
-├── PLAN.md
-├── package.json / tsconfig.json / next.config.ts / postcss.config.mjs / .gitignore
-├── src/
-│   ├── middleware.ts                 # Détection & redirection de locale
-│   ├── app/
-│   │   ├── globals.css               # Tokens Tailwind v4 (@theme) + styles de base
-│   │   ├── robots.ts
-│   │   ├── sitemap.ts
-│   │   └── [locale]/
-│   │       ├── layout.tsx            # <html lang>, fonts, métadonnées, JSON-LD
-│   │       ├── page.tsx              # Assemblage des sections
-│   │       └── opengraph-image.tsx   # OG image générée (next/og)
-│   ├── i18n/
-│   │   ├── config.ts                 # Locales supportées, défaut, helpers
-│   │   └── dictionaries.ts           # Chargement typé des dictionnaires
-│   ├── content/
-│   │   ├── types.ts                  # Types du contenu (Source de vérité)
-│   │   ├── fr.ts                     # Contenu FR (placeholder)
-│   │   └── en.ts                     # Contenu EN (placeholder)
-│   ├── lib/
-│   │   ├── utils.ts                  # cn() helper
-│   │   └── form-schema.ts            # Schéma Zod du formulaire
-│   └── components/
-│       ├── ui/                       # Button, Badge, Pill, SectionHeading, Card
-│       ├── motion/                   # Reveal, FadeIn (wrappers Framer Motion)
-│       ├── layout/                   # Header, Footer, LocaleSwitcher
-│       └── sections/                 # Hero, HeroVisual, TrustBar, Services,
-│                                     # CaseStudies, TechStack, Process,
-│                                     # Testimonials, Faq, Contact
-```
+### Arborescence (ajouts et déplacements)
 
-### Design tokens (Tailwind v4 `@theme` dans `globals.css`)
-| Token | Valeur | Usage |
-|---|---|---|
-| `--color-ink` | `#0A0C10` | Fond principal (matte charcoal) |
-| `--color-surface` | `#14171F` | Cartes / surfaces |
-| `--color-line` | `#242936` | Bordures 1px |
-| `--color-fg` | `#FFFFFF` | Titres / texte primaire |
-| `--color-muted` | `#94A3B8` | Texte secondaire |
-| `--color-accent` | `#3B82F6` | **EXCLUSIVEMENT** CTA primaires + onglet actif |
-| Police | Inter (`next/font/google`) | Sans-serif précision |
-
-**Règle d'or couleur** : l'accent `#3B82F6` n'apparaît QUE sur les boutons CTA primaires, l'indicateur d'onglet actif, le point du pill badge et les focus rings. Nulle part ailleurs.
+```
+src/
+├── middleware.ts                  # locale (existant) + garde grossière des routes d'espace
+├── auth.ts                        # config Auth.js v5 (credentials, JWT 7j, rôles)
+├── lib/
+│   ├── db/
+│   │   ├── index.ts               # client Drizzle (Neon)
+│   │   └── schema.ts              # 13 tables (§1.2)
+│   ├── permissions.ts             # rôle → routes + actions autorisées (source de vérité RBAC)
+│   ├── commission.ts              # barème progressif + plafond 25 % (pur, testé)
+│   ├── prospect-dedup.ts          # normalisation email/téléphone
+│   └── password.ts                # scrypt (Node crypto, zéro dépendance native)
+├── actions/                       # Server Actions (une par domaine, "use server")
+│   ├── auth.ts · profile.ts · prospects.ts · status.ts
+│   ├── quotes.ts · payments.ts · commissions.ts
+│   ├── invitations.ts · project.ts · messages.ts
+├── content/platform/
+│   ├── types.ts · fr.ts · en.ts   # dictionnaires de la plateforme (≠ landing)
+├── app/[locale]/
+│   ├── layout.tsx                 # racine : <html>, fonts, MotionConfig (Header/Footer sortis)
+│   ├── (marketing)/               # landing : layout Header+Footer+JSON-LD, page, opengraph-image
+│   ├── (auth)/                    # layout carte centrée (pas de header)
+│   │   ├── connexion/page.tsx · inscription/page.tsx
+│   ├── (app)/                     # layout shell (sidebar+topbar+garde rôle) — tout en noindex
+│   │   ├── layout.tsx · page.tsx  # page = redirection vers l'espace du rôle
+│   │   ├── tableau-de-bord/page.tsx
+│   │   ├── prospects/page.tsx · prospects/nouveau/page.tsx · prospects/[id]/page.tsx
+│   │   ├── commissions/page.tsx · equipe/page.tsx · projet/page.tsx · profil/page.tsx
+├── components/app/                # shell, StatusBadge, ProspectTable, FilterBar, StatCard,
+│                                  # EmptyState, ProspectWizard, MilestoneTimeline, AuditLog…
+```
 
 ### Conventions
-- TypeScript **strict**, `import type` obligatoire pour les types.
-- Composants serveur par défaut ; `"use client"` uniquement si interaction (onglets, formulaire, animations).
-- Tout le contenu textuel vient de `src/content/[locale].ts` — **aucune string hardcodée dans le JSX** (hors aria-labels techniques).
-- Tous les composants exportés et typés (`Props` explicites).
-- Pas de `any`, pas de `@ts-ignore`, pas de CSS inline (sauf valeur dynamique calculée).
-- Dépendances runtime : `next`, `react`, `tailwindcss`, `framer-motion`, `zod`, `react-hook-form`, `@hookform/resolvers`, `clsx`, `tailwind-merge`, `lucide-react` (icônes tree-shakées).
+
+- TypeScript **strict**, `import type`, zéro `any`, zéro `@ts-ignore`.
+- **Toute mutation passe par une Server Action** avec validation **Zod** + vérification de rôle **côté serveur** (le middleware ne fait qu'une garde grossière).
+- Montants en **cents (entier)**, devise **USD uniquement** ; dates en **UTC** stockées, affichage `Africa/Algiers`.
+- Tout texte visible vient de `src/content/platform/{fr,en}.ts` (comme la landing).
+- Mots de passe : **scrypt** (Node crypto), format `salt:hash`, comparaison à temps constant.
+- Composants serveur par défaut ; `"use client"` seulement pour les formulaires/filtres/tableaux interactifs.
 
 ---
 
-## 1. Fondations & Architecture
+## 1. Base de données (DB)
 
-### 1.1 Scaffold du projet — `Backend`
-**Fichiers** : `package.json`, `tsconfig.json`, `next.config.ts`, `postcss.config.mjs`, `.gitignore`, `src/app/globals.css`
-**Actions** :
-1. `npx create-next-app@latest . --ts --tailwind --eslint --app --src-dir --import-alias "@/*" --use-npm --yes` (dossier courant vide).
-2. Installer : `framer-motion zod react-hook-form @hookform/resolvers clsx tailwind-merge lucide-react`.
-3. Définir les design tokens dans `globals.css` (`@theme` Tailwind v4) + reset sombre (`color-scheme: dark`), styles de base (scroll doux avec `prefers-reduced-motion`, sélection de texte `#3B82F6`, focus ring visible).
-4. `git init` + `.gitignore` (node_modules, .next, .env*, etc.).
-**Dépendances** : aucune.
-**Critère « fait »** : `npm run build` passe sans erreur ; tokens visibles dans le CSS compilé ; `git status` propre après commit initial.
+### 1.1 Mise en place — `Backend`
 
-### 1.2 Helpers & configuration i18n — `Backend`
-**Fichiers** : `src/i18n/config.ts`, `src/i18n/dictionaries.ts`, `src/lib/utils.ts`, `src/middleware.ts`
-**Actions** :
-1. `config.ts` : `locales = ['fr','en'] as const`, `defaultLocale = 'fr'`, type `Locale`, helper `isValidLocale`.
-2. `dictionaries.ts` : loader typé paresseux (`Record<Locale, () => Promise<Dictionary>>`) avec type `Dictionary` importé depuis `content/types`.
-3. `utils.ts` : `cn()` (clsx + tailwind-merge).
-4. `middleware.ts` : matcher excluant assets statiques, détection `Accept-Language`, redirection `/` → `/fr` (défaut), validation de la locale dans l'URL.
-**Dépendances** : 1.1.
-**Critère « fait »** : `/` redirige vers `/fr`, `/xx` renvoie 404 propre, typage `Dictionary` compilé.
+**Fichiers** : `drizzle.config.ts`, `src/lib/db/index.ts`, `src/lib/db/schema.ts`, `.env.local` (`DATABASE_URL`, `AUTH_SECRET`), `package.json` (scripts `db:generate` / `db:migrate` / `db:seed`).
+**Dépendances** : `drizzle-orm`, `@neondatabase/serverless`, `drizzle-kit`.
+**Critère « fait »** : `npm run db:migrate` crée les 13 tables sur Neon ; un `SELECT` de contrôle renvoie des lignes.
 
----
+### 1.2 Schéma (13 tables) — `Backend`
 
-## 2. Contenu & Internationalisation
+| Table | Rôle | Champs clés |
+|---|---|---|
+| `users` | comptes | `email` unique, `password_hash`, `name`, `phone`, `role` (`ceo`/`manager`/`commercial`/`vendeur`/`client`), `status` (`pending`/`active`/`rejected`/`disabled`), `created_at` |
+| `prospects` | pipeline | `full_name`, `company`, `email`, `phone`, **`email_norm` + `phone_norm` uniques** (dédoublonnage), `source` (`ldg`/`ads`/`landing`/`rayan`/`ceo`), `source_user_id`, `status` (10 statuts §structure.md), `disqualify_reason`, `next_reminder_at` |
+| `prospect_briefs` | fiche projet 1-1 | 5 blocs (identité/contexte, besoin, contraintes, technique, suivi) + `completed_blocks` |
+| `quotes` | devis | `prospect_id`, `amount_usd_cents`, `status` (`draft`/`sent`/`signed`/`lost`), `pdf_document_id`, `sent_at`, `signed_at`, `created_by` |
+| `payments` | encaissements | `quote_id`, `label` (acompte/échéance), `amount_usd_cents`, `due_at`, `paid_at`, `method`, `created_by` |
+| `commissions` | barème | `quote_id`, `beneficiary_id`, `kind` (`seller`/`manager`), `rate_percent` (snapshot), `base_cents`, `amount_cents`, `status` (`due`/`paid`), `paid_at` — **unique (`quote_id`,`beneficiary_id`,`kind`)** = anti-double-génération |
+| `client_projects` | livraison | `quote_id`, `name`, `status` (`en_livraison`/`clos`) |
+| `milestones` | 5 jalons | `project_id`, `order`, `key` (`cadrage`/`design`/`dev`/`recette`/`mise_en_ligne`), `status`, `validated_at`, `validated_by` |
+| `documents` | PDF | `owner_type` (`prospect`/`project`), `owner_id`, `kind` (`devis`/`contrat`/`facture`/`livrable`), `filename`, `bytes` (bytea ≤ 5 Mo), `mime`, `uploaded_by` |
+| `invitations` | portail client | `email`, `token` unique, `project_id`, `expires_at`, `used_at` |
+| `activities` | journal/audit | `actor_id`, `action`, `entity_type`, `entity_id`, `meta` jsonb |
+| `messages` | messagerie projet | `project_id`, `sender_id`, `body`, `read_at` |
+| `login_attempts` | rate-limit | `email`, `ip`, `created_at` (≥ 5 échecs / 15 min → blocage) |
 
-### 2.1 Types du contenu — `Backend`
-**Fichiers** : `src/content/types.ts`
-**Actions** : définir les types de la source de vérité : `SiteContent` (nav, hero, trustBar, services, cases, techStack, process, testimonials, faq, contact, footer, seo), avec `ServiceItem`, `CaseStudy` (avec `category: 'web' | 'mobile' | 'ai'`), `TechCategory`, `ProcessStep`, `Testimonial`, `FaqItem`, `ContactInfo`, `SeoMeta`.
-**Dépendances** : 1.2.
-**Critère « fait »** : tous les types exportés, aucune `any`, structure capable d'accueillir les 8 sections + SEO.
+### 1.3 Règles métier encodées — `Backend`
 
-### 2.2 Contenu FR placeholder — `Frontend`
-**Fichiers** : `src/content/fr.ts`
-**Actions** : rédiger l'intégralité du contenu FR (ton B2B premium, « nous », orienté valeur business) conforme à la structure `SiteContent` : badge hero, H1/H2, CTA, 3 stats, 4 services, 4 réalisations (SaaS Clinique / Papernote AI / MYKS Radio / Tiberium Enterprise) avec badges tech + métrique business, 4 catégories de stack (~7-8 tech chacune), 4 étapes de process, 3 témoignages (dont Ahcen B. et Karim O.), 5 FAQ, coordonnées (email / WhatsApp / « Remote & Algérie »), footer + SEO (title, description, mots-clés).
-**Dépendances** : 2.1.
-**Critère « fait »** : `fr.ts` satisfait strictement `SiteContent`, zéro string manquante, `satisfies SiteContent` utilisé.
-
-### 2.3 Contenu EN placeholder — `Frontend`
-**Fichiers** : `src/content/en.ts`
-**Actions** : traduction professionnelle EN (pas de traduction littérale : ton natif business), mêmes clés, mêmes métriques.
-**Dépendances** : 2.1 (parallélisable conceptuellement, mais exécutée séquentiellement après 2.2).
-**Critère « fait »** : `en.ts` satisfait strictement `SiteContent`.
+- **Dédoublonnage** : normaliser (`email` → minuscules/trim ; `phone` → chiffres, `+213`/`00213` → `0`) puis contrainte unique → l'ajout d'un doublon **échoue côté DB**, message « prospect déjà existant ».
+- **Machine à états** : les 10 statuts de `structure.md` §4.1 avec transitions autorisées par rôle (`src/lib/permissions.ts`), appliquées dans une transaction avec contrôle du statut attendu (anti-course).
+- **Commissions** : à l'enregistrement d'un paiement **acompte** marqué payé → génère une ligne `seller` (taux du palier du vendeur **au moment du déclencheur**, figé en snapshot) + une ligne `manager` 5 % (Rayan), **si `beneficiary_id` nul → ligne créée avec bannière « sans bénéficiaire »** dans la file CEO. Contrainte unique = idempotence.
+- **Paliers** : cumul des deals du vendeur ayant atteint `client_actif` **avant** ce deal (jamais rétroactif).
 
 ---
 
-## 3. UI — Composants partagés
+## 2. API Routes / Server Actions
 
-### 3.1 Primitives UI — `Frontend`
-**Fichiers** : `src/components/ui/Button.tsx`, `src/components/ui/Badge.tsx`, `src/components/ui/SectionHeading.tsx`
-**Actions** :
-- `Button` : variantes `primary` (fond `#3B82F6`, texte blanc, hover légèrement plus clair) / `ghost` (texte + flèche) / `secondary` (surface + bordure) ; tailles `sm|md|lg` ; polymorphe `as` pour les liens ; focus ring AA.
-- `Badge` : pill avec bordure `#242936`, texte `#94A3B8`, variante `dot` (point bleu `#3B82F6`).
-- `SectionHeading` : titre H2 blanc + eyebrow optionnel + description `#94A3B8`, alignement `left|center`, hiérarchie typo (clamp 2.5rem→3.5rem titres).
-**Dépendances** : 1.1.
-**Critère « fait »** : composants sans état, typés, rendu conforme à la palette imposée.
+### 2.1 Actions par domaine — `Backend`
 
-### 3.2 Wrappers d'animation — `Frontend`
-**Fichiers** : `src/components/motion/Reveal.tsx`, `src/components/motion/FadeIn.tsx`
-**Actions** : wrappers Framer Motion (whileInView, `viewport={{ once: true }}`), respect de `useReducedMotion()` (désactive tout si `prefers-reduced-motion: reduce`), props `delay`, `y`, `duration` avec valeurs par défaut **sobres** (y: 16px, 0.5s, ease out).
-**Dépendances** : 1.1.
-**Critère « fait »** : aucune animation rebondissante ou lumineuse ; désactivation propre en reduced-motion.
+| Fichier | Actions | Rôles autorisés |
+|---|---|---|
+| `actions/auth.ts` | connexion, déconnexion, rate-limit | public |
+| `actions/profile.ts` | changer email / téléphone / mot de passe (**pas le nom**) | tout rôle authentifié |
+| `actions/prospects.ts` | ajouter (anti-doublon), lire (scopé par rôle), filtrer | vendeur+ (ajout), lecture selon rôle |
+| `actions/status.ts` | changer de statut + **raison obligatoire** si `perdu`/`disqualifie` | matrice §structure.md 4.2 |
+| `actions/quotes.ts` | créer devis (montant TTC + PDF), statuts `draft→sent→signed/lost` | CEO uniquement |
+| `actions/payments.ts` | enregistrer acompte/échéance, marquer payé → **déclenche commissions** | CEO uniquement |
+| `actions/commissions.ts` | marquer payée(s) (individuel ou lot), historique | CEO uniquement |
+| `actions/invitations.ts` | générer lien client (48 h), révoquer | CEO uniquement |
+| `actions/project.ts` | valider un jalon, messages de projet | client (ses jalons) + CEO/commercial |
+| `actions/audit.ts` | écriture systématique dans `activities` | interne |
 
-### 3.3 Header, LocaleSwitcher & Footer — `Frontend`
-**Fichiers** : `src/components/layout/Header.tsx`, `src/components/layout/LocaleSwitcher.tsx`, `src/components/layout/Footer.tsx`
-**Actions** :
-- `Header` : sticky glass (`backdrop-blur-xl`, fond `rgba(10,12,16,.72)`, bordure basse 1px `#242936`) ; gauche logo monogramme « A » SVG + « ATHERIS LABS » ; centre liens (Services, Réalisations, Technologies, Méthode) avec **scroll ancre doux** + état actif ; droite `LocaleSwitcher` + CTA « Demander un devis ». Menu mobile : bouton hamburger → panneau plein écran animé.
-- `LocaleSwitcher` : bascule FR/EN (`usePathname` pour conserver l'ancre), accessible `aria-label`.
-- `Footer` : colonne logo + baseline, liens de navigation, contact, mentions légales (placeholder `#`), copyright dynamique (année), respect strict du dark mode.
-**Dépendances** : 2.2, 3.1.
-**Critère « fait »** : navigation clavier complète, header transparent → verre au scroll, menu mobile utilisable à 360px de large.
+### 2.2 Garde d'accès — `Backend`
+
+- **Middleware** : présence du cookie de session sur `/[locale]/espace/*` et `/[locale]/connexion` (redirection propre) — garde *grossière*.
+- **Layout `(app)`** : `auth()` serveur → rôle → redirige vers la page d'accueil du rôle.
+- **Chaque Server Action** : `requireRole(...)` + `zod` + vérification d'appartenance (un vendeur ne lit/modifie que **ses** prospects ; un client ne lit que **son** projet).
+- Toute la zone `(app)` : `robots: { index: false }`.
 
 ---
 
-## 4. UI — Sections de la page
+## 3. UI Components
 
-### 4.1 Hero + visuel + trust bar — `Frontend`
-**Fichiers** : `src/components/sections/Hero.tsx`, `src/components/sections/HeroVisual.tsx`, `src/components/sections/TrustBar.tsx`
-**Actions** :
-- `Hero` : pill badge « ✦ Studio d'Ingénierie Logicielle & Design Web » (point bleu), H1 `clamp(2.75rem, 6vw, 4.75rem)` bold tracking serré, sous-titre `#94A3B8` max-width 640px, CTA « Lancer un projet » + lien discret « ou réserver un appel découverte → », hiérarchie verticale généreuse (py 8-10rem).
-- `HeroVisual` : **100% CSS/Tailwind** — fenêtre desktop (barre de titre macOS, sidebar, cartes KPI, mini-graphique barres, tableau) **chevauchée** d'un cadre mobile (notch, bottom nav) en bas à droite. Dégradé radial très subtil derrière. Aucune forme flottante, aucune image externe. Responsive : le mockup mobile passe sous la fenêtre desktop en mobile.
-- `TrustBar` : 3 stats en ligne horizontale séparées par des filets 1px (« +20 Produits Livrés » | « 100% Code Propriétaire & Scalable » | « Accompagnement A à Z »), passage en colonne < 640px.
-**Dépendances** : 3.1, 3.2.
-**Critère « fait »** : rendu identique à la direction artistique imposée, mockup sans image raster, lisibilité du H1 vérifiée.
+### 3.1 Shell & primitives — `Frontend`
 
-### 4.2 Pôles d'Expertise (grille 2×2) — `Frontend`
-**Fichiers** : `src/components/sections/Services.tsx`
-**Actions** : titre de section + 4 cartes (`#14171F`, bordure 1px `#242936`, radius 20px, padding 32px) : icône lucide, titre, description, liste de badges tech. Hover : bordure `rgba(59,130,246,0.4)`, translation `-4px`, ombre très légère. Grille `md:grid-cols-2`, gap 20px.
-**Dépendances** : 3.1, 3.2.
-**Critère « fait »** : 4 cartes équilibrées en hauteur, hover subtil, aucune couleur accent sur le repos.
+- **Shadcn/ui installé et re-thématisé** : mapping `background→ink`, `card→surface`, `border→line`, `primary→accent #3B82F6`, `destructive→#F87171`, `muted-foreground→#94A3B8` (radius 12/20 px conformes §2.6 DESIGN.md).
+- **Ajout au `DESIGN.md`** (commit `docs(design)`, validation utilisateur) : palette des **statuts de badge** — `Nouveau` gris · `Contacté` bleu discret · `Qualifié` bleu · `Devis envoyé` ambre `#F59E0B` · `Signé` vert `#34D399` · `Perdu`/`Disqualifié` rouge `#F87171` + règles sidebar/tableau (fond `ink-2`, lignes `line`, hover `surface-2`, accent = sélection active uniquement).
+- `AppShell` (sidebar par rôle + topbar : profil, switch FR/EN), `StatusBadge`, `ProspectTable`, `FilterBar` (état dans l'URL), `StatCard`, `EmptyState` (avec CTA), `ConfirmDialog`.
 
-### 4.3 Projets & Réalisations (filtres) — `Frontend`
-**Fichiers** : `src/components/sections/CaseStudies.tsx`, `src/components/sections/CaseStudyCard.tsx`
-**Actions** :
-- Onglets de filtre `[Tous][Web & SaaS][Mobile][IA & Médias]` : `role="tablist"`, navigation flèches clavier, onglet actif = fond `#3B82F6` + texte blanc (seul usage accent autorisé ici).
-- Grille asymétrique : carte 1 « large featured » (2 colonnes, mockup produit CSS) + cartes 2/3/4 standard. Chaque carte : **mockup produit 100% CSS** (mini-dashboard / mini-app selon le projet), badges tech, **métrique business** en évidence (ex. « +100h économisées/an par cabinet »).
-- Filtrage animé Framer Motion (`layout`, fade/scale 0.2s) sans reflow brutal.
-**Dépendances** : 3.1, 3.2, 4.2 (styles cohérents).
-**Critère « fait »** : filtres fonctionnels et accessibles, métriques visibles en un coup d'œil, zéro image externe.
+### 3.2 Pages par espace — `Frontend`
 
-### 4.4 Stack Technique (onglets) — `Frontend`
-**Fichiers** : `src/components/sections/TechStack.tsx`
-**Actions** : composant client à switcher horizontal `[Frontend][Backend & Data][Mobile & Desktop][Cloud & DevOps]` (soulignement/indicateur animé `#3B82F6`), zone de contenu = grille de badges tech propres (8 max par onglet), transitions douces entre panneaux, accessibilité `tablist/tab/tabpanel`.
-**Dépendances** : 3.1, 3.2.
-**Critère « fait »** : jamais d'« icon wall » surchargée, un seul panneau visible, clavier OK.
+| Espace | Pages | Contenu clé |
+|---|---|---|
+| `(auth)` | `connexion`, `inscription` | formulaire Zod + RHF, erreurs i18n, inscription = **candidature en attente** |
+| CEO | `tableau-de-bord`, `prospects`, `prospects/[id]`, `commissions`, `equipe`, `profil` | **files d'action** + KPIs ; détail = onglets (Identité · Fiche · Devis & paiements · Historique) ; file de versement en **lot** ; stats par employé (funnel + activité + rentabilité) ; journal d'audit |
+| Manager | mêmes routes, vues scopées | classement des LDG, commissions de l'équipe, **lecture seule** des candidatures (validation = CEO seul), actions commerciales complètes |
+| Commercial | `tableau-de-bord`, `prospects`, `prospects/[id]`, `profil` | pipeline complet, **assistant fiche projet 5 étapes**, relances du jour, plafond : actions jusqu'à `devis_envoye` |
+| Vendeur | `tableau-de-bord`, `prospects`, `prospects/nouveau`, `commissions` (= mes gains), `profil` | **mobile-first** : ajout 1 écran, liste en cartes, **jauge de palier** (« 3/5 → 12,5 % »), ledger gains (en attente/versées) |
+| Client | `projet`, `profil` | **timeline de 5 jalons en héros** + bouton « Valider cette étape », onglets Documents / Factures / Messagerie |
 
-### 4.5 Notre Processus (4 étapes) — `Frontend`
-**Fichiers** : `src/components/sections/Process.tsx`
-**Actions** : ligne de progression horizontale (filet 1px `#242936`, pastilles numérotées `01→04`) : Cadrage & Spécifications → Architecture & Design UI/UX → Développement Agile & Sprints → Déploiement & Support Continu. Chaque étape : numéro, titre, description courte. Adaptation verticale en mobile (timeline verticale).
-**Dépendances** : 3.1, 3.2.
-**Critère « fait »** : timeline lisible et alignée en desktop, verticale propre en mobile.
+### 3.3 Intégration landing — `Frontend`
 
-### 4.6 Témoignages — `Frontend`
-**Fichiers** : `src/components/sections/Testimonials.tsx`
-**Actions** : 3 cartes citation (guillemet discret, texte, logo client placeholder typographique, nom + rôle, badge « Projet vérifié » avec icône check). Grille `md:grid-cols-3`. Témoignages placeholder : Ahcen B. (Fondateur Clinique Dentaire), Karim O. (CEO Tiberium), + un troisième.
-**Dépendances** : 3.1, 3.2.
-**Critère « fait »** : 3 cartes homogènes, badges visibles, contenu typé.
-
-### 4.7 FAQ — `Frontend`
-**Fichiers** : `src/components/sections/Faq.tsx`
-**Actions** : accordéon accessible (`<details>/<summary>` stylé ou composant contrôlé avec `aria-expanded`), 5 questions (délais, budget, propriété du code, maintenance, confidentialité/NDA), animation d'ouverture discrète, un seul élément ouvert à la fois.
-**Dépendances** : 3.1, 3.2.
-**Critère « fait »** : utilisable au clavier, contenu prêt pour le JSON-LD `FAQPage`.
-
-### 4.8 Contact & demande de devis — `Frontend`
-**Fichiers** : `src/components/sections/Contact.tsx`, `src/lib/form-schema.ts`
-**Actions** :
-- Split section : **gauche** « Concrétisons votre projet » + liens directs (Email professionnel, WhatsApp entreprise, Localisation : Remote & Algérie) avec icônes ; **droite** formulaire minimaliste 4 champs : Nom / Entreprise, Email, Type de projet (select : Web & SaaS / Mobile / Desktop / Modernisation & Cloud / Autre), Message (textarea).
-- `form-schema.ts` : schéma Zod (nom min 2, email `z.string().email()`, type de projet enum, message min 10 max 2000) + messages d'erreur **i18n passés en paramètre**.
-- React Hook Form + `@hookform/resolvers/zod`, champs avec labels réels, états d'erreur (bordure rouge douce + `aria-invalid` + `aria-describedby`).
-- **Frontend only** : à la soumission → validation → état de succès local animé (« Merci, votre demande a bien été préparée. ») ; **aucun appel réseau**. Champ honeypot `company_website` masqué (pré-câblé pour le futur backend).
-- CTA accent `#3B82F6` pleine largeur.
-**Dépendances** : 3.1, 3.2, 2.2.
-**Critère « fait »** : validation fonctionnelle FR+EN, aucun envoi réseau, honeypot invisible visuellement et au lecteur d'écran (`aria-hidden` + tabindex -1).
-
-### 4.9 Assemblage de la page — `Frontend`
-**Fichiers** : `src/app/[locale]/page.tsx`, `src/app/[locale]/layout.tsx`
-**Actions** :
-- `layout.tsx` : `<html lang={locale}>`, `next/font` Inter, `generateMetadata` (title/description/openGraph/twitter alternates de langue), JSON-LD (`Organization` + `Service` + `FAQPage`) injecté via `<script type="application/ld+json">`, header + footer.
-- `page.tsx` : assemblage RSC des 10 sections dans l'ordre, `generateStaticParams` pour `/fr` et `/en`.
-**Dépendances** : toutes les sections 4.1 → 4.8.
-**Critère « fait »** : les deux locales se rendent en SSG, aucune erreur d'hydratation.
+- Déplacement de `page.tsx` + `opengraph-image.tsx` + layout Header/Footer/JSON-LD dans `(marketing)` **sans changer les URLs** ; `sitemap.ts`/`robots.ts` inchangés.
+- Ajout d'un lien **« Connexion »** discret dans le header landing (FR/EN) et « Espace client » dans le footer.
 
 ---
 
-## 5. SEO, Performance & Accessibilité
+## 4. Tests
 
-### 5.1 Métadonnées, sitemap & robots — `Backend`
-**Fichiers** : `src/app/sitemap.ts`, `src/app/robots.ts`, `src/app/[locale]/opengraph-image.tsx`
-**Actions** : sitemap bilingue, robots pointant vers le sitemap, image OG générée via `next/og` (fond `#0A0C10`, monogramme + nom + accroche, dimensions 1200×630).
-**Dépendances** : 4.9.
-**Critère « fait »** : `/sitemap.xml` et `/robots.txt` servis, OG image rendue en build.
-
-### 5.2 Passe accessibilité & performance — `Frontend`
-**Fichiers** : `src/app/globals.css` (ajustements), composants concernés
-**Actions** : vérification contrastes (AA), ordre de tabulation, `skip-link`, focus ring cohérent, `prefers-reduced-motion` global, `aria-*` des onglets/accordéon, images/mockups décoratifs `aria-hidden`, hiérarchie H1 unique → H2 → H3.
-**Dépendances** : 4.9.
-**Critère « fait »** : audit manuel clavier + lecteur d'écran OK, build sans warning.
-
----
-
-## 6. Qualité & Tests
-
-### 6.1 Qualité statique — `Backend`
-**Fichiers** : `.eslintrc`/`eslint.config.mjs` (déjà fourni par scaffold), `package.json` (scripts)
-**Actions** : `npm run lint` sans erreur, `npx tsc --noEmit` sans erreur, `npm run build` de production sans erreur ni warning.
-**Dépendances** : 5.2.
-**Critère « fait »** : les 3 commandes passent.
-
-### 6.2 Validation E2E — `Tester`
-**Actions** : parcours navigateur (MCP Playwright) sur `npm run dev` : chargement `/fr` et `/en`, navigation ancres, filtres réalisations, onglets stack, accordéon FAQ, soumission formulaire (erreurs + succès), responsive 360px / 768px / 1440px, capture d'écran de contrôle.
-**Dépendances** : 6.1.
-**Critère « fait »** : rapport Tester = VALIDÉ, ou liste de correctifs précis.
+- **Unitaires (vitest)** : `lib/commission.ts` (paliers, plafond 25 %, idempotence, Rayan vendeur), `lib/prospect-dedup.ts` (normalisation), transitions de statut.
+- **Statique** : `npm run lint` · `npx tsc --noEmit` · `npm run build` sans erreur.
+- **E2E (Tester, Playwright)** : connexion par rôle, ajout anti-doublon, déclenchement commission à l'acompte, lot de versement, validation de jalon côté client, FR/EN, responsive 360/768/1440, non-régression de la landing.
 
 ---
 
@@ -285,51 +203,70 @@ ATHERIS/
 
 | Risque | Mesure |
 |---|---|
-| Injection XSS via contenu futur | Tout le contenu passe par React (échappement natif) ; JSON-LD sérialisé avec `JSON.stringify` dans un `<script>` avec remplacement des `<` (`\u003c`) pour éviter la clôture de balise |
-| Spam de formulaire | Champ honeypot + validation stricte (prêt pour rate-limit serveur lors du futur câblage) |
-| Formulaire sans backend | Aucun envoi réseau explicite + message utilisateur honnête (« demande préparée »), documenté dans le code |
-| Locale invalide dans l'URL (`/de`) | Middleware → 404 propre ou redirection `/fr` |
-| Hydration mismatch (année copyright, `matchMedia`) | Valeurs dynamiques lues côté client uniquement après montage, ou rendues via SSG |
-| `prefers-reduced-motion` | Toutes les animations Framer Motion neutralisées via `useReducedMotion` |
-| Overflow mobile (mockups larges, tableaux) | Mockups en `overflow-hidden` + échelle responsive, tests à 360px |
-| Accessibilité des onglets | `role="tablist"`, `aria-selected`, flèches clavier, `tabIndex` géré |
-| Contraste texte gris | `#94A3B8` sur `#0A0C10` ≈ 7:1 (AAA) ; vérifié sur surface `#14171F` (≈ 6.4:1, AA) |
-| Liens externes futurs (`target="_blank"`) | `rel="noopener noreferrer"` obligatoire |
+| Escalade de rôle (client qui lit le pipeline) | RBAC `permissions.ts` vérifié **dans chaque Server Action** + tests E2E par rôle |
+| Doublon de prospect en écriture concurrente | index unique `email_norm`/`phone_norm` → message propre |
+| Double génération de commission (double clic/paiement) | contrainte unique `(quote_id, beneficiary_id, kind)` |
+| Deal sans bénéficiaire (Ads sans responsable) | statut `due` + bannière « sans bénéficiaire » dans la file CEO |
+| Commission sur deal annulé | **pas de clawback** (choix assumé) → note dans l'écran CEO avant paiement |
+| Force brute connexion | table `login_attempts` : 5 échecs / 15 min par email+IP |
+| Fichier malveillant | type/extension/taille vérifiés (PDF, ≤ 5 Mo), nom aléatoire, **téléchargement par route handler authentifiée** (jamais en public) |
+| Statut modifié en double (2 onglets) | transaction avec `WHERE status = attendu` → erreur « recharger » |
+| Course sur changement de statut | idem, + `activities` journalise l'auteur |
+| Fuite de données entre vendeurs | scoping systématique `WHERE source_user_id = moi` |
+| PII (coordonnées prospects) | accès scopé, `noindex`, pas d'export en v1 |
+| Invitation client expirée/réutilisée | `expires_at` 48 h + `used_at` |
+| Fuseau | stockage UTC, rendu `Africa/Algiers` (pas de comparaison de dates côté client) |
 
 ---
 
-## Ordre d'exécution (séquentiel)
+## Ordre d'exécution (séquentiel — détail dans `TACHES.md`)
 
-| # | Tâche | Agent | Validation |
+| # | Tâche (titre explicite) | Agent | TACHES.md |
 |---|---|---|---|
-| 1 | 1.1 Scaffold + tokens | Backend | Reviewer → commit `chore(scaffold)` |
-| 2 | 1.2 i18n config + middleware + utils | Backend | Reviewer → commit `feat(i18n)` |
-| 3 | 2.1 Types du contenu | Backend | Reviewer → commit `feat(content)` |
-| 4 | 2.2 Contenu FR | Frontend | Reviewer → commit `docs(content)` |
-| 5 | 2.3 Contenu EN | Frontend | Reviewer → commit `docs(content)` |
-| 6 | 3.1 Primitives UI | Frontend | Reviewer → commit `feat(ui)` |
-| 7 | 3.2 Wrappers animation | Frontend | Reviewer → commit `feat(motion)` |
-| 8 | 3.3 Header + LocaleSwitcher + Footer | Frontend | Reviewer → commit `feat(layout)` |
-| 9 | 4.1 Hero + HeroVisual + TrustBar | Frontend | Reviewer → commit `feat(hero)` |
-| 10 | 4.2 Services | Frontend | Reviewer → commit `feat(services)` |
-| 11 | 4.3 Réalisations (filtres + cartes) | Frontend | Reviewer → commit `feat(cases)` |
-| 12 | 4.4 Stack technique | Frontend | Reviewer → commit `feat(tech-stack)` |
-| 13 | 4.5 Processus | Frontend | Reviewer → commit `feat(process)` |
-| 14 | 4.6 Témoignages | Frontend | Reviewer → commit `feat(testimonials)` |
-| 15 | 4.7 FAQ | Frontend | Reviewer → commit `feat(faq)` |
-| 16 | 4.8 Contact + schéma Zod | Frontend | Reviewer → commit `feat(contact)` |
-| 17 | 4.9 Assemblage layout + page | Frontend | Reviewer → commit `feat(page)` |
-| 18 | 5.1 SEO (sitemap, robots, OG) | Backend | Reviewer → commit `feat(seo)` |
-| 19 | 5.2 Passe a11y & perf | Frontend | Reviewer → commit `fix(a11y)` |
-| 20 | 6.1 Qualité statique (lint/tsc/build) | Backend | Vérification Lead |
-| 21 | 6.2 Validation E2E | Tester | Rapport final |
+| 1 | T01 — Connecter Neon + Drizzle et créer la base locale/migrée | Backend | T01 |
+| 2 | T02 — Créer les 13 tables du schéma (users, prospects, devis, paiements, commissions, jalons, documents…) + migration | Backend | T02 |
+| 3 | T03 — Installer Auth.js v5 : connexion credentials, sessions JWT 7j, hachage scrypt | Backend | T03 |
+| 4 | T04 — Installer shadcn/ui et mapper son thème sur les tokens DESIGN.md + ajouter la palette des statuts au DESIGN.md | Frontend | T04 |
+| 5 | T05 — Restructurer les routes en groupes (marketing)/(auth)/(app) sans casser la landing `/fr` et `/en` | Frontend | T05 |
+| 6 | T06 — Créer la couche i18n de la plateforme (types + dictionnaires FR/EN) | Frontend | T06 |
+| 7 | T07 — Écrire la matrice RBAC (`permissions.ts`) et le middleware de garde des routes d'espace | Backend | T07 |
+| 8 | T08 — Construire le shell de l'espace (sidebar par rôle, topbar, redirection rôle, noindex) | Frontend | T08 |
+| 9 | T09 — Page de connexion (FR/EN) avec erreurs i18n et blocage après 5 échecs | Frontend | T09 |
+| 10 | T10 — Page d'inscription candidature LDG → compte en attente de validation | Frontend | T10 |
+| 11 | T11 — Espace CEO : valider ou refuser les candidatures (avec motif) | Frontend | T11 |
+| 12 | T12 — Script de seed : comptes CEO + Rayan + prospects de démonstration | Backend | T12 |
+| 13 | T13 — Page profil unifiée (email, téléphone, mot de passe — nom figé) | Frontend | T13 |
+| 14 | T14 — Action serveur d'ajout de prospect avec anti-doublon (normalisation + index unique) | Backend | T14 |
+| 15 | T15 — Machine à états des 10 statuts + journal d'audit (`activities`) + raison obligatoire sur statut terminal | Backend | T15 |
+| 16 | T16 — Composant PipelineTable réutilisable (filtres URL, badges, colonnes/actions par rôle) | Frontend | T16 |
+| 17 | T17 — Pages liste prospects scopées par rôle (vendeur : les siens, autres : tous) | Frontend | T17 |
+| 18 | T18 — Page détail prospect en 4 onglets (Identité, Fiche, Devis & paiements, Historique) | Frontend | T18 |
+| 19 | T19 — Assistant fiche projet en 5 étapes avec jauge de complétion | Frontend | T19 |
+| 20 | T20 — Espace vendeur mobile-first : ajout 1 écran, liste en cartes, jauge de palier, ledger « mes gains » | Frontend | T20 |
+| 21 | T21 — Espace CEO : création de devis (montant USD TTC + PDF joint) et avancement de ses statuts | Frontend | T21 |
+| 22 | T22 — Encaissements CEO : acompte + échéances (saisie manuelle) avec confirmation explicite | Frontend | T22 |
+| 23 | T23 — Moteur de commissions (barème progressif, plafond 25 %, snapshots, idempotence) + tests unitaires | Backend | T23 |
+| 24 | T24 — Espace CEO : file de versement des commissions (individuel ou en lot) + historique | Frontend | T24 |
+| 25 | T25 — Stockage & téléchargement sécurisé des PDF (devis, contrats, factures, livrables) | Backend | T25 |
+| 26 | T26 — Portail client : invitations (lien 48 h) et activation du compte | Backend | T26 |
+| 27 | T27 — Portail client : timeline des 5 jalons + validation d'étape en 1 clic | Frontend | T27 |
+| 28 | T28 — Portail client : onglets Documents & Factures | Frontend | T28 |
+| 29 | T29 — Portail client : messagerie projet avec accusé de lecture | Frontend | T29 |
+| 30 | T30 — Dashboard CEO : KPIs globaux + 3 files d'action + stats par employé (funnel/activité/rentabilité) | Frontend | T30 |
+| 31 | T31 — Espace Manager (Rayan) : classement des LDG + historique des commissions de l'équipe | Frontend | T31 |
+| 32 | T32 — Dashboards Commercial (relances du jour) et Vendeur (palier + prospects) | Frontend | T32 |
+| 33 | T33 — Passe a11y + responsive 360/768/1440 + états vides/chargement/erreur sur toute la plateforme | Frontend | T33 |
+| 34 | T34 — Câbler le formulaire contact de la landing → prospect source `landing` (validé) | Backend | T34 |
+| 35 | T35 — Qualité statique : lint + tsc + build production sans erreur | Backend | T35 |
+| 36 | T36 — Validation E2E par rôle (Playwright) + non-régression de la landing | Tester | T36 |
 
-**Règles d'exécution** : une tâche à la fois, prompt isolé (2-3 fichiers), `Reviewer` systématique après chaque tâche Frontend/Backend, micro-commit Conventional Commits en français après `APPROUVE`, **aucun `git push`**. En cas de `REJETE`, correction puis revue ; après 2 échecs identiques → escalade utilisateur.
+**Règles d'exécution** : une tâche à la fois, prompt isolé (2-3 fichiers), `Reviewer` après chaque tâche Frontend/Backend, micro-commit Conventional Commits en français après `APPROUVE`, **aucun `git push`**. `REJETE` → correction puis revue ; 2 échecs identiques → escalade utilisateur.
 
 ---
 
 ## Validation finale (Reviewer → Tester)
-1. Chaque tâche ci-dessus cochée + commitée.
-2. `Reviewer` : dernier diff complet conforme (typage strict, pas de string hardcodée, palette respectée, a11y).
-3. `Tester` : parcours E2E FR/EN + responsive + formulaire → rapport.
-4. Synthèse utilisateur : fichiers créés, statut revue/tests, et **ce qu'il reste à fournir** (contenu réel, email/WhatsApp, domaine).
+
+1. Les 36 tâches (T01→T36) cochées et commitées.
+2. `Reviewer` : diff complet conforme (RBAC serveur, zéro `any`, palette DESIGN.md, i18n FR/EN, landing non régressée).
+3. `Tester` : E2E des 5 rôles + responsive + non-régression landing → rapport.
+4. Synthèse utilisateur : fichiers créés, statut revues/tests, points restants (domaine, contenu réel, décision T34).
