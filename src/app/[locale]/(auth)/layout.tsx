@@ -1,6 +1,8 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { isValidLocale } from "@/i18n/config";
+import { getPlatformDictionary } from "@/i18n/platform-dictionaries";
 
 type AuthLayoutProps = {
   children: React.ReactNode;
@@ -8,9 +10,28 @@ type AuthLayoutProps = {
 };
 
 /**
+ * Métadonnées **par défaut** de la zone `(auth)` : chaque page (connexion,
+ * inscription…) peut les surcharger via son propre `generateMetadata` (Next
+ * fusionne : le champ défini par l'enfant gagne). Aucun `generateMetadata` au
+ * root (T05) : pas de conflit.
+ */
+export async function generateMetadata({
+  params,
+}: Pick<AuthLayoutProps, "params">): Promise<Metadata> {
+  const { locale } = await params;
+  if (!isValidLocale(locale)) {
+    return {};
+  }
+  const dict = await getPlatformDictionary(locale);
+  return {
+    title: `${dict.common.brand.name} ${dict.common.brand.suffix}`,
+  };
+}
+
+/**
  * Layout du groupe `(auth)` : page centrée sans header ni footer.
  * Carte unique sur fond `bg-ink`, monogramme constructiviste + mot-marque.
- * (Formulaires réels câblés en T09.)
+ * Formulaires réels câblés en T09 (connexion) / FE-3 (inscription).
  */
 export default async function AuthLayout({
   children,
@@ -57,7 +78,8 @@ export default async function AuthLayout({
         </p>
       </div>
       <div className="w-full max-w-sm rounded-xl border border-line bg-surface p-8">
-        {children}
+        {/* Landmark a11y unique de la zone auth (cible du skip-link). */}
+        <main id="main">{children}</main>
       </div>
     </div>
   );
