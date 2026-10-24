@@ -171,11 +171,13 @@ export const en = {
       allStatuses: "All statuses",
       searchPlaceholder: "Search by name or company…",
       clearFilters: "Reset",
+      resultCount: "{count} prospect(s)",
     },
     messages: {
       created: "The prospect has been added to the pipeline.",
       duplicate: "A prospect with the same email or phone already exists.",
       createdToast: "Prospect added.",
+      reminderOverdue: "Follow-up overdue",
     },
   },
 

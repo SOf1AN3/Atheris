@@ -177,11 +177,13 @@ export const fr: PlatformContent = {
       allStatuses: "Tous les statuts",
       searchPlaceholder: "Rechercher un nom, une entreprise…",
       clearFilters: "Réinitialiser",
+      resultCount: "{count} prospect(s)",
     },
     messages: {
       created: "Le prospect a bien été ajouté au pipeline.",
       duplicate: "Un prospect avec la même adresse email ou le même téléphone existe déjà.",
       createdToast: "Prospect ajouté.",
+      reminderOverdue: "Relance dépassée",
     },
   },
 

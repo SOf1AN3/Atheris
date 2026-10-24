@@ -232,6 +232,8 @@ export interface PipelineContent {
     allStatuses: string;
     searchPlaceholder: string;
     clearFilters: string;
+    /** Compteur de résultats (placeholder `{count}` = nombre de lignes). */
+    resultCount: string;
   };
   messages: {
     /** Message inline après création réussie. */
@@ -240,6 +242,8 @@ export interface PipelineContent {
     duplicate: string;
     /** Toast de confirmation après création. */
     createdToast: string;
+    /** Badge texte de relance dépassée (a11y : la couleur seule ne suffit pas). */
+    reminderOverdue: string;
   };
 }
 
