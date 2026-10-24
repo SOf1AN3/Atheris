@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
+import { motion } from "framer-motion";
 import type { Variants } from "framer-motion";
 import type { ReactNode } from "react";
 
@@ -39,8 +39,8 @@ export type RevealProps = {
 /**
  * Bloc révélé au scroll (M1) : fondu + léger déplacement vertical.
  * Rend un `<div>` par défaut ; `as` permet `<section>`, `<article>`, `<li>`
- * ou `<figure>`. Respecte `prefers-reduced-motion` (état final immédiat,
- * aucun flash de contenu invisible — règle dure §5).
+ * ou `<figure>`. Respecte `prefers-reduced-motion` via
+ * `MotionConfig(reducedMotion="user")` au niveau layout (règle dure §5).
  */
 export function Reveal({
   children,
@@ -50,14 +50,14 @@ export function Reveal({
   as = "div",
   disableAnimation = false,
 }: RevealProps): ReactNode {
-  const reducedMotion = useReducedMotion();
   const MotionTag = MOTION_TAGS[as];
   const rootClassName = cn(className);
 
-  // DESIGN: reduced-motion ou désactivation → aucun attribut d'animation.
-  // L'élément rend son état final naturel (opacity 1, y 0) sans délai :
-  // zéro risque de flash ni de dépendance aux internals de Framer Motion.
-  if (disableAnimation || reducedMotion) {
+  // DESIGN: pas de branchement sur useReducedMotion ici (cause d'hydration
+  // mismatch) — le respect de la préférence est délégué à
+  // MotionConfig(reducedMotion="user") au layout. `disableAnimation` est une
+  // prop constante (identique serveur/client) → aucun risque de mismatch.
+  if (disableAnimation) {
     return <MotionTag className={rootClassName}>{children}</MotionTag>;
   }
 

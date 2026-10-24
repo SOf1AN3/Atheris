@@ -1,10 +1,16 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
+import { motion } from "framer-motion";
 import type { Variants } from "framer-motion";
 import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
+
+// DESIGN: pas de branchement sur useReducedMotion ici (cause d'hydration
+// mismatch) — le respect de la préférence est délégué à
+// MotionConfig(reducedMotion="user") au layout. Seule la prop constante
+// `disableAnimation` (identique serveur/client) peut court-circuiter
+// l'animation, sans risque de mismatch.
 
 // DESIGN: M2 (DESIGN.md §5) — cascade d'enfants : stagger 80ms, durée 500ms,
 // easing M1 cubic-bezier(0.22, 1, 0.36, 1). Aucun spring, aucune boucle.
@@ -64,7 +70,8 @@ export type FadeInProps = {
  * Conteneur de cascade (M2) : ses enfants directs animés via `FadeInItem`
  * apparaissent en séquence (stagger). Le conteneur lui-même ne bouge pas
  * (aucun transform) et n'est révélé qu'une fois (`once: true`).
- * Respecte `prefers-reduced-motion` (états finaux immédiats — règle dure §5).
+ * Respecte `prefers-reduced-motion` via `MotionConfig(reducedMotion="user")`
+ * au niveau layout (règle dure §5).
  */
 export function FadeIn({
   children,
@@ -74,7 +81,6 @@ export function FadeIn({
   as = "div",
   disableAnimation = false,
 }: FadeInProps): ReactNode {
-  const reducedMotion = useReducedMotion();
   const MotionTag = MOTION_TAGS[as];
   const rootClassName = cn(className);
 
@@ -93,10 +99,10 @@ export function FadeIn({
     },
   };
 
-  // DESIGN: reduced-motion ou désactivation → aucun attribut d'animation sur
-  // le conteneur ; les FadeInItem, sans labels hérités, rendent leur état
+  // DESIGN: désactivation explicite → aucun attribut d'animation sur le
+  // conteneur ; les FadeInItem, sans labels hérités, rendent leur état
   // final visible (safe par défaut, aucun flash).
-  if (disableAnimation || reducedMotion) {
+  if (disableAnimation) {
     return <MotionTag className={rootClassName}>{children}</MotionTag>;
   }
 
@@ -128,6 +134,8 @@ export type FadeInItemProps = {
  * variants (`hidden`/`visible`) sont hérités du conteneur via le contexte
  * Motion, ce qui garantit le décalage `staggerChildren`. Utilisé seul (hors
  * `FadeIn`), il rend son état final visible — comportement sûr par défaut.
+ * Respecte `prefers-reduced-motion` via `MotionConfig(reducedMotion="user")`
+ * au niveau layout (règle dure §5).
  */
 export function FadeInItem({
   children,
@@ -135,12 +143,11 @@ export function FadeInItem({
   as = "div",
   disableAnimation = false,
 }: FadeInItemProps): ReactNode {
-  const reducedMotion = useReducedMotion();
   const ItemTag = MOTION_ITEM_TAGS[as];
   const rootClassName = cn(className);
 
-  // DESIGN: reduced-motion ou désactivation → rendu naturel (état final).
-  if (disableAnimation || reducedMotion) {
+  // DESIGN: désactivation explicite → rendu naturel (état final).
+  if (disableAnimation) {
     return <ItemTag className={rootClassName}>{children}</ItemTag>;
   }
 

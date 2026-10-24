@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { notFound } from "next/navigation";
 
+import { MotionConfig } from "framer-motion";
+
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { getDictionary } from "@/i18n/dictionaries";
@@ -96,19 +98,24 @@ export default async function RootLayout({
       data-scroll-behavior="smooth"
     >
       <body className="bg-ink text-fg antialiased">
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: jsonLd }}
-        />
-        <a
-          href="#main"
-          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:border focus:border-line focus:bg-surface focus:px-4 focus:py-2 focus:text-sm focus:text-fg"
-        >
-          {dict.a11y.skipToContent}
-        </a>
-        <Header nav={dict.nav} a11y={dict.a11y} />
-        {children}
-        <Footer nav={dict.nav} footer={dict.footer} />
+        {/* MotionConfig ne rend aucun DOM (provider de contexte) : le body
+            garde exactement le même DOM serveur/client, seul le moteur de
+            Framer Motion respecte `prefers-reduced-motion` après hydratation. */}
+        <MotionConfig reducedMotion="user">
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: jsonLd }}
+          />
+          <a
+            href="#main"
+            className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:border focus:border-line focus:bg-surface focus:px-4 focus:py-2 focus:text-sm focus:text-fg"
+          >
+            {dict.a11y.skipToContent}
+          </a>
+          <Header nav={dict.nav} a11y={dict.a11y} />
+          {children}
+          <Footer nav={dict.nav} footer={dict.footer} />
+        </MotionConfig>
       </body>
     </html>
   );
