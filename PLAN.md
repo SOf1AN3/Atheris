@@ -89,10 +89,11 @@ src/
 │   ├── (auth)/                    # layout carte centrée (pas de header)
 │   │   ├── connexion/page.tsx · inscription/page.tsx
 │   ├── (app)/                     # layout shell (sidebar+topbar+garde rôle) — tout en noindex
-│   │   ├── layout.tsx · page.tsx  # page = redirection vers l'espace du rôle
-│   │   ├── tableau-de-bord/page.tsx
-│   │   ├── prospects/page.tsx · prospects/nouveau/page.tsx · prospects/[id]/page.tsx
-│   │   ├── commissions/page.tsx · equipe/page.tsx · projet/page.tsx · profil/page.tsx
+│   │   ├── layout.tsx
+│   │   ├── espace/page.tsx        # ⚠ NE PAS créer (app)/page.tsx (conflit avec la landing)
+│   │   ├── espace/tableau-de-bord/page.tsx
+│   │   ├── espace/prospects/page.tsx · prospects/nouveau · prospects/[id]
+│   │   ├── espace/commissions/page.tsx · equipe/page.tsx · projet/page.tsx · profil/page.tsx
 ├── components/app/                # shell, StatusBadge, ProspectTable, FilterBar, StatCard,
 │                                  # EmptyState, ProspectWizard, MilestoneTimeline, AuditLog…
 ```

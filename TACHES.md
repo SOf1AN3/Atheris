@@ -93,12 +93,12 @@
 
 ### T08 — Construire le shell de l'espace connecté
 - **Agent** : Frontend · **Dépendances** : T06, T07
-- **Fichiers** : `src/app/[locale]/(app)/layout.tsx`, `src/components/app/AppShell.tsx`, `Sidebar.tsx`, `Topbar.tsx`, `src/app/[locale]/(app)/page.tsx`
+- **Fichiers** : `src/app/[locale]/(app)/layout.tsx`, `src/components/app/AppShell.tsx`, `Sidebar.tsx`, `Topbar.tsx`, `src/app/[locale]/(app)/espace/page.tsx` (remplace le placeholder T05)
 - **Étapes** :
   1. Layout `(app)` : `export const dynamic = "force-dynamic"` ; session serveur via `auth()` ; **403/redirect** si rôle non autorisé pour la route courante (via `ROUTE_ACCESS`) ; `robots: { index: false, follow: false }`.
   2. `Sidebar` : items filtrés par rôle (tableau ci-dessous), item actif = fond `surface-2` + point/accent `#3B82F6` (règle accent DESIGN.md §2.3), logo monogramme en haut, collapse mobile en `Sheet` (menu hamburger, focus trap, `Escape`, verrou scroll — cf. DESIGN.md §4.11).
   3. `Topbar` : switch FR/EN (conserve le chemin), menu avatar (profil, déconnexion), hauteur 64-72px, sticky glass léger cohérent avec le header landing.
-  4. `(app)/page.tsx` : `redirect(HOME_BY_ROLE[session.role])`.
+  4. `(app)/espace/page.tsx` : `redirect(HOME_BY_ROLE[session.role])`. ⚠ Ne **jamais** créer `(app)/page.tsx` : il résoudrait vers `/[locale]` et casserait la landing (conflit « two parallel pages », contourné en T05).
   5. Items par rôle : **CEO** tableau-de-bord · prospects · commissions · équipe · profil — **Manager** tableau-de-bord · prospects · commissions (équipe) · équipe · profil — **Commercial** tableau-de-bord · prospects · profil — **Vendeur** prospects · nouveau prospect · gains · profil — **Client** projet · profil.
 - **Critère « fait »** : chaque rôle ne voit **que** ses items ; cliquer un item interdit (URL forcée) → redirection ; mobile 360px utilisable.
 
