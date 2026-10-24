@@ -8,7 +8,7 @@ import {
   type AddProspectFormMessages,
 } from "@/components/app/vendor/AddProspectForm";
 import { Button } from "@/components/ui/Button";
-import { isValidLocale, type Locale } from "@/i18n/config";
+import { isValidLocale } from "@/i18n/config";
 import { getPlatformDictionary } from "@/i18n/platform-dictionaries";
 import { isRole } from "@/lib/permissions";
 
@@ -28,35 +28,13 @@ export const dynamic = "force-dynamic";
  * - cette page le ré-asserte (`notFound()`) + double filet session du layout
  *   (`redirect` connexion) repris ici pour rester correcte appelée seule.
  *
- * ⚠ CLÉS DICTIONNAIRE MANQUANTES (dict verrouillé — listées en restitution,
- * jamais créées) : `pipeline.newProspect` (h1 + libellé du bouton), un label
- * dédié « Nom / entreprise » et un label « Note » n'existent pas dans
- * `src/content/platform/{fr,en}.ts` → replis locaux bilingues **documentés**
- * ci-dessous (même arbitrage que `NEW_PROSPECT_LABEL` de FE-5). Tous les
- * messages de validation proviennent, eux, du dict (`auth.validation.*`,
- * `pipeline.messages.*`, `common.*`).
+ * Tous les libellés viennent du dict (`pipeline.newProspect`,
+ * `prospect.fields.*`, `common.*`) ; les messages de validation
+ * proviennent de `auth.validation.*` et `pipeline.messages.*`.
  */
 
 /** Suffixe des routes prospects (retour), SANS préfixe de locale. */
 const PROSPECTS_HREF = "/espace/prospects";
-
-/** `pipeline.newProspect` absent : repli bilingue documenté (dict verrouillé). */
-const PAGE_TITLE: Record<Locale, string> = {
-  fr: "Nouveau prospect",
-  en: "New prospect",
-};
-
-/** Label « Nom / entreprise » absent : repli bilingue documenté. */
-const NAME_LABEL: Record<Locale, string> = {
-  fr: "Nom / entreprise",
-  en: "Name / company",
-};
-
-/** Label « Note » absent : repli bilingue documenté (fr et en identiques). */
-const NOTE_LABEL: Record<Locale, string> = {
-  fr: "Note",
-  en: "Note",
-};
 
 type NouveauProspectPageProps = {
   params: Promise<{ locale: string }>;
@@ -67,7 +45,8 @@ export async function generateMetadata({
 }: NouveauProspectPageProps): Promise<Metadata> {
   const { locale } = await params;
   if (!isValidLocale(locale)) return {};
-  return { title: PAGE_TITLE[locale] };
+  const dict = await getPlatformDictionary(locale);
+  return { title: dict.pipeline.newProspect };
 }
 
 export default async function NouveauProspectPage({
@@ -89,10 +68,10 @@ export default async function NouveauProspectPage({
   const dict = await getPlatformDictionary(locale);
 
   const labels: AddProspectFormLabels = {
-    name: NAME_LABEL[locale],
+    name: dict.prospect.fields.fullName,
     email: dict.prospect.labels.email,
     phone: dict.prospect.labels.phone,
-    note: NOTE_LABEL[locale],
+    note: dict.prospect.fields.note,
     submit: dict.common.submit,
     optionalSuffix: dict.common.optional,
   };
@@ -122,7 +101,7 @@ export default async function NouveauProspectPage({
           ← {dict.common.back}
         </Button>
         <h1 className="text-2xl font-bold tracking-[-0.02em] text-fg">
-          {PAGE_TITLE[locale]}
+          {dict.pipeline.newProspect}
         </h1>
       </div>
 

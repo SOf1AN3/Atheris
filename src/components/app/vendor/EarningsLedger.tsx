@@ -71,7 +71,7 @@ export type EarningsLedgerLabels = {
   status: string;
   /** `dict.commissions.generatedAt` — colonne « Date ». */
   date: string;
-  /** Réf deal — ⚠ clé manquante (dict verrouillé) : repli bilingue server. */
+  /** `dict.commissions.dealRef` — colonne « Réf deal ». */
   reference: string;
   /** `dict.common.noData` — état vide. */
   noData: string;

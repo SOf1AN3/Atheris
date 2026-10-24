@@ -4,8 +4,7 @@
  * Composant **pur** (Server Component, aucun `"use client"`, aucun hook) :
  * props 100 % sérialisables — montants, taux et dates sont **déjà formatés
  * côté serveur** par `espace/tableau-de-bord/page.tsx` (aucun formatage ni
- * i18n côté client). Les libellés y sont également résolus (dict +
- * replis listés par la page).
+ * i18n côté client). Les libellés y sont également résolus (100 % dict).
  *
  * ORDRE IMPOSÉ PLAN §T30 :
  * 1. **Files d'action** (`ActionQueue`) : candidatures → `/espace/equipe`,
@@ -14,7 +13,7 @@
  *    si des lignes sont orphelines), relances → pipeline ;
  * 2. **4 indicateurs** (`StatCard`) : CA encaissé, pipeline, conversion
  *    (`null` → « — », jamais `NaN`), commissions dues ;
- * 3. **Activité récente** : 5 lignes (action en style `micro`, auteur, date).
+ * 3. **Activité récente** : 5 lignes (phrase `dict.activities.*` + date).
  *
  * Une file à **zéro** n'est pas une action : elle est retirée de la liste.
  * Si aucune file n'a de travail, `ActionQueue` rend `null` et un état vide
@@ -52,14 +51,15 @@ export type CeoKpi = {
 /** Une ligne du journal d'activité (date déjà formatée server). */
 export type CeoDashboardActivityItem = {
   id: string;
-  /** Code technique brut de l'activité (`status.changed`…). */
-  action: string;
-  /** `null` = action système (cron/seed) : la ligne n'affiche alors que l'action. */
-  actorName: string | null;
+  /**
+   * Phrase du journal (`dict.activities.*`), jetons `{actor}`/`{from}`/`{to}`
+   * remplacés côté serveur — le code technique brut n'est jamais affiché.
+   */
+  actionLabel: string;
   dateLabel: string;
 };
 
-/** Libellés résolus server (dict + replis listés par la page). */
+/** Libellés résolus server (100 % dict). */
 export type CeoDashboardLabels = {
   /** `dict.dashboard.actionQueues`. */
   actionQueues: string;
@@ -182,15 +182,7 @@ export function CeoDashboard({
                 key={item.id}
                 className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-line py-3 last:border-0"
               >
-                <span className="flex min-w-0 flex-wrap items-baseline gap-2">
-                  {/* Style `micro` §12.3 — code technique brut, pas de prose. */}
-                  <span className="text-[12px] font-medium uppercase tracking-[0.02em] text-muted">
-                    {item.action}
-                  </span>
-                  {item.actorName !== null ? (
-                    <span className="text-sm text-fg">{item.actorName}</span>
-                  ) : null}
-                </span>
+                <span className="min-w-0 text-sm text-fg">{item.actionLabel}</span>
                 <span className="shrink-0 text-sm tabular-nums text-muted">{item.dateLabel}</span>
               </li>
             ))}

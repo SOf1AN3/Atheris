@@ -6,8 +6,8 @@
  *
  * Composant CLIENT (dialogs shadcn + appel de Server Action) dont **toutes
  * les données sont calculées côté serveur** par `espace/equipe/page.tsx` :
- * lignes (nom, email, téléphone, rôle, statut, date), libellés dict +
- * replis listés, et `actor` = `{ id, role }` **chargé en session côté
+ * lignes (nom, email, téléphone, rôle, statut, date), libellés dict,
+ * et `actor` = `{ id, role }` **chargé en session côté
  * serveur** (contrat C-5, même schéma que `StatusActions` : la Server
  * Action revalide uuid + rôle `ceo` de toute façon).
  *
@@ -66,7 +66,7 @@ export type ApplicationRow = {
   createdLabel: string;
 };
 
-/** Libellés résolus server (dict + replis listés par la page). */
+/** Libellés résolus server (100 % dict). */
 export type ApplicationListLabels = {
   /** En-têtes de colonnes. */
   name: string;
@@ -90,7 +90,7 @@ export type ApplicationListLabels = {
   loading: string;
   retry: string;
   required: string;
-  /** ⚠ Clés manquantes : replis bilingues server. */
+  /** `dict.applications.rejectReasonHint` + `dict.applications.forbidden`. */
   reasonHint: string;
   forbidden: string;
 };

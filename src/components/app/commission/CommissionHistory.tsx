@@ -51,13 +51,13 @@ export type CommissionHistoryTotals = {
   paidCents: number;
 };
 
-/** Libellés résolus server (dict + replis listés par la page). */
+/** Libellés résolus server (100 % dict). */
 export type CommissionHistoryLabels = {
   /** `dict.commissions.history` — titre de la section. */
   title: string;
-  /** Colonne bénéficiaire (⚠ clé manquante : repli bilingue server). */
+  /** `dict.commissions.beneficiary` — colonne bénéficiaire. */
   beneficiary: string;
-  /** Colonne « Deal » (⚠ clé manquante : repli bilingue server). */
+  /** `dict.commissions.deal` — colonne « Deal ». */
   deal: string;
   /** `dict.commissions.rate` — colonne « Taux ». */
   rate: string;

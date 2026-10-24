@@ -88,40 +88,8 @@ const NEXT_TIER: Record<CommissionTier, { at: number; rate: CommissionTier } | n
   200: null,
 };
 
-/**
- * ⚠ CLÉ DICTIONNAIRE MANQUANTE (dict verrouillé — listée en restitution,
- * jamais créée) : aucune clé « Réf deal » dans `commissions.*` → repli
- * local bilingue **documenté** (même arbitrage que FE-5 `NEW_PROSPECT_LABEL`).
- */
-const REFERENCE_LABEL: Record<Locale, string> = {
-  fr: "Réf deal",
-  en: "Deal ref",
-};
-
 /** Nombre de lignes de l'historique affiché (50 derniers versements). */
 const HISTORY_LIMIT = 50;
-
-/**
- * ⚠ CLÉS DICTIONNAIRE MANQUANTES FE-8 (dict verrouillé — listées en
- * restitution, jamais créées) : `commissions.beneficiary`,
- * `commissions.deal` et `commissions.selectedCount` n'existent pas →
- * replis bilingues documentés (même arbitrage que `REFERENCE_LABEL` ci-dessus
- * et `NEW_PROSPECT_LABEL` FE-5). Tous les autres libellés viennent du dict
- * (`commissions.*`, `common.*`).
- */
-const BENEFICIARY_LABEL: Record<Locale, string> = {
-  fr: "Bénéficiaire",
-  en: "Beneficiary",
-};
-
-/** Colonne « Deal » (nom du prospect + montant du devis). */
-const DEAL_LABEL: Record<Locale, string> = { fr: "Deal", en: "Deal" };
-
-/** Compteur de sélection de la file — `{count}` remplacé côté client. */
-const SELECTED_COUNT_TEMPLATE: Record<Locale, string> = {
-  fr: "{count} sélectionné(s)",
-  en: "{count} selected",
-};
 
 /** Taux en dixièmes → libellé localisé (125 → « 12,5 % » / « 12.5% »). */
 function formatRate(rateTenths: number, locale: Locale): string {
@@ -248,8 +216,8 @@ export default async function CommissionsPage({
 
       // Libellés résolus ICI (frontière RSC : uniquement des strings au client).
       const sharedLabels = {
-        beneficiary: BENEFICIARY_LABEL[locale],
-        deal: DEAL_LABEL[locale],
+        beneficiary: dict.commissions.beneficiary,
+        deal: dict.commissions.deal,
       };
 
       const queueLabels: CommissionQueueLabels = {
@@ -260,7 +228,7 @@ export default async function CommissionsPage({
         generatedAt: dict.commissions.generatedAt,
         pending: dict.commissions.pending,
         noBeneficiary: dict.commissions.noBeneficiary,
-        selectedCount: SELECTED_COUNT_TEMPLATE[locale],
+        selectedCount: dict.commissions.selectedCount,
         markPaidLot: dict.commissions.markPaidLot,
         lotConfirm: dict.commissions.lotConfirm,
         noClawback: dict.commissions.noClawbackWarning,
@@ -377,7 +345,7 @@ export default async function CommissionsPage({
     amount: dict.commissions.amount,
     status: dict.pipeline.columns.status,
     date: dict.commissions.generatedAt,
-    reference: REFERENCE_LABEL[locale],
+    reference: dict.commissions.dealRef,
     noData: dict.common.noData,
   };
 

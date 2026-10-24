@@ -4,7 +4,6 @@ import { notFound, redirect } from "next/navigation";
 
 import { listMessages } from "@/actions/messages";
 import { getProjectOverview } from "@/actions/project";
-import type { MilestoneStatus } from "@/actions/project";
 import { auth } from "@/auth";
 import {
   DocList,
@@ -22,7 +21,7 @@ import { Thread, type ThreadLabels, type ThreadMessageView } from "@/components/
 import { isValidLocale, type Locale } from "@/i18n/config";
 import { getPlatformDictionary } from "@/i18n/platform-dictionaries";
 import { getDb } from "@/lib/db";
-import { clientProjects, documentKindEnum, documents, payments, quotes } from "@/lib/db/schema";
+import { clientProjects, documents, payments, quotes } from "@/lib/db/schema";
 import { isRole, type ProspectStatus } from "@/lib/permissions";
 
 // Session + lecture DB au rendu : jamais statique (la page lit `auth()`,
@@ -62,35 +61,9 @@ const usdFormatter = new Intl.NumberFormat("en-US", {
   currency: "USD",
 });
 
-/**
- * ⚠ CLÉS DICTIONNAIRE MANQUANTES (dict verrouillé T09 — listées en
- * restitution, **jamais créées**) et replis documentés (même arbitrage que
- * `NEW_PROSPECT_LABEL`, FE-5) :
- * - `statuses.milestone` indexe les 5 CLÉS de jalon (cadrage, design…),
- *   aucun libellé d'ÉTAT (`en_attente`/`en_cours`/`valide`) n'existe →
- *   `MILESTONE_STATUS_LABELS` ci-dessous ;
- * - `statuses.document.*` n'existe pas (ni dans le type `StatusesContent`)
- *   → micro-labels bilingues par kind de PDF ;
- * - aucune phrase d'état vide projet (`client.emptyProject`) → repli
- *   bilingue `NO_PROJECT_HINT` (le titre utilise `common.noData`).
- */
-const MILESTONE_STATUS_LABELS: Record<Locale, Record<MilestoneStatus, string>> = {
-  fr: { en_attente: "En attente", en_cours: "En cours", valide: "Validé" },
-  en: { en_attente: "Pending", en_cours: "In progress", valide: "Validated" },
-};
-
-const DOCUMENT_KIND_LABELS: Record<
-  Locale,
-  Record<(typeof documentKindEnum.enumValues)[number], string>
-> = {
-  fr: { devis: "Devis", contrat: "Contrat", facture: "Facture", livrable: "Livrable" },
-  en: { devis: "Quote", contrat: "Contract", facture: "Invoice", livrable: "Deliverable" },
-};
-
-const NO_PROJECT_HINT: Record<Locale, string> = {
-  fr: "Aucun projet ne vous est encore rattaché. Contactez votre interlocuteur ATHERIS.",
-  en: "No project is attached to your account yet. Contact your ATHERIS contact.",
-};
+// Libellés 100 % dict : `statuses.milestoneStatus` (états d'un jalon),
+// `statuses.document` (kind de PDF), `client.emptyProject` (état vide) —
+// aucune constante locale bilingue.
 
 /**
  * Format de date UNIQUE côté serveur (string transmise au client → aucun
@@ -126,7 +99,7 @@ function formatBytes(bytes: number, locale: Locale): string {
 /**
  * Libellé du badge statut projet — **réutilisation documentée** : le statut
  * projet est une colonne `text` (`en_livraison` | `clos`, valeurs identiques
- * à celles du dict `statuses.prospect`) ; le dict verrouillé n'a aucune
+ * à celles du dict `statuses.prospect`) ; le dict n'a aucune
  * clé `statuses.project.*` ni méta de badge §12.2 dédiée aux projets →
  * badge NEUTRE `bg-surface-2 text-muted border border-line` (couleur seule
  * jamais porteur : le texte du dict l'est). Statut inconnu → pas de badge.
@@ -150,10 +123,9 @@ export async function generateMetadata({
   const { locale } = await params;
   if (!isValidLocale(locale)) return {};
   const dict = await getPlatformDictionary(locale);
-  // ⚠ pas de `seo.clientPortal` dans le dict verrouillé (listé en
-  // restitution) : composition 100 % dict (`client.projectTitle` + marque).
   return {
-    title: `${dict.client.projectTitle} | ${dict.common.brand.name} ${dict.common.brand.suffix}`,
+    title: dict.seo.clientPortal.title,
+    description: dict.seo.clientPortal.description,
   };
 }
 
@@ -185,13 +157,8 @@ export default async function ProjetPage({
           {dict.client.projectTitle}
         </h1>
         <p className="text-[15px] text-muted">{dict.common.noData}</p>
-        {/* ⚠ clé manquante `client.emptyProject` (dict verrouillé) : repli
-            bilingue documenté, jamais de littéral non listé. */}
-        <p className="text-[13px] text-muted">
-          {locale === "fr"
-            ? NO_PROJECT_HINT.fr
-            : NO_PROJECT_HINT.en}
-        </p>
+        {/* État vide du portail : `client.emptyProject` (dict). */}
+        <p className="text-[13px] text-muted">{dict.client.emptyProject}</p>
       </div>
     );
   }
@@ -250,7 +217,7 @@ export default async function ProjetPage({
 
   const docItems: DocListItem[] = documentRows.map((row) => ({
     id: row.id,
-    kindLabel: DOCUMENT_KIND_LABELS[locale][row.kind],
+    kindLabel: dict.statuses.document[row.kind],
     filename: row.filename,
     sizeLabel: formatBytes(row.byteSize, locale),
     dateLabel: formatDate(row.createdAt, locale),
@@ -298,7 +265,7 @@ export default async function ProjetPage({
     validateConfirm: dict.client.validateConfirm,
     cancel: dict.common.cancel,
     retry: dict.common.retry,
-    statusLabels: MILESTONE_STATUS_LABELS[locale],
+    statusLabels: dict.statuses.milestoneStatus,
   };
 
   const docListLabels: DocListLabels = {

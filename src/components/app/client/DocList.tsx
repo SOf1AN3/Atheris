@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/Badge";
 /** Une ligne de la liste Documents (déjà formatée côté serveur). */
 export type DocListItem = {
   id: string;
-  /** `statuses.document.*` si la clé existe, sinon micro-label bilingue. */
+  /** `statuses.document[kind]` résolu côté serveur. */
   kindLabel: string;
   filename: string;
   /** Taille formatée (`ko` / `Mo`) côté serveur. */

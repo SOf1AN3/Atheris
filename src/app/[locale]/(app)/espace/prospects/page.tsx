@@ -70,18 +70,6 @@ const CREATE_ROLES: readonly Role[] = ["ceo", "manager", "commercial", "vendeur"
 const VALID_STATUS_VALUES: ReadonlySet<string> = new Set<string>(STATUS_ORDER);
 
 /**
- * ⚠ CLÉ DICTIONNAIRE MANQUANTE (dict verrouillé — listée en restitution) :
- * aucun libellé `pipeline.newProspect` / `prospect.actions.create` n'existe
- * dans `src/content/platform/{fr,en}.ts`. Repli local bilingue **documenté**
- * plutôt que clé inventée (le CTA est une exigence de la tâche) : à remplacer
- * par la clé dédiée dès que le dict s'ouvrira.
- */
-const NEW_PROSPECT_LABEL: Record<Locale, string> = {
-  fr: "Nouveau prospect",
-  en: "New prospect",
-};
-
-/**
  * Format de date UNIQUE des deux côtés de la frontière RSC : la page formatte
  * côté server et transmet une **string** (jamais de `Date` à relire côté
  * client) → aucun décalage d'hydratation possible, fuseau `Africa/Algiers`
@@ -210,11 +198,11 @@ export default async function ProspectsPage({
 
   const emptyState: PipelineEmptyState = {
     title: dict.common.noData,
-    // ⚠ clé manquante `prospect.list.empty` (dict verrouillé) : repli sur le
-    // placeholder de recherche, actionnable quand un filtre est actif.
-    description: dict.pipeline.filters.searchPlaceholder,
+    // État vide de la liste pipeline — `prospect.list.empty` (actionnable :
+    // ajuster les filtres ou ajouter un prospect).
+    description: dict.prospect.list.empty,
     // CTA de création (page FE-7) — masqué pour un rôle sans droit d'écriture.
-    ctaLabel: canCreate ? NEW_PROSPECT_LABEL[locale] : undefined,
+    ctaLabel: canCreate ? dict.pipeline.newProspect : undefined,
     ctaHref: canCreate ? `/${locale}${PROSPECTS_HREF}/nouveau` : undefined,
   };
   const resultCountLabel = dict.pipeline.filters.resultCount.replace(
@@ -231,7 +219,7 @@ export default async function ProspectsPage({
         {/* CTA création — page FE-7 (`/prospects/nouveau`) : lien seul. */}
         {canCreate ? (
           <Button href={`/${locale}${PROSPECTS_HREF}/nouveau`} size="sm">
-            {`+ ${NEW_PROSPECT_LABEL[locale]}`}
+            {`+ ${dict.pipeline.newProspect}`}
           </Button>
         ) : null}
       </div>

@@ -19,7 +19,7 @@ import {
   type StatusTransitionOption,
 } from "@/components/app/prospect/StatusActions";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { QuoteStatus } from "@/content/platform/types";
+import type { ActivitiesContent, QuoteStatus } from "@/content/platform/types";
 import { isValidLocale, type Locale } from "@/i18n/config";
 import { getPlatformDictionary } from "@/i18n/platform-dictionaries";
 import { getDb } from "@/lib/db";
@@ -109,6 +109,43 @@ function toStatus(value: unknown): ProspectStatus | null {
 }
 
 // ---------------------------------------------------------------------------
+// Journal d'audit — résolution `dict.activities.*` (côté serveur uniquement).
+// ---------------------------------------------------------------------------
+
+/**
+ * Vrai si `key` est une clé réelle de `dict.activities` (repli `unknown`
+ * pour tout code DB sans gabarin correspondant).
+ */
+function isActivityKey(
+  activities: ActivitiesContent,
+  key: string,
+): key is keyof ActivitiesContent {
+  return Object.hasOwn(activities, key);
+}
+
+/**
+ * Gabarin d'une activité : le code DB (`status.changed`, `quote.status_changed`…)
+ * est converti en clé camelCase de `dict.activities` (`statusChanged`,
+ * `quoteStatusChanged`…) — correspondance vérifiée sur les littéraux
+ * `action:` de `src/actions/*`. Aucun code connu → `activities.unknown`.
+ *
+ * Les jetons `{actor}` / `{from}` / `{to}` sont remplacés ici par de simples
+ * `String.replace` (jamais de fonction côté server, frontière RSC respectée).
+ */
+function activityPhrase(
+  activities: ActivitiesContent,
+  action: string,
+  tokens: { actor: string; from: string; to: string },
+): string {
+  const key = action.replace(/[_.]([a-z])/g, (_match, letter: string) => letter.toUpperCase());
+  const template = isActivityKey(activities, key) ? activities[key] : activities.unknown;
+  return template
+    .replace("{actor}", tokens.actor)
+    .replace("{from}", tokens.from)
+    .replace("{to}", tokens.to);
+}
+
+// ---------------------------------------------------------------------------
 // FE-8 (T21 · T22) — onglet Devis enrichi en actions CEO.
 // ---------------------------------------------------------------------------
 
@@ -129,87 +166,9 @@ const QUOTE_ACTIONS: Record<QuoteStatus, readonly QuoteStatus[]> = {
 /** Statuts de devis ouverts à l'ajout d'une échéance (miroir serveur). */
 const PAYABLE_QUOTE_STATUSES: readonly QuoteStatus[] = ["sent", "signed"];
 
-/**
- * ⚠ CLÉS DICTIONNAIRE MANQUANTES (dict verrouillé T09 — listées en restitution,
- * **jamais créées**) : aucune clé `prospect.deals.*` / `quotes.*` n'existe pour
- * les actions CEO (création de devis, échéancier, encaissement, génération de
- * commissions) → replis bilingues documentés ci-dessous, même arbitrage que
- * `NEW_PROSPECT_LABEL` (FE-5) et `NOTE_LABEL` (FE-7).
- * Tout le reste vient du dict : `common.*`, `auth.validation.*`,
- * `auth.login.errors.generic`, `commissions.*`, `statuses.quote.*`,
- * `prospect.actions.*`, `client.paid|due`.
- */
-const CREATE_QUOTE_LABEL: Record<Locale, string> = {
-  fr: "Créer un devis",
-  en: "Create quote",
-};
-
-/** Champ « Référence externe » (`createQuote.externalRef`, optionnel). */
-const EXTERNAL_REF_LABEL: Record<Locale, string> = {
-  fr: "Référence externe",
-  en: "External reference",
-};
-
-/** Champ PDF du devis (fr et en identiques — sigle international). */
-const PDF_LABEL: Record<Locale, string> = { fr: "PDF", en: "PDF" };
-
-/** Erreur sous le champ montant — miroir des contraintes serveur. */
-const AMOUNT_INVALID_LABEL: Record<Locale, string> = {
-  fr: "Montant invalide : supérieur à 0, 10 000 000 USD maximum, 2 décimales au plus.",
-  en: "Invalid amount: above 0, at most 10,000,000 USD, 2 decimals maximum.",
-};
-
-/** Erreur sous le champ PDF — miroir des contraintes serveur (5 Mo, `%PDF`). */
-const PDF_INVALID_LABEL: Record<Locale, string> = {
-  fr: "Fichier invalide : un PDF de 5 Mo maximum.",
-  en: "Invalid file: a PDF of at most 5 MB.",
-};
-
-/** Bouton / titre « Ajouter une échéance ». */
-const ADD_PAYMENT_LABEL: Record<Locale, string> = {
-  fr: "Ajouter une échéance",
-  en: "Add due date",
-};
-
-/** Champ libellé d'une échéance (« Acompte », « Échéance 1 »…). */
-const PAYMENT_LABEL_FIELD: Record<Locale, string> = {
-  fr: "Libellé",
-  en: "Label",
-};
-
-/** Champ date d'une échéance (facultatif). */
-const PAYMENT_DUE_FIELD: Record<Locale, string> = {
-  fr: "Échéance",
-  en: "Due date",
-};
-
-/** Bouton d'encaissement d'une échéance non payée. */
-const MARK_PAID_LABEL: Record<Locale, string> = {
-  fr: "Marquer payée",
-  en: "Mark as paid",
-};
-
-/**
- * Bouton `draft→sent` (⚠ clé manquante : ni « Marquer envoyé » ni libellé
- * d'action n'existent dans le dict) — les deux autres transitions
- * (`signed` / `lost`) réutilisent `statuses.quote.*`, déjà affichés en badge.
- */
-const MARK_SENT_LABEL: Record<Locale, string> = {
-  fr: "Marquer envoyé",
-  en: "Mark as sent",
-};
-
-/** Rappel affiché avant le 1ᵉʳ encaissement (déclencheur des commissions). */
-const GENERATES_COMMISSIONS_LABEL: Record<Locale, string> = {
-  fr: "Cette action générera les commissions de ce deal.",
-  en: "This action will generate the commissions for this deal.",
-};
-
-/** Toast explicite après génération — `{count}` remplacé côté client. */
-const COMMISSIONS_GENERATED_TEMPLATE: Record<Locale, string> = {
-  fr: "{count} commission(s) générée(s)",
-  en: "{count} commission(s) generated",
-};
+// Onglet Devis & paiements : 100 % dict (`prospect.deals.*`, `commissions.*`,
+// `common.*`, `auth.validation.*`) — aucune constante locale bilingue (les
+// replis documentés par T09 ont été remplacés par les clés `prospect.deals.*`).
 
 type ProspectDetailPageProps = {
   params: Promise<{ locale: string; id: string }>;
@@ -350,11 +309,11 @@ export default async function ProspectDetailPage({
       canAddPayment: PAYABLE_QUOTE_STATUSES.includes(row.status),
       // Transitions du graphe figé, libellées ici (frontière RSC) :
       // `label` = libellé de STATUT (badge + toast), `buttonLabel` = intitulé
-      // du bouton d'action (spécifique sur `draft→sent`, cf. repli server).
+      // du bouton d'action (spécifique sur `draft→sent`).
       actions: QUOTE_ACTIONS[row.status].map((to) => ({
         to,
         label: dict.statuses.quote[to],
-        buttonLabel: to === "sent" ? MARK_SENT_LABEL[locale] : dict.statuses.quote[to],
+        buttonLabel: to === "sent" ? dict.prospect.deals.markSent : dict.statuses.quote[to],
       })),
       payments: paymentsByQuote.get(row.id) ?? [],
     };
@@ -365,14 +324,15 @@ export default async function ProspectDetailPage({
     const to = toStatus(row.meta.to);
     return {
       id: row.id,
-      action: row.action,
-      transitionLabel:
-        from !== null && to !== null
-          ? `${dict.statuses.prospect[from]} → ${dict.statuses.prospect[to]}`
-          : null,
+      // Phrase du journal (`dict.activities.*`) — le code brut DB n'est plus
+      // affiché ; auteur et transition `from → to` sont déjà dans la phrase.
+      actionLabel: activityPhrase(dict.activities, row.action, {
+        actor: row.actorName ?? "—",
+        from: from !== null ? dict.statuses.prospect[from] : "—",
+        to: to !== null ? dict.statuses.prospect[to] : "—",
+      }),
       note: readMetaString(row.meta, "note"),
       reason: readMetaString(row.meta, "reason"),
-      actorLabel: row.actorName,
       dateLabel: formatDate(row.createdAt, locale),
     };
   });
@@ -390,42 +350,42 @@ export default async function ProspectDetailPage({
   const ceoLabels: DealsCeoLabels | undefined = isCeo
     ? {
         create: {
-          open: CREATE_QUOTE_LABEL[locale],
+          open: dict.prospect.deals.createQuote,
           amount: dict.commissions.amount,
-          externalRef: EXTERNAL_REF_LABEL[locale],
-          pdf: PDF_LABEL[locale],
+          externalRef: dict.prospect.deals.externalRef,
+          pdf: dict.prospect.deals.pdf,
           optional: dict.common.optional,
           submit: dict.common.save,
           cancel: dict.common.cancel,
           required: dict.auth.validation.required,
           refTooLong: dict.auth.validation.tooLong(100),
-          amountInvalid: AMOUNT_INVALID_LABEL[locale],
-          pdfInvalid: PDF_INVALID_LABEL[locale],
+          amountInvalid: dict.prospect.deals.amountInvalid,
+          pdfInvalid: dict.prospect.deals.pdfInvalid,
           genericError: dict.auth.login.errors.generic,
         },
         payment: {
-          add: ADD_PAYMENT_LABEL[locale],
-          labelField: PAYMENT_LABEL_FIELD[locale],
+          add: dict.prospect.deals.addPayment,
+          labelField: dict.prospect.deals.paymentLabel,
           amount: dict.commissions.amount,
-          dueField: PAYMENT_DUE_FIELD[locale],
+          dueField: dict.prospect.deals.paymentDue,
           optional: dict.common.optional,
           submit: dict.common.save,
           cancel: dict.common.cancel,
           required: dict.auth.validation.required,
           labelTooShort: dict.auth.validation.tooShort(2),
           labelTooLong: dict.auth.validation.tooLong(120),
-          amountInvalid: AMOUNT_INVALID_LABEL[locale],
+          amountInvalid: dict.prospect.deals.amountInvalid,
           genericError: dict.auth.login.errors.generic,
         },
         markPaid: {
-          markPaid: MARK_PAID_LABEL[locale],
+          markPaid: dict.prospect.deals.markPaid,
           confirmChange: dict.prospect.actions.confirmChange,
           cancel: dict.common.cancel,
-          triggerWarning: GENERATES_COMMISSIONS_LABEL[locale],
+          triggerWarning: dict.commissions.generatesWarning,
           noClawback: dict.commissions.noClawbackWarning,
           paid: dict.commissions.paid,
           retry: dict.common.retry,
-          generatedTemplate: COMMISSIONS_GENERATED_TEMPLATE[locale],
+          generatedTemplate: dict.commissions.generatedCount,
         },
         status: {
           changeStatus: dict.prospect.actions.changeStatus,
@@ -499,9 +459,7 @@ export default async function ProspectDetailPage({
               source: dict.prospect.labels.source,
               owner: dict.prospect.labels.owner,
               createdAt: dict.prospect.labels.createdAt,
-              // ⚠ clé `prospect.labels.updatedAt` absente du dict verrouillé
-              // (listée en restitution) : repli sur « Dernière activité ».
-              updatedAt: dict.pipeline.columns.lastActivity,
+              updatedAt: dict.prospect.labels.updatedAt,
               reason: dict.prospect.actions.reasonLabel,
             }}
             values={{
@@ -519,13 +477,15 @@ export default async function ProspectDetailPage({
 
         {/* --- Fiche projet : placeholder volontaire (FE-6 / T19). --- */}
         {/* BriefTab.tsx n'est PAS créée ici : carte sobre uniquement, libellés
-            100 % dict (⚠ clé `prospect.tabs.briefPlaceholder` manquante). */}
+            100 % dict (`prospect.tabs.briefPlaceholder`). */}
         <TabsContent value="brief">
           <div className="rounded-xl border border-line bg-surface p-6">
             <p className="text-lg font-semibold tracking-[-0.015em] text-fg">
               {dict.prospect.tabs.brief}
             </p>
-            <p className="mt-1 text-[15px] text-muted">{dict.brief.title}</p>
+            <p className="mt-1 text-[15px] text-muted">
+              {dict.prospect.tabs.briefPlaceholder}
+            </p>
           </div>
         </TabsContent>
 
@@ -539,9 +499,9 @@ export default async function ProspectDetailPage({
             ceoLabels={ceoLabels}
             commissionsHref={`/${locale}/espace/commissions`}
             labels={{
-              empty: dict.common.noData,
-              paid: dict.client.paid,
-              upcoming: dict.client.due,
+              empty: dict.prospect.deals.empty,
+              paid: dict.prospect.deals.paid,
+              upcoming: dict.prospect.deals.upcoming,
             }}
           />
         </TabsContent>

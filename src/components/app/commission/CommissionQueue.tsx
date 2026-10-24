@@ -23,8 +23,7 @@
  * versées) et plafonne à 100 ids par appel → `paidCount` fait foi, aucun
  * optimisme local, simple `router.refresh()` après succès.
  *
- * LIBELLÉS : props sérialisables résolus côté serveur (dict `commissions.*`
- * + replis bilingues listés dans `espace/commissions/page.tsx`).
+ * LIBELLÉS : props sérialisables résolus côté serveur (dict `commissions.*`).
  */
 
 import { Inbox } from "lucide-react";
@@ -80,13 +79,13 @@ export type CommissionQueueTotals = {
   count: number;
 };
 
-/** Libellés résolus server (dict + replis listés par la page). */
+/** Libellés résolus server (100 % dict). */
 export type CommissionQueueLabels = {
   /** `dict.commissions.queue` — titre de la section. */
   title: string;
-  /** Colonne bénéficiaire (⚠ clé manquante : repli bilingue server). */
+  /** `dict.commissions.beneficiary` — colonne bénéficiaire. */
   beneficiary: string;
-  /** Colonne « Deal » (⚠ clé manquante : repli bilingue server). */
+  /** `dict.commissions.deal` — colonne « Deal ». */
   deal: string;
   /** `dict.commissions.tier.label` — colonne « Palier ». */
   tier: string;
@@ -98,7 +97,7 @@ export type CommissionQueueLabels = {
   pending: string;
   /** `dict.commissions.noBeneficiary` — badge + bannière d'orphelines. */
   noBeneficiary: string;
-  /** `{count} sélectionné(s)` (⚠ clé manquante : repli bilingue server). */
+  /** `dict.commissions.selectedCount` — `{count}` remplacé côté client. */
   selectedCount: string;
   /** `dict.commissions.markPaidLot` — bouton de la barre sticky. */
   markPaidLot: string;

@@ -44,15 +44,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
-/** Libellés de champs, résolus dans la page server (dict ou repli documenté). */
+/** Libellés de champs, résolus dans la page server (100 % dict). */
 export type AddProspectFormLabels = {
-  /** Champ Nom / entreprise. */
+  /** `dict.prospect.fields.fullName` — champ Nom / entreprise. */
   name: string;
   /** `dict.prospect.labels.email`. */
   email: string;
   /** `dict.prospect.labels.phone`. */
   phone: string;
-  /** Champ Note (optionnel). */
+  /** `dict.prospect.fields.note` — champ Note (optionnel). */
   note: string;
   /** `dict.common.submit`. */
   submit: string;

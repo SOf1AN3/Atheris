@@ -2,43 +2,11 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { ActivateForm } from "@/components/app/client/ActivateForm";
-import { isValidLocale, type Locale } from "@/i18n/config";
+import { isValidLocale } from "@/i18n/config";
 import { getPlatformDictionary } from "@/i18n/platform-dictionaries";
 
 type InvitationPageProps = {
   params: Promise<{ locale: string; token: string }>;
-};
-
-/**
- * ⚠ CLÉS DICTIONNAIRE MANQUANTES (dict verrouillé T09 — listées en
- * restitution, **jamais créées**) : aucune clé `seo.invitation`,
- * `auth.invitation.*` ni `client.activate*` n'existe pour la page publique
- * d'activation d'un lien d'espace client. Replis documentés :
- * - **titre SEO** : `${common.brand.name} ${common.brand.suffix}` (même
- *   composition que le layout `(auth)`, dict 100 % `common.*`) ;
- * - **titre de page, CTA et bloc succès** : mini-constantes bilingues
- *   ci-dessous (même arbitrage que `NEW_PROSPECT_LABEL`, FE-5) — les clés
- *   `auth.signup.successTitle/Body` parlent d'une candidature examinée « sous
- *   48 heures » : mensongère pour une activation IMMÉDIATE, donc écartées.
- */
-const ACTIVATION_TITLE: Record<Locale, string> = {
-  fr: "Activation de votre espace",
-  en: "Activate your workspace",
-};
-
-const ACTIVATION_SUBMIT: Record<Locale, string> = {
-  fr: "Activer mon compte",
-  en: "Activate my account",
-};
-
-const ACTIVATION_SUCCESS_TITLE: Record<Locale, string> = {
-  fr: "Compte activé",
-  en: "Account activated",
-};
-
-const ACTIVATION_SUCCESS_BODY: Record<Locale, string> = {
-  fr: "Votre espace client est prêt. Connectez-vous pour suivre votre projet.",
-  en: "Your client portal is ready. Sign in to follow your project.",
 };
 
 /**
@@ -49,11 +17,14 @@ const ACTIVATION_SUCCESS_BODY: Record<Locale, string> = {
  *   la page ne le valide pas (le Zod de `activateClientAccount` tranche :
  *   jeton inconnu/expiré/déjà utilisé → code i18nalisé côté client).
  * - `generateMetadata` vit dans CETTE page (le layout `(auth)` fournit un
- *   titre par défaut fusionné ici) ; aucun email n'est exposé (le token le
- *   porte mais il n'est pas lisible sans DB, et la fuite serait inutile).
+ *   titre par défaut fusionné ici) : `seo.invitation.{title,description}` ;
+ *   aucun email n'est exposé (le token le porte mais il n'est pas lisible
+ *   sans DB, et la fuite serait inutile).
  * - Le layout `(auth)` fournit la carte centrée ; pas de session requise
  *   (action publique) — un compte déjà connecté peut activer un second lien,
  *   cas légitime d'invitation.
+ * - Tous les libellés viennent du dict (`auth.invitation.*`, `common.*`,
+ *   `auth.signup.*`, `auth.validation.*`) : aucune constante locale bilingue.
  */
 export async function generateMetadata({
   params,
@@ -61,7 +32,10 @@ export async function generateMetadata({
   const { locale } = await params;
   if (!isValidLocale(locale)) return {};
   const dict = await getPlatformDictionary(locale);
-  return { title: `${dict.common.brand.name} ${dict.common.brand.suffix}` };
+  return {
+    title: dict.seo.invitation.title,
+    description: dict.seo.invitation.description,
+  };
 }
 
 export default async function InvitationPage({
@@ -71,13 +45,13 @@ export default async function InvitationPage({
   if (!isValidLocale(locale)) notFound();
 
   const dict = await getPlatformDictionary(locale);
-  const { signup, validation, login } = dict.auth;
+  const { signup, validation, login, invitation } = dict.auth;
 
   return (
     <div className="flex flex-col gap-6 text-center">
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl font-bold tracking-[-0.02em] text-fg">
-          {ACTIVATION_TITLE[locale]}
+          {invitation.title}
         </h1>
       </div>
 
@@ -91,15 +65,15 @@ export default async function InvitationPage({
           nameLabel: signup.nameLabel,
           passwordLabel: signup.passwordLabel,
           passwordConfirmLabel: signup.passwordConfirmLabel,
-          submit: ACTIVATION_SUBMIT[locale],
+          submit: invitation.submit,
           loading: dict.common.loading,
-          successTitle: ACTIVATION_SUCCESS_TITLE[locale],
-          successBody: ACTIVATION_SUCCESS_BODY[locale],
+          successTitle: invitation.successTitle,
+          successBody: invitation.successBody,
           signIn: login.submit,
-          errorInvalid: dict.common.notFound,
-          errorExpired: login.errors.generic,
-          errorUsed: login.errors.generic,
-          errorDuplicate: signup.duplicateEmail,
+          errorInvalid: invitation.invalid,
+          errorExpired: invitation.expired,
+          errorUsed: invitation.used,
+          errorDuplicate: invitation.duplicate,
           errorGeneric: login.errors.generic,
           required: validation.required,
           nameTooShort: validation.tooShort(2),

@@ -3,8 +3,8 @@
  *
  * Composant **pur** (Server Component, aucun `"use client"`, aucun hook) :
  * props 100 % sérialisables — dates **déjà formatées côté serveur** par
- * `espace/tableau-de-bord/page.tsx`, libellés résolus server (dict +
- * replis listés), badges de statut habillés par `PROSPECT_STATUS_META`
+ * `espace/tableau-de-bord/page.tsx`, libellés résolus server (100 % dict),
+ * badges de statut habillés par `PROSPECT_STATUS_META`
  * (`StatusBadge`) avec un label déjà traduit.
  *
  * ORDRE SPEC T32 :
@@ -56,11 +56,11 @@ export type SalesRecentItem = {
   href: string;
 };
 
-/** Libellés résolus server (dict + replis listés par la page). */
+/** Libellés résolus server (100 % dict). */
 export type CommercialDashboardLabels = {
   /** `dict.dashboard.queues.remindersToday`. */
   remindersTitle: string;
-  /** ⚠ Clé manquante : repli bilingue (« Fiches incomplètes »). */
+  /** `dict.dashboard.queues.incompleteBriefs`. */
   briefsTitle: string;
   /** `dict.dashboard.recentActivity`. */
   recentTitle: string;

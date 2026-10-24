@@ -90,60 +90,10 @@ function formatDate(value: Date | null, locale: Locale): string {
 }
 
 // ---------------------------------------------------------------------------
-// ⚠ CLÉS DICTIONNAIRE MANQUANTES FE-10 (dict verrouillé — listées en
-// restitution, JAMAIS créées) : `ApplicationsContent` n'a pas de clé pour la
-// colonne « Rôle » ni pour le motif de refus / le refus d'action ; le bloc
-// « stats employé » réutilise les mêmes colonnes que la page tableau de bord
-// (`DashboardContent.perEmployee` ne expose que les 3 groupes). Replis
-// bilingues documentés — même arbitrage que FE-5/FE-8.
+// FE-10 : tous les libellés viennent du dict (`applications.*`,
+// `dashboard.perEmployee.*`, `pipeline.*`, `common.*`) — aucune constante
+// locale bilingue (les replis T09 ont été remplacés par les clés ouvertes).
 // ---------------------------------------------------------------------------
-
-type LocalLabels = {
-  /** `applications.role` — colonne « Rôle ». */
-  role: string;
-  /** `applications.rejectReasonHint` — aide au motif (≥ 3 caractères). */
-  rejectReasonHint: string;
-  /** `applications.forbidden` — refus d'action (rôle sans droit). */
-  forbidden: string;
-  /** Colonnes des statistiques employé (`dashboard.perEmployee.*`). */
-  added: string;
-  qualified: string;
-  signed: string;
-  conversion: string;
-  changes: string;
-  generated: string;
-  cost: string;
-  margin: string;
-};
-
-const LOCAL_LABELS: Record<Locale, LocalLabels> = {
-  fr: {
-    role: "Rôle",
-    rejectReasonHint: "Motif obligatoire, 3 caractères minimum.",
-    forbidden: "Action non autorisée.",
-    added: "Ajoutés",
-    qualified: "Qualifiés",
-    signed: "Signés",
-    conversion: "Conversion",
-    changes: "Changements",
-    generated: "CA généré",
-    cost: "Coût commissions",
-    margin: "Marge",
-  },
-  en: {
-    role: "Role",
-    rejectReasonHint: "Reason required, 3 characters minimum.",
-    forbidden: "Not allowed.",
-    added: "Added",
-    qualified: "Qualified",
-    signed: "Signed",
-    conversion: "Conversion",
-    changes: "Status changes",
-    generated: "Revenue generated",
-    cost: "Commissions cost",
-    margin: "Margin",
-  },
-};
 
 /** Bloc d'erreur sobre — `common.retry`, aucun détail technique en UI. */
 function errorBlock(retryLabel: string): React.JSX.Element {
@@ -285,7 +235,6 @@ export default async function EquipePage({
   if (role !== "ceo" && role !== "manager") notFound();
 
   const dict = await getPlatformDictionary(locale);
-  const local = LOCAL_LABELS[locale];
   const title =
     dict.nav[role].find((item) => item.href === "/espace/equipe")?.label ??
     dict.applications.title;
@@ -334,7 +283,7 @@ export default async function EquipePage({
     name: dict.pipeline.columns.name,
     email: dict.prospect.labels.email,
     phone: dict.prospect.labels.phone,
-    role: local.role,
+    role: dict.applications.role,
     status: dict.applications.statusLabel,
     created: dict.prospect.labels.createdAt,
     actions: dict.common.actions,
@@ -348,8 +297,8 @@ export default async function EquipePage({
     loading: dict.common.loading,
     retry: dict.common.retry,
     required: dict.auth.validation.required,
-    reasonHint: local.rejectReasonHint,
-    forbidden: local.forbidden,
+    reasonHint: dict.applications.rejectReasonHint,
+    forbidden: dict.applications.forbidden,
   };
 
   // --- 2. Stats équipe (ceo | manager) ------------------------------------
@@ -361,15 +310,15 @@ export default async function EquipePage({
   const employeeLabels: EmployeeStatsLabels = {
     title: dict.dashboard.perEmployee.title,
     name: dict.pipeline.columns.name,
-    added: local.added,
-    qualified: local.qualified,
-    signed: local.signed,
-    conversion: local.conversion,
-    changes: local.changes,
+    added: dict.dashboard.perEmployee.added,
+    qualified: dict.dashboard.perEmployee.qualified,
+    signed: dict.dashboard.perEmployee.signed,
+    conversion: dict.dashboard.perEmployee.conversion,
+    changes: dict.dashboard.perEmployee.changes,
     lastActivity: dict.pipeline.columns.lastActivity,
-    generated: local.generated,
-    cost: local.cost,
-    margin: local.margin,
+    generated: dict.dashboard.perEmployee.generated,
+    cost: dict.dashboard.perEmployee.cost,
+    margin: dict.dashboard.perEmployee.margin,
     noData: dict.common.noData,
   };
 

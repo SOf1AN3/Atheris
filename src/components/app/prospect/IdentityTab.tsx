@@ -8,7 +8,7 @@
 
 import type { ReactNode } from "react";
 
-/** Libellés i18n résolus côté serveur (`dict.prospect.labels.*` + 2 replis). */
+/** Libellés i18n résolus côté serveur (`dict.prospect.labels.*` + `reason`). */
 export type IdentityTabLabels = {
   email: string;
   phone: string;
@@ -19,9 +19,8 @@ export type IdentityTabLabels = {
   /** `dict.prospect.labels.createdAt`. */
   createdAt: string;
   /**
-   * Dernière modification — ⚠ clé manquante `prospect.labels.updatedAt`
-   * (dict verrouillé, listée en restitution) : la page passe
-   * `dict.pipeline.columns.lastActivity` en repli sémantique.
+   * Dernière modification de la fiche — `dict.prospect.labels.updatedAt`,
+   * résolu côté serveur par la page détail.
    */
   updatedAt: string;
   /** `dict.prospect.actions.reasonLabel` — titre du bloc disqualification. */

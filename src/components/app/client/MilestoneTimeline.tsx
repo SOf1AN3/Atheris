@@ -45,11 +45,9 @@ export type MilestoneTimelineLabels = {
   /** `common.retry` — toast d'échec / conflit optimiste. */
   retry: string;
   /**
-   * Libellés des 3 états de jalon — **⚠ clé manquante** :
-   * `statuses.milestone` est indexée par les 5 CLÉS de jalon (cadrage,
-   * design…), aucun libellé d'ÉTAT (en_attente/en_cours/valide) n'existe
-   * dans le dict verrouillé → repli bilingue documenté côté serveur
-   * (page `espace/projet`), jamais de littéral ici.
+   * Libellés des 3 états de jalon — `dict.statuses.milestoneStatus`
+   * (`en_attente` / `en_cours` / `valide`), résolus côté serveur par la page
+   * `espace/projet` (jamais de littéral ici).
    */
   statusLabels: Record<MilestoneStatus, string>;
 };

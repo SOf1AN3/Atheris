@@ -4,7 +4,7 @@
  * Composant **pur** (Server Component, aucun `"use client"`, aucun hook) :
  * props 100 % sérialisables — montants, taux et paliers sont **déjà
  * formatés côté serveur** par `espace/tableau-de-bord/page.tsx` ; les
- * libellés y sont résolus (dict + replis listés).
+ * libellés y sont résolus (100 % dict).
  *
  * STRUCTURE :
  * 1. **Classement des vendeurs** — tableau desktop (`hidden md:block`) +
@@ -51,11 +51,11 @@ export type ManagerDashboardTotals = {
   paidCountLabel: string;
 };
 
-/** Libellés résolus server (dict + replis listés par la page). */
+/** Libellés résolus server (100 % dict). */
 export type ManagerDashboardLabels = {
   /** `dict.dashboard.perEmployee.title` — titre du classement. */
   title: string;
-  /** Colonnes (⚠ `rank`/`added`/`deals`/`conversion` : replis bilingues). */
+  /** Colonnes — `dict.dashboard.ranking.*` + `dict.pipeline.columns.name`. */
   rank: string;
   name: string;
   added: string;

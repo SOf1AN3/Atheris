@@ -10,7 +10,7 @@ import {
   type BriefWizardProps,
 } from "@/components/app/prospect/BriefWizard";
 import type { BriefFieldLabel } from "@/components/app/prospect/brief-steps";
-import { isValidLocale, type Locale } from "@/i18n/config";
+import { isValidLocale } from "@/i18n/config";
 import { getPlatformDictionary } from "@/i18n/platform-dictionaries";
 import { getDb } from "@/lib/db";
 import { prospectBriefs, prospects } from "@/lib/db/schema";
@@ -42,26 +42,6 @@ import { isRole } from "@/lib/permissions";
 
 /** Garde uuid sur le segment d'URL (évite une erreur PG sur un id forgé). */
 const uuidSchema = z.uuid();
-
-/**
- * ⚠ CLÉS DICTIONNAIRE MANQUANTES (dict verrouillé — **listées en
- * restitution**, jamais créées dans `src/content/platform/*`) :
- * `brief.savedToast` et `brief.readOnlyNotice` n'existent pas dans le
- * contrat `BriefContent`. Repli local bilingue **documenté** (même motif que
- * `NEW_PROSPECT_LABEL`, page pipeline) : ces chaînes sont résolues ici et
- * voyagent dans `labels` — le client ne contient aucune string affichable et
- * le dictionnaire n'est jamais transmis.
- */
-const MISSING_BRIEF_LABELS: Record<Locale, { saved: string; readOnlyNotice: string }> = {
-  fr: {
-    saved: "Modification enregistrée.",
-    readOnlyNotice: "Consultation seule : votre rôle ne permet pas de modifier cette fiche.",
-  },
-  en: {
-    saved: "Change saved.",
-    readOnlyNotice: "Read-only: your role cannot modify this brief.",
-  },
-};
 
 type ProspectBriefPageProps = {
   /** Next 15 : `params` est une `Promise`, résolue par la page server. */
@@ -182,19 +162,14 @@ export default async function ProspectBriefPage({
     gaugeTemplate: dict.brief.gauge.blocksDone,
     ready: dict.brief.gauge.readyForQuote,
     save: dict.common.save,
-    saving: dict.common.loading,
-    saved: MISSING_BRIEF_LABELS[locale].saved,
+    saving: dict.brief.saving,
+    saved: dict.brief.savedToast,
     retry: dict.common.retry,
     next: dict.common.next,
-    // ⚠ clé `brief.previous` manquante (dict verrouillé) : « Retour » de
-    // `common` est le repli le plus proche pour reculer d'une étape.
-    previous: dict.common.back,
-    // ⚠ clé `brief.backToProspect` manquante : composition `common.back` +
-    // nom du prospect (donnée, pas du contenu) pour un nom accessible
-    // distinct du bouton « Retour » précédent.
-    backToProspect: `${dict.common.back} — ${prospect.fullName}`,
+    previous: dict.brief.previous,
+    backToProspect: dict.brief.backToProspect,
     requiredError: dict.auth.validation.required,
-    readOnlyNotice: MISSING_BRIEF_LABELS[locale].readOnlyNotice,
+    readOnlyNotice: dict.brief.readOnlyNotice,
     readOnly,
     fields: fieldDefs,
   };

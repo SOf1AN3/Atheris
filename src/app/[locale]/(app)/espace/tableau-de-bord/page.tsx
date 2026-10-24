@@ -22,7 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { PlatformContent } from "@/content/platform/types";
+import type { ActivitiesContent, PlatformContent } from "@/content/platform/types";
 import { isValidLocale, type Locale } from "@/i18n/config";
 import { getPlatformDictionary } from "@/i18n/platform-dictionaries";
 import { isRole, type Role } from "@/lib/permissions";
@@ -51,7 +51,7 @@ export const dynamic = "force-dynamic";
  * (`console.error` + code) puis présenté par un bloc sobre `common.retry` —
  * aucun détail technique en UI. Une erreur d'infra DB est propagée → 500.
  *
- * FRONTIÈRE RSC : tous les libellés (dict + replis listés), montants,
+ * FRONTIÈRE RSC : tous les libellés (100 % dict), montants,
  * taux et dates sont résolus/formatés ICI, en strings sérialisables — les
  * dashboards sont des renderers purs, aucun formatage côté client.
  */
@@ -95,80 +95,11 @@ function formatDate(value: Date | null, locale: Locale): string {
 }
 
 // ---------------------------------------------------------------------------
-// ⚠ CLÉS DICTIONNAIRE MANQUANTES FE-10 (dict verrouillé — listées en
-// restitution, JAMAIS créées) : `DashboardContent` n'expose ni titre de
-// page, ni libellés d'indicateurs, ni colonnes des tableaux « par employé »
-// / « classement ». Replis bilingues documentés — même arbitrage que FE-5
-// (`NEW_PROSPECT_LABEL`) et FE-8 (`REFERENCE_LABEL`, `BENEFICIARY_LABEL`).
-// Tout le reste vient du dict (`dashboard.*`, `commissions.*`,
-// `pipeline.*`, `common.*`, `nav.*`, `brief.gauge.*`).
+// FE-10 : tous les libellés viennent du dict (`dashboard.*`, `commissions.*`,
+// `pipeline.*`, `common.*`, `nav.*`, `brief.gauge.*`, `activities.*`) — aucune
+// constante locale bilingue (les replis T09 ont été remplacés par les clés
+// `dashboard.kpis|totals|ranking|perEmployee|queues.*` ouvertes depuis).
 // ---------------------------------------------------------------------------
-
-type LocalLabels = {
-  /** `dashboard.kpis.collected` — KPI CA encaissé. */
-  kpiCollected: string;
-  /** `dashboard.kpis.pipeline` — KPI valeur du pipeline. */
-  kpiPipeline: string;
-  /** `dashboard.kpis.conversion` — KPI taux de conversion. */
-  kpiConversion: string;
-  /** `dashboard.kpis.quotesSent` — sous-ligne pipeline (template `{count}`). */
-  quotesSentHint: string;
-  /** `dashboard.totals.paidCount` — sous-ligne totaux manager (template `{count}`). */
-  paidCountHint: string;
-  /** Colonnes du classement manager (`dashboard.ranking.*`). */
-  rank: string;
-  added: string;
-  deals: string;
-  /** Colonnes des statistiques employé (`dashboard.perEmployee.*`). */
-  qualified: string;
-  signed: string;
-  conversion: string;
-  changes: string;
-  generated: string;
-  cost: string;
-  margin: string;
-  /** `dashboard.queues.incompleteBriefs` — section du dashboard commercial. */
-  briefsTitle: string;
-};
-
-const LOCAL_LABELS: Record<Locale, LocalLabels> = {
-  fr: {
-    kpiCollected: "CA encaissé",
-    kpiPipeline: "Pipeline",
-    kpiConversion: "Taux de conversion",
-    quotesSentHint: "{count} devis en attente",
-    paidCountHint: "{count} versement(s)",
-    rank: "Rang",
-    added: "Ajoutés",
-    deals: "Deals",
-    qualified: "Qualifiés",
-    signed: "Signés",
-    conversion: "Conversion",
-    changes: "Changements",
-    generated: "CA généré",
-    cost: "Coût commissions",
-    margin: "Marge",
-    briefsTitle: "Fiches incomplètes",
-  },
-  en: {
-    kpiCollected: "Collected revenue",
-    kpiPipeline: "Pipeline",
-    kpiConversion: "Conversion rate",
-    quotesSentHint: "{count} quotes awaiting",
-    paidCountHint: "{count} payment(s)",
-    rank: "Rank",
-    added: "Added",
-    deals: "Deals",
-    qualified: "Qualified",
-    signed: "Signed",
-    conversion: "Conversion",
-    changes: "Status changes",
-    generated: "Revenue generated",
-    cost: "Commissions cost",
-    margin: "Margin",
-    briefsTitle: "Incomplete briefs",
-  },
-};
 
 /** Bloc d'erreur sobre — `common.retry`, aucun détail technique en UI. */
 function errorBlock(retryLabel: string): React.JSX.Element {
@@ -183,14 +114,49 @@ function errorBlock(retryLabel: string): React.JSX.Element {
 
 /**
  * Titre de page : label de nav du rôle pour `/espace/tableau-de-bord`
- * (pattern repris de FE-7/FE-8 — `dashboard.title` n'existe pas, cf. replis
- * listés plus haut ; tous les rôles internes portent cette entrée de nav).
+ * (pattern repris de FE-7/FE-8, tous les rôles internes portent cette
+ * entrée de nav ; repli = `dashboard.title`).
  */
 function resolvePageTitle(dict: PlatformContent, role: Role): string {
   return (
     dict.nav[role].find((item) => item.href === "/espace/tableau-de-bord")?.label ??
-    dict.dashboard.kpi
+    dict.dashboard.title
   );
+}
+
+// ---------------------------------------------------------------------------
+// Journal d'audit du dashboard CEO — résolution `dict.activities.*` (serveur).
+// ---------------------------------------------------------------------------
+
+/** Vrai si `key` est une clé réelle de `dict.activities` (sinon `unknown`). */
+function isActivityKey(
+  activities: ActivitiesContent,
+  key: string,
+): key is keyof ActivitiesContent {
+  return Object.hasOwn(activities, key);
+}
+
+/**
+ * Gabarin d'une activité : le code DB (`status.changed`,
+ * `quote.status_changed`…) est converti en clé camelCase de `dict.activities`
+ * — correspondance vérifiée sur les littéraux `action:` de `src/actions/*`.
+ * Aucun code connu → `activities.unknown` ; les jetons `{actor}` / `{from}` /
+ * `{to}` sont remplacés par de simples `String.replace` (frontière RSC).
+ *
+ * Le journal CEO ne transporte pas `activities.meta` (contrat
+ * `CeoDashboardData` figé) : un jeton sans donnée affiche « — ».
+ */
+function activityPhrase(
+  activities: ActivitiesContent,
+  action: string,
+  tokens: { actor: string; from: string; to: string },
+): string {
+  const key = action.replace(/[_.]([a-z])/g, (_match, letter: string) => letter.toUpperCase());
+  const template = isActivityKey(activities, key) ? activities[key] : activities.unknown;
+  return template
+    .replace("{actor}", tokens.actor)
+    .replace("{from}", tokens.from)
+    .replace("{to}", tokens.to);
 }
 
 // ---------------------------------------------------------------------------
@@ -203,7 +169,7 @@ type EmployeeStatsLabels = {
   title: string;
   /** `dict.pipeline.columns.name`. */
   name: string;
-  /** Colonnes — dict ou replis listés (`LOCAL_LABELS`). */
+  /** Colonnes — `dict.dashboard.perEmployee.*`. */
   added: string;
   qualified: string;
   signed: string;
@@ -330,7 +296,6 @@ export default async function DashboardPage({
   if (role === "client") notFound();
 
   const dict = await getPlatformDictionary(locale);
-  const local = LOCAL_LABELS[locale];
   const title = resolvePageTitle(dict, role);
   // Identité chargée EN SESSION côté serveur (contrat C-5) — jamais montée
   // du client ; les actions revalident uuid + rôle par Zod.
@@ -357,15 +322,15 @@ export default async function DashboardPage({
       const employeeLabels: EmployeeStatsLabels = {
         title: dict.dashboard.perEmployee.title,
         name: dict.pipeline.columns.name,
-        added: local.added,
-        qualified: local.qualified,
-        signed: local.signed,
-        conversion: local.conversion,
-        changes: local.changes,
+        added: dict.dashboard.perEmployee.added,
+        qualified: dict.dashboard.perEmployee.qualified,
+        signed: dict.dashboard.perEmployee.signed,
+        conversion: dict.dashboard.perEmployee.conversion,
+        changes: dict.dashboard.perEmployee.changes,
         lastActivity: dict.pipeline.columns.lastActivity,
-        generated: local.generated,
-        cost: local.cost,
-        margin: local.margin,
+        generated: dict.dashboard.perEmployee.generated,
+        cost: dict.dashboard.perEmployee.cost,
+        margin: dict.dashboard.perEmployee.margin,
         noData: dict.common.noData,
       };
 
@@ -381,20 +346,20 @@ export default async function DashboardPage({
             }}
             kpis={{
               collected: {
-                label: local.kpiCollected,
+                label: dict.dashboard.kpis.collected,
                 value: formatCents(data.kpis.collectedCents),
                 tone: "success",
               },
               pipeline: {
-                label: local.kpiPipeline,
+                label: dict.dashboard.kpis.pipeline,
                 value: formatCents(data.kpis.pipelineValueCents),
-                hint: local.quotesSentHint.replace(
+                hint: dict.dashboard.kpis.quotesSent.replace(
                   "{count}",
                   String(data.kpis.quotesSent),
                 ),
               },
               conversion: {
-                label: local.kpiConversion,
+                label: dict.dashboard.kpis.conversion,
                 value: formatPercent(data.kpis.conversionRate, locale),
               },
               commissionsDue: {
@@ -406,8 +371,13 @@ export default async function DashboardPage({
             }}
             activity={data.recentActivity.map((item) => ({
               id: item.id,
-              action: item.action,
-              actorName: item.actorName,
+              // Phrase du journal (`dict.activities.*`) résolue ici — le code
+              // brut DB n'est plus affiché ; `{from}`/`{to}` faute de `meta`.
+              actionLabel: activityPhrase(dict.activities, item.action, {
+                actor: item.actorName ?? "—",
+                from: "—",
+                to: "—",
+              }),
               dateLabel: formatDate(item.createdAt, locale),
             }))}
             labels={{
@@ -463,7 +433,7 @@ export default async function DashboardPage({
           totals={{
             dueLabel: formatCents(data.totals.dueCents),
             paidLabel: formatCents(data.totals.paidCents),
-            paidCountLabel: local.paidCountHint.replace(
+            paidCountLabel: dict.dashboard.totals.paidCount.replace(
               "{count}",
               String(data.totals.paidCount),
             ),
@@ -471,11 +441,11 @@ export default async function DashboardPage({
           commissionsHref={`/${locale}/espace/commissions`}
           labels={{
             title: dict.dashboard.perEmployee.title,
-            rank: local.rank,
+            rank: dict.dashboard.ranking.rank,
             name: dict.pipeline.columns.name,
-            added: local.added,
-            deals: local.deals,
-            conversion: local.conversion,
+            added: dict.dashboard.ranking.added,
+            deals: dict.dashboard.ranking.deals,
+            conversion: dict.dashboard.ranking.conversion,
             tier: dict.commissions.tier.label,
             due: dict.commissions.pending,
             paid: dict.commissions.paid,
@@ -527,7 +497,7 @@ export default async function DashboardPage({
             }))}
             labels={{
               remindersTitle: dict.dashboard.queues.remindersToday,
-              briefsTitle: local.briefsTitle,
+              briefsTitle: dict.dashboard.queues.incompleteBriefs,
               recentTitle: dict.dashboard.recentActivity,
               blocksDone: dict.brief.gauge.blocksDone,
               noData: dict.common.noData,

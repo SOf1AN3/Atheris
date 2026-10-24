@@ -35,11 +35,13 @@ export type ActivateFormLabels = {
   successBody: string;
   /** Lien de CTA après succès → `/{locale}/connexion` (libellé `login.submit`). */
   signIn: string;
-  /** Jeton inconnu ou malformé → `common.notFound` (aucun détail fuité). */
+  /** Jeton inconnu ou malformé → `auth.invitation.invalid`. */
   errorInvalid: string;
+  /** Jeton expiré → `auth.invitation.expired`. */
   errorExpired: string;
+  /** Jeton déjà consommé → `auth.invitation.used`. */
   errorUsed: string;
-  /** Email déjà pourvu d'un compte → `auth.signup.duplicateEmail`. */
+  /** Email déjà pourvu d'un compte → `auth.invitation.duplicate`. */
   errorDuplicate: string;
   /** Repli pour tout code inattendu + erreur réseau → `login.errors.generic`. */
   errorGeneric: string;
