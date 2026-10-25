@@ -56,3 +56,7 @@ BUSINESS.md
 # - preview.html : prototype interactif local ouvert dans le navigateur
 DESIGN.md
 preview.html
+
+# video (pipeline Remotion — voir VIDEO.md)
+/VIDEO.md
+/public/audio/
