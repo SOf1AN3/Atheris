@@ -21,8 +21,9 @@ import { createContactSchema } from "@/lib/form-schema";
 import type { ContactFormValues } from "@/lib/form-schema";
 import { cn } from "@/lib/utils";
 
-// DESIGN: M10 (§5) — swap formulaire → succès : fade + scale 0.96→1, 260ms.
-const EASE_PREMIUM: [number, number, number, number] = [0.22, 1, 0.36, 1];
+// DESIGN: M10 (§5) — swap formulaire → succès : fade + scale 0.96→1, 300ms,
+// courbe UNIQUE du site (§3.1) — aucun easing concurrent.
+const EASE_PREMIUM: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 // DESIGN: mapping lucide ciblé (§4.10) — icônes 20px `text-muted`, stroke 1.5.
 // L'accent est interdit sur les icônes décoratives (§2.3).
@@ -32,16 +33,26 @@ const CHANNEL_ICONS = {
   pin: MapPin,
 } as const satisfies Record<ChannelIcon, typeof Mail>;
 
-// DESIGN: §3.6 — champ 52px, radius 12px, padding-x 16px, texte 15px.
-// Focus : bordure accent + focus ring global `:focus-visible` (globals.css) —
-// `outline: none` interdit §6.3, aucun remplacement par une classe locale.
+// DESIGN: §2.6 — champ 52px, rayon 12px (`rounded-xl`), padding-x 16px,
+// texte 15px, bordure `line-2`. Focus : bordure volt + ring volt localisé
+// (remplacement explicite du `focus ring` — aucun `outline: none` §2.7).
 const FIELD_BASE =
-  "block w-full rounded-xl border bg-surface px-4 text-[15px] text-fg placeholder:text-faint transition-colors duration-200 focus:border-accent";
+  "block h-[52px] w-full rounded-xl border bg-surface px-4 text-[15px] text-fg placeholder:text-faint transition-[border-color,box-shadow] duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] focus:border-accent focus:shadow-[0_0_0_3px_rgba(204,255,74,0.16)]";
 
 const FIELD_ERROR_CLASS = "border-danger";
+const FIELD_IDLE_CLASS = "border-line-2";
 
 const TEXTAREA_BASE =
-  "block w-full resize-y rounded-xl border bg-surface px-4 py-4 text-[15px] leading-relaxed text-fg placeholder:text-faint transition-colors duration-200 focus:border-accent";
+  "block w-full resize-y rounded-xl border bg-surface px-4 py-4 text-[15px] leading-relaxed text-fg placeholder:text-faint transition-[border-color,box-shadow] duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] focus:border-accent focus:shadow-[0_0_0_3px_rgba(204,255,74,0.16)]";
+
+/**
+ * Couleur de bordure d'état — MUTUELLEMENT EXCLUSIVE : poser `border-line-2`
+ * ET `border-danger` laisserait l'ordre de cascade Tailwind trancher à notre
+ * place. Le focus volt (`focus:border-accent`) reste une variante, toujours
+ * résolue après l'état de base.
+ */
+const fieldBorderClass = (hasError: boolean): string =>
+  hasError ? FIELD_ERROR_CLASS : FIELD_IDLE_CLASS;
 
 type FieldErrorProps = {
   id: string;
@@ -90,13 +101,18 @@ type ContactChannelProps = {
 };
 
 /**
- * Un canal de contact (§4.10) : bloc `surface` cliquable si `href` (mailto /
- * wa.me — externe = `target="_blank"`), statique sinon (localisation).
- * Hover : bordure accent uniquement, aucun fond bleu (§2.3).
+ * Un canal de contact (§2.5) : carte `card spot` cliquable si `href`
+ * (mailto / wa.me — externe = `target="_blank" rel="noopener noreferrer"`),
+ * statique sinon (localisation). Icône lucide 20px `text-muted`, micro-label
+ * mono, valeur 15px `fg` — hover = arête `line-2` + -3px, aucune ombre.
  */
 function ContactChannel({ channel }: ContactChannelProps): ReactNode {
   const Icon = CHANNEL_ICONS[channel.icon];
-  const isExternal = channel.href?.startsWith("http") ?? false;
+  // Liens externes : `wa.me` (https) ET `mailto:` ouvrent hors-site
+  // (`target="_blank"` + `rel="noopener noreferrer"`).
+  const isExternal =
+    channel.href !== null &&
+    (channel.href.startsWith("http") || channel.href.startsWith("mailto:"));
 
   const content = (
     <>
@@ -106,10 +122,8 @@ function ContactChannel({ channel }: ContactChannelProps): ReactNode {
         strokeWidth={1.5}
       />
       <span className="min-w-0">
-        <span className="block text-[12px] font-medium uppercase tracking-[0.06em] text-faint">
-          {channel.label}
-        </span>
-        <span className="mt-0.5 block text-[15px] font-medium text-fg">
+        <span className="micro block text-faint">{channel.label}</span>
+        <span className="mt-1 block text-[15px] font-medium text-fg">
           {channel.value}
         </span>
       </span>
@@ -117,7 +131,7 @@ function ContactChannel({ channel }: ContactChannelProps): ReactNode {
   );
 
   const baseClassName =
-    "flex items-center gap-4 rounded-2xl border border-line bg-surface p-5";
+    "card spot flex items-center gap-4 rounded-[20px] border border-line bg-surface p-5 transition-[border-color,translate] duration-[240ms] ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-[3px] hover:border-line-2";
 
   if (channel.href === null) {
     return <div className={baseClassName}>{content}</div>;
@@ -128,10 +142,7 @@ function ContactChannel({ channel }: ContactChannelProps): ReactNode {
       href={channel.href}
       target={isExternal ? "_blank" : undefined}
       rel={isExternal ? "noopener noreferrer" : undefined}
-      className={cn(
-        baseClassName,
-        "transition-[border-color] duration-200 hover:border-[rgba(59,130,246,0.4)]",
-      )}
+      className={baseClassName}
     >
       {content}
     </a>
@@ -229,10 +240,12 @@ export function Contact({ contact }: ContactProps): ReactNode {
 
   return (
     // DESIGN: `id="contact"` = ancre des CTA (« Lancer un projet »).
-    // Bande visuellement séparée §4.10 : bordure haute + fond `ink-2`.
+    // Bande visuellement séparée (densité normale §2.3) : fond `ink-2` +
+    // filet haut `line`.
     <section
       id="contact"
-      className="border-t border-line bg-ink-2 py-[72px] md:py-24 lg:py-[120px]"
+      aria-labelledby="contact-title"
+      className="border-t border-line bg-ink-2 py-[clamp(80px,10vh,128px)]"
     >
       {/* Container §2.7. */}
       <div className="mx-auto max-w-[1200px] px-[clamp(1.25rem,5vw,2.5rem)]">
@@ -240,7 +253,8 @@ export function Contact({ contact }: ContactProps): ReactNode {
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-16">
           <div className="lg:col-span-5">
             <SectionHeading
-              align="left"
+              index="07"
+              headingId="contact-title"
               eyebrow={contact.eyebrow}
               title={contact.title}
               description={contact.description}
@@ -255,9 +269,9 @@ export function Contact({ contact }: ContactProps): ReactNode {
 
           <div className="lg:col-span-7">
             <Reveal>
-              <div className="rounded-[24px] border border-line bg-surface p-6 md:p-10">
+              <div className="rounded-[20px] border border-line-2 border-t-white/[0.18] bg-surface p-6 shadow-[0_50px_90px_-60px_rgba(0,0,0,0.9)] md:p-9">
                 {/* DESIGN: M10 (§5) — swap animé entre formulaire et bloc
-                    succès (fade + scale 0.96→1, 260ms), reduced-motion →
+                    succès (fade + scale 0.96→1, 300ms), reduced-motion →
                     état final immédiat sans animation. */}
                 <AnimatePresence mode="wait">
                   {sent ? (
@@ -270,11 +284,11 @@ export function Contact({ contact }: ContactProps): ReactNode {
                       }
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0 }}
-                      transition={{ duration: 0.26, ease: EASE_PREMIUM }}
+                      transition={{ duration: 0.3, ease: EASE_PREMIUM }}
                       role="status"
                       className="flex flex-col items-center py-10 text-center"
                     >
-                      <span className="flex size-16 items-center justify-center rounded-full border border-[rgba(52,211,153,0.3)] bg-[rgba(52,211,153,0.10)]">
+                      <span className="flex size-16 items-center justify-center rounded-full border border-success/30 bg-success/10">
                         <svg
                           aria-hidden="true"
                           viewBox="0 0 24 24"
@@ -290,26 +304,28 @@ export function Contact({ contact }: ContactProps): ReactNode {
                           />
                         </svg>
                       </span>
-                      <h3 className="mt-5 text-[22px] font-semibold text-fg">
+                      <h3 className="h-display mt-5 text-[22px] text-fg">
                         {contact.form.successTitle}
                       </h3>
-                      <p className="mt-2 max-w-[38ch] text-[15px] text-muted">
+                      <p className="mt-3 max-w-[38ch] text-[15px] text-muted">
                         {contact.form.successMessage}
                       </p>
-                      <button
+                      <Button
                         type="button"
-                        className="mt-6 text-sm font-semibold text-muted underline decoration-line underline-offset-4 transition-colors hover:text-fg"
+                        variant="ghost"
+                        size="sm"
+                        className="mt-6"
                         onClick={handleReset}
                       >
                         {contact.form.successAction}
-                      </button>
+                      </Button>
                     </motion.div>
                   ) : (
                     <motion.div
                       key="form"
                       initial={false}
                       exit={{ opacity: 0 }}
-                      transition={{ duration: 0.26, ease: EASE_PREMIUM }}
+                      transition={{ duration: 0.3, ease: EASE_PREMIUM }}
                     >
                       <form
                         noValidate
@@ -319,7 +335,7 @@ export function Contact({ contact }: ContactProps): ReactNode {
                           <div>
                             <label
                               htmlFor="contact-name"
-                              className="mb-2 block text-[13px] font-semibold text-fg"
+                              className="mb-2 block text-[13px] font-semibold text-fg-2"
                             >
                               {contact.form.nameLabel}
                             </label>
@@ -334,8 +350,7 @@ export function Contact({ contact }: ContactProps): ReactNode {
                               }
                               className={cn(
                                 FIELD_BASE,
-                                "h-[52px]",
-                                errors.name && FIELD_ERROR_CLASS,
+                                fieldBorderClass(!!errors.name),
                               )}
                               {...register("name")}
                             />
@@ -350,7 +365,7 @@ export function Contact({ contact }: ContactProps): ReactNode {
                           <div>
                             <label
                               htmlFor="contact-email"
-                              className="mb-2 block text-[13px] font-semibold text-fg"
+                              className="mb-2 block text-[13px] font-semibold text-fg-2"
                             >
                               {contact.form.emailLabel}
                             </label>
@@ -365,8 +380,7 @@ export function Contact({ contact }: ContactProps): ReactNode {
                               }
                               className={cn(
                                 FIELD_BASE,
-                                "h-[52px]",
-                                errors.email && FIELD_ERROR_CLASS,
+                                fieldBorderClass(!!errors.email),
                               )}
                               {...register("email")}
                             />
@@ -381,7 +395,7 @@ export function Contact({ contact }: ContactProps): ReactNode {
                           <div className="sm:col-span-2">
                             <label
                               htmlFor="contact-type"
-                              className="mb-2 block text-[13px] font-semibold text-fg"
+                              className="mb-2 block text-[13px] font-semibold text-fg-2"
                             >
                               {contact.form.typeLabel}
                             </label>
@@ -397,8 +411,8 @@ export function Contact({ contact }: ContactProps): ReactNode {
                                 }
                                 className={cn(
                                   FIELD_BASE,
-                                  "h-[52px] appearance-none pr-10",
-                                  errors.type && FIELD_ERROR_CLASS,
+                                  "appearance-none pr-10",
+                                  fieldBorderClass(!!errors.type),
                                 )}
                                 {...register("type")}
                               >
@@ -433,7 +447,7 @@ export function Contact({ contact }: ContactProps): ReactNode {
                           <div className="sm:col-span-2">
                             <label
                               htmlFor="contact-message"
-                              className="mb-2 block text-[13px] font-semibold text-fg"
+                              className="mb-2 block text-[13px] font-semibold text-fg-2"
                             >
                               {contact.form.messageLabel}
                             </label>
@@ -451,7 +465,7 @@ export function Contact({ contact }: ContactProps): ReactNode {
                               className={cn(
                                 TEXTAREA_BASE,
                                 "min-h-[128px]",
-                                errors.message && FIELD_ERROR_CLASS,
+                                fieldBorderClass(!!errors.message),
                               )}
                               {...register("message")}
                             />

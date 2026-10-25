@@ -1,4 +1,4 @@
-import { Inter } from "next/font/google";
+import { Instrument_Serif, Inter_Tight, JetBrains_Mono } from "next/font/google";
 import { notFound } from "next/navigation";
 
 import { MotionConfig } from "framer-motion";
@@ -7,10 +7,30 @@ import { isValidLocale, locales } from "@/i18n/config";
 
 import "../globals.css";
 
-const inter = Inter({
+/* DESIGN §2.2 — les 3 voix du système typographique :
+   - Inter Tight  (structure)  → titres + UI + corps
+   - Instrument Serif (émotion) → italique des titres, `.voix`
+   - JetBrains Mono (donnée)   → index de section, micro-labels, chiffres
+   Inter seul est désormais interdit en display. */
+const interTight = Inter_Tight({
   subsets: ["latin", "latin-ext"],
   display: "swap",
-  variable: "--font-inter",
+  variable: "--font-inter-tight",
+});
+
+const instrumentSerif = Instrument_Serif({
+  weight: ["400"],
+  style: ["normal", "italic"],
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-instrument",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin", "latin-ext"],
+  weight: ["400", "500"],
+  display: "swap",
+  variable: "--font-jetbrains",
 });
 
 type Params = { locale: string };
@@ -39,7 +59,7 @@ export default async function RootLayout({
   return (
     <html
       lang={locale}
-      className={inter.variable}
+      className={`${interTight.variable} ${instrumentSerif.variable} ${jetbrainsMono.variable}`}
       data-scroll-behavior="smooth"
     >
       <body className="bg-ink text-fg antialiased">

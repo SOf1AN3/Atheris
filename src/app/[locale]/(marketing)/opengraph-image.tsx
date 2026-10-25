@@ -65,7 +65,7 @@ export default async function Image({
             right: 0,
             bottom: 0,
             backgroundImage:
-              "radial-gradient(ellipse 80% 50% at 50% -10%, rgba(59,130,246,0.10), transparent 70%)",
+              "radial-gradient(ellipse 80% 50% at 50% -10%, rgba(204,255,74,0.10), transparent 70%)",
           }}
         />
 

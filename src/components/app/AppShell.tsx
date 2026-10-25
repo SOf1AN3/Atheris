@@ -25,7 +25,11 @@ export type AppShellProps = {
   nav: PlatformNavContent;
   /** Identité affichée dans le menu avatar. */
   user: { name: string };
-  /** Libellé lisible du rôle — `dict.statuses.role[role]`. */
+  /**
+   * Libellé lisible du rôle — `dict.statuses.role[role]`. Sert de label
+   * `.micro` en tête de section de la sidebar (desktop + menu mobile) et de
+   * nom de rôle dans le menu avatar.
+   */
   roleLabel: string;
   /** DESIGN §6.4 — libellé du skip-link (`dict.a11y.skipToContent`). */
   skipToContent: string;
@@ -48,12 +52,17 @@ export function AppShell({
           (pattern repris du layout `(marketing)`). */}
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:border focus:border-line focus:bg-surface focus:px-4 focus:py-2 focus:text-sm focus:text-fg"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-xl focus:border focus:border-line focus:bg-surface focus:px-4 focus:py-2 focus:text-sm focus:text-fg"
       >
         {skipToContent}
       </a>
       <div className="flex min-h-screen bg-ink">
-        <Sidebar items={items} locale={locale} brand={nav.brand} />
+        <Sidebar
+          items={items}
+          locale={locale}
+          brand={nav.brand}
+          sectionLabel={roleLabel}
+        />
         <div className="flex min-w-0 flex-1 flex-col">
           <Topbar
             items={items}
@@ -71,6 +80,11 @@ export function AppShell({
           </main>
         </div>
       </div>
+      {/* DESIGN §2.4 — grain plein écran : `position: fixed`,
+          `pointer-events: none`, opacité .05 → n'interfère ni avec le
+          `sticky` de la topbar (z-40) ni avec le `Sheet`/les menus (z-50),
+          ni avec le focus. */}
+      <div className="grain" aria-hidden="true" />
       <Toaster theme="dark" />
     </>
   );

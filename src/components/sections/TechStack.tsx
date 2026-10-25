@@ -5,6 +5,7 @@ import type { KeyboardEvent, ReactNode } from "react";
 
 import { AnimatePresence, motion } from "framer-motion";
 
+import { TechIcon, resolveTechKey } from "@/components/icons/TechIcons";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import type { TechGroupId, TechStackContent } from "@/content/types";
 import { cn } from "@/lib/utils";
@@ -18,9 +19,10 @@ type TechStackProps = {
   tabsLabel: string;
 };
 
-// DESIGN: M5 (§5) — indicateur d'onglet actif, glissement 240ms,
-// cubic-bezier(0.4, 0, 0.2, 1). Aucun spring rebondissant (règle dure §5).
-const EASE_STANDARD: [number, number, number, number] = [0.4, 0, 0.2, 1];
+// DESIGN §3.1 (v2) — M5 (§3.2) : indicateur d'onglet actif, glissement 240ms
+// sur la courbe UNIQUE du site `cubic-bezier(0.16, 1, 0.3, 1)`. Aucun spring
+// (règle dure §2.8).
+const EASE_PREMIUM: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 // DESIGN: §4.6 — « 8 items max par onglet ». Le contenu actuel en a 7 ; la
 // garde `slice(0, 8)` protège si le content venait à grandir au-delà de la
@@ -99,15 +101,18 @@ export function TechStack({
     null;
 
   return (
-    // DESIGN: `id="technologies"` = ancre de la nav header.
+    // DESIGN: `id="technologies"` = ancre de la nav header. §2.3 — densité
+    // DENSE (`clamp(56px, 7vh, 88px)`) : la Stack respire serré après les
+    // sections aérées.
     <section
       id="technologies"
       aria-labelledby="techstack-title"
-      className="py-[72px] md:py-24 lg:py-[120px]"
+      className="py-[clamp(56px,7vh,88px)]"
     >
       <div className="mx-auto max-w-[1200px] px-[clamp(1.25rem,5vw,2.5rem)]">
         <SectionHeading
           align="left"
+          index="03"
           headingId="techstack-title"
           eyebrow={techStack.eyebrow}
           title={techStack.title}
@@ -142,10 +147,10 @@ export function TechStack({
                 tabIndex={isActive ? 0 : -1}
                 onClick={() => setActiveId(group.id)}
                 className={cn(
-                  // §6.10 : min-h-11 (44px) = cible tactile. §3.5 variante
+                  // §6.10 : min-h-11 (44px) = cible tactile. §2.3 variante
                   // underline : texte seul, pas de fond pill — l'accent est
-                  // porté exclusivement par le trait bas (§2.3).
-                  "relative min-h-11 whitespace-nowrap px-4 pb-3.5 pt-3 text-[15px] font-medium transition-colors duration-150",
+                  // porté exclusivement par le trait bas.
+                  "relative min-h-11 whitespace-nowrap px-4 pb-3.5 pt-3 text-[15px] font-medium transition-colors duration-150 ease-[cubic-bezier(0.16,1,0.3,1)]",
                   isActive ? "text-fg font-semibold" : "text-muted hover:text-fg",
                 )}
               >
@@ -157,7 +162,7 @@ export function TechStack({
                     aria-hidden="true"
                     layoutId="tech-tab-indicator"
                     className="absolute -bottom-px left-0 right-0 h-0.5 bg-accent"
-                    transition={{ duration: 0.24, ease: EASE_STANDARD }}
+                    transition={{ duration: 0.24, ease: EASE_PREMIUM }}
                   />
                 ) : null}
                 <span className="relative z-10">{group.label}</span>
@@ -176,8 +181,8 @@ export function TechStack({
           tabIndex={0}
           className="mt-8 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent md:mt-10"
         >
-          {/* DESIGN: M6 (§5) — entrée 220ms ease-out (opacity + y 8px→0),
-              sortie fade 140ms, un seul panneau visible à la fois
+          {/* DESIGN: M6 (§3.2) — entrée 220ms / sortie fade 140ms sur la
+              courbe UNIQUE, y 8px→0, un seul panneau visible à la fois
               (`mode="wait"`). Reduced-motion délégué à MotionConfig(user). */}
           <AnimatePresence mode="wait">
             <motion.div
@@ -186,26 +191,52 @@ export function TechStack({
               animate={{ opacity: 1, y: 0 }}
               exit={{
                 opacity: 0,
-                transition: { duration: 0.14, ease: "easeOut" },
+                transition: { duration: 0.14, ease: EASE_PREMIUM },
               }}
-              transition={{ duration: 0.22, ease: "easeOut" }}
+              transition={{ duration: 0.22, ease: EASE_PREMIUM }}
               className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"
             >
-              {/* Pastilles larges §4.6 : éléments NON interactifs (pas de
-                  hover, pas de cursor, aucun logo/icône de marque §3.2). */}
+              {/* Pastilles §2.6 : éléments NON interactifs (non cliquables,
+                  pas de rôle de commande). Chaque techno porte l'icône de
+                  marque monochrome `text-muted` → `text-fg` au survol,
+                  JAMAIS de couleur de marque ni de volt (§2.1) ; si le
+                  libellé n'a pas d'icône, un monogramme 2 lettres conserve
+                  la présence visuelle de l'item (aucune techno ne disparaît). */}
               {(activeGroup?.items ?? [])
                 .slice(0, MAX_ITEMS_PER_GROUP)
-                .map((item, index) => (
-                  <div
-                    key={`${item.name}-${index}`}
-                    className="flex flex-col gap-1 rounded-xl border border-line bg-surface px-[18px] py-[14px]"
-                  >
-                    <span className="text-[15px] font-medium text-fg">
-                      {item.name}
-                    </span>
-                    <span className="text-[12px] text-faint">{item.hint}</span>
-                  </div>
-                ))}
+                .map((item, index) => {
+                  const hasIcon = resolveTechKey(item.name) !== null;
+
+                  return (
+                    <div
+                      key={`${item.name}-${index}`}
+                      className="group flex items-center gap-4 rounded-xl border border-line bg-surface px-4 py-4 transition-colors duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:border-line-2 hover:bg-surface-2"
+                    >
+                      {hasIcon ? (
+                        <TechIcon
+                          name={item.name}
+                          size={26}
+                          className="shrink-0 text-muted transition-colors duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:text-fg"
+                        />
+                      ) : (
+                        <span
+                          aria-hidden="true"
+                          className="micro flex size-[26px] shrink-0 items-center justify-center rounded-md border border-line text-faint"
+                        >
+                          {item.name.slice(0, 2).toUpperCase()}
+                        </span>
+                      )}
+                      <div className="min-w-0">
+                        <div className="truncate text-[15px] font-medium text-fg">
+                          {item.name}
+                        </div>
+                        <div className="truncate text-[12px] text-faint">
+                          {item.hint}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
             </motion.div>
           </AnimatePresence>
         </div>

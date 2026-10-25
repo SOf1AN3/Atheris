@@ -62,7 +62,7 @@ const TableRow = React.forwardRef<
       // DESIGN §12.3 : hover `ink-2` (#0E1117), sélection `surface-2`
       // (#191D27) + liseré accent de 2px sur la première cellule (§2.3 :
       // indicateur d'état actif autorisé).
-      "border-b transition-colors hover:bg-ink-2 data-[state=selected]:bg-surface-2 data-[state=selected]:[&>td:first-child]:shadow-[inset_2px_0_0_0_#3B82F6]",
+      "border-b transition-colors hover:bg-ink-2 data-[state=selected]:bg-surface-2 data-[state=selected]:[&>td:first-child]:shadow-[inset_2px_0_0_0_#CCFF4A]",
       className
     )}
     {...props}

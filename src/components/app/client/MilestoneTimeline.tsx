@@ -71,7 +71,7 @@ const PASTILLE_BASE =
 
 const PASTILLE_BY_STATUS: Record<MilestoneStatus, string> = {
   valide: "border-success/40 bg-success/10 text-success",
-  en_cours: "border-accent bg-accent text-white",
+  en_cours: "border-accent bg-accent text-ink",
   en_attente: "border-line bg-surface text-muted",
 };
 

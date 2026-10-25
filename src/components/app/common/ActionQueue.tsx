@@ -45,7 +45,7 @@ export function ActionQueue({ items }: ActionQueueProps): React.JSX.Element | nu
         <li key={item.id}>
           <Link
             href={item.href}
-            className="group flex items-center justify-between gap-4 rounded-xl border border-line bg-surface px-4 py-3 transition-colors duration-150 hover:border-[rgba(59,130,246,0.4)] hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
+            className="group flex items-center justify-between gap-4 rounded-xl border border-line bg-surface px-4 py-3 transition-colors duration-150 hover:border-line-2 hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
           >
             <span className="flex min-w-0 flex-col gap-0.5">
               <span className="text-[15px] font-semibold text-fg">{item.label}</span>

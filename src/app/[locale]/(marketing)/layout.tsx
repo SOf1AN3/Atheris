@@ -62,7 +62,9 @@ export default async function MarketingLayout({
       },
       {
         "@type": "Service",
-        name: dict.services.title,
+        // Les `*accent*` du content sont une convention d'affichage (§2.2) :
+        // ils sont retirés pour le balisage structuré (jamais visibles en SEO).
+        name: dict.services.title.replace(/\*/g, ""),
         description: dict.services.description,
         serviceType: dict.services.items.map((item) => item.title),
         provider: { "@id": ORGANIZATION_ID },

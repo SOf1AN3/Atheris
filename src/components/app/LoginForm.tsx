@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { LoginErrorsContent } from "@/content/platform/types";
 import type { Locale } from "@/i18n/config";
+import { cn } from "@/lib/utils";
 
 /**
  * Formulaire de connexion (T09) — « use client » car il consomme la Server
@@ -28,9 +29,11 @@ import type { Locale } from "@/i18n/config";
  * (trim + minuscules + `z.email()`) + mot de passe min. 8 caractères.
  * `noValidate` sur le `<form>` désactive la validation native du navigateur.
  *
- * DESIGN §3.6 : label 13px/600 blanc toujours visible au-dessus (mb 8px),
- * champ 52px thématisé, erreur = bordure `#F87171` + message 13px `text-danger`
- * sous le champ avec icône `AlertCircle` 14px, relié par `aria-describedby`.
+ * DESIGN §3.6 : carte « console » (rayon 20px, arête lumineuse `border-t-white/
+ * [0.18]`, profondeur) — label 13px/600 `fg-2` toujours visible au-dessus
+ * (mb 8px), champ 52px thématisé, erreur = bordure `danger` + message 13px
+ * `text-danger` sous le champ avec icône `AlertCircle` 14px, relié par
+ * `aria-describedby`. CTA unique aplat volt + `sweep` (brillance M13).
  */
 
 /** Libellés statiques du formulaire (copie sérialisable de `auth.login`). */
@@ -159,10 +162,16 @@ export function LoginForm({ locale, labels, messages }: LoginFormProps) {
       onSubmit={onSubmit}
       noValidate
       aria-busy={isSubmitting}
-      className="mt-8 flex flex-col gap-5"
+      className={cn(
+        /* DESIGN §2.4/§2.6 — carte « console » : arête lumineuse en bord
+           supérieur + profondeur. Rayon carte (20px) = contenu, jamais pill. */
+        "mt-8 flex flex-col gap-5 rounded-[20px] border border-line-2 border-t-white/[0.18] bg-surface p-6 shadow-[0_50px_90px_-60px_rgba(0,0,0,0.9)] md:p-9",
+      )}
     >
       <div className="flex flex-col gap-2">
-        <Label htmlFor="login-email">{labels.emailLabel}</Label>
+        <Label htmlFor="login-email" className="text-fg-2">
+          {labels.emailLabel}
+        </Label>
         <Input
           {...register("email")}
           id="login-email"
@@ -187,7 +196,9 @@ export function LoginForm({ locale, labels, messages }: LoginFormProps) {
       </div>
 
       <div className="flex flex-col gap-2">
-        <Label htmlFor="login-password">{labels.passwordLabel}</Label>
+        <Label htmlFor="login-password" className="text-fg-2">
+          {labels.passwordLabel}
+        </Label>
         <Input
           {...register("password")}
           id="login-password"
@@ -214,7 +225,12 @@ export function LoginForm({ locale, labels, messages }: LoginFormProps) {
         variant="primary"
         size="lg"
         disabled={isSubmitting}
-        className="w-full disabled:opacity-70"
+        className={cn(
+          /* SEUL aplat volt de l'écran : `sweep` = balayée de brillance (M13).
+             Libellé/spinner pilotés ci-dessus, seul l'habillage change ici. */
+          "w-full sweep disabled:opacity-60",
+          isSubmitting && "cursor-wait",
+        )}
       >
         {isSubmitting ? labels.submitLoading : labels.submit}
       </Button>
@@ -240,7 +256,7 @@ export function LoginForm({ locale, labels, messages }: LoginFormProps) {
         variant="ghost"
         size="sm"
         href={`/${locale}/inscription`}
-        className="self-center"
+        className="self-center text-muted underline decoration-line-2 underline-offset-4 hover:text-fg"
       >
         {labels.signupLink}
       </Button>

@@ -81,7 +81,7 @@ const SECTION_TITLE_CLASS = "text-lg font-semibold tracking-[-0.015em] text-fg";
 const EMPTY_CLASS =
   "rounded-xl border border-line bg-surface px-6 py-10 text-center text-[15px] font-semibold text-fg";
 const LINK_ROW_CLASS =
-  "flex items-center justify-between gap-4 rounded-xl border border-line bg-surface px-4 py-3 transition-colors duration-150 hover:border-[rgba(59,130,246,0.4)] hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2";
+  "flex items-center justify-between gap-4 rounded-xl border border-line bg-surface px-4 py-3 transition-colors duration-150 hover:border-line-2 hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2";
 
 export function CommercialDashboard({
   reminders,

@@ -1,6 +1,6 @@
 /**
  * Atheris — carte d'indicateur des tableaux de bord (FE-10 · T30/T31/T32 ·
- * DESIGN.md §12).
+ * DESIGN.md « OBSIDIAN INSTRUMENT »).
  *
  * Composant **pur** (aucun `"use client"`, aucun hook, zéro import i18n/DB) :
  * props 100 % sérialisables, `value` **déjà formatée côté serveur** par la
@@ -9,12 +9,18 @@
  *
  * ACCESSIBILITÉ : la couleur ne porte jamais le sens seul — le libellé reste
  * lisible quelle que soit la teinte, et la valeur est en `tabular-nums`
- * (alignement des chiffres).
+ * (alignement des chiffres). Contrastes : `fg` 18.9:1, `success` et `danger`
+ * ≥ 4.5:1 sur `surface` (§2.7).
  *
- * `tone` — **`accent` n'est jamais décoratif** : il est réservé à une valeur
- * ACTIVE (mesure en cours, état sélectionné, jauge remplie — sémaphore
- * DESIGN §2.3). Aucun indicateur statique ne doit l'utiliser : `neutral`
- * (défaut), `success` (réalisé / encaissé) et `danger` (sortie de
+ * HABILLAGE (§2.4 / §2.6) : carte `border border-line bg-surface
+ * rounded-[20px]`, hover `border-line-2` (200ms, courbe unique). Label en
+ * `.micro text-faint` (mono 11px uppercase +0.18em), valeur en
+ * `clamp(1.75rem, 3vw, 2.5rem)` sémantique `fg`.
+ *
+ * `tone` — **`accent` n'est jamais décoratif** : il est réservé à la valeur
+ * CLÉ de l'écran (DESIGN §2.1 — **une seule** valeur KPI en volt par écran,
+ * tous les autres chiffres restant en `text-fg`). Sémantique de mesure :
+ * `neutral` (défaut), `success` (réalisé / encaissé), `danger` (sortie de
  * trésorerie / alerte) couvrent les cas des 4 dashboards.
  */
 
@@ -33,6 +39,7 @@ export type StatCardProps = {
   tone?: StatCardTone;
 };
 
+/** Repos = `text-fg` ; seuls `success` / `danger` / `accent` (volt) sortent. */
 const TONE_CLASSES: Record<StatCardTone, string> = {
   neutral: "text-fg",
   success: "text-success",
@@ -47,18 +54,22 @@ export function StatCard({
   tone = "neutral",
 }: StatCardProps): React.JSX.Element {
   return (
-    <div className="flex flex-col gap-1 rounded-xl border border-line bg-surface p-5">
-      {/* Style `micro` §12.3 : 12px/500 uppercase, `muted`. */}
-      <p className="text-[12px] font-medium uppercase tracking-[0.02em] text-muted">{label}</p>
+    <div className="flex flex-col rounded-[20px] border border-line bg-surface p-5 transition-colors duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:border-line-2 md:p-6">
+      {/* Micro-label : `.micro` (mono 11px, uppercase, +0.18em) — §2.2. */}
+      <p className="micro text-faint">{label}</p>
       <p
         className={cn(
-          "text-2xl font-bold tabular-nums tracking-[-0.015em]",
+          "mt-2 text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-none tabular-nums tracking-[-0.03em]",
           TONE_CLASSES[tone],
         )}
       >
         {value}
       </p>
-      {hint !== undefined ? <p className="text-xs text-muted">{hint}</p> : null}
+      {hint !== undefined ? (
+        <p className="mt-4 border-t border-line pt-4 text-[13px] leading-snug text-muted">
+          {hint}
+        </p>
+      ) : null}
     </div>
   );
 }

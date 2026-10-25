@@ -33,7 +33,7 @@ const TabsTrigger = React.forwardRef<
     className={cn(
       // DESIGN §3.5 : inactif `muted` 15px, hover `fg`, radius 8px ;
       // ACTIF = fond `accent` + texte blanc 600 (sémaphore §2.3 autorisé).
-      "inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-lg px-[18px] py-2.5 text-[15px] font-medium text-muted transition-colors duration-150 hover:text-fg focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-surface disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-accent data-[state=active]:font-semibold data-[state=active]:text-white",
+      "inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-lg px-[18px] py-2.5 text-[15px] font-medium text-muted transition-colors duration-150 hover:text-fg focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-surface disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-accent data-[state=active]:font-semibold data-[state=active]:text-ink",
       className
     )}
     {...props}

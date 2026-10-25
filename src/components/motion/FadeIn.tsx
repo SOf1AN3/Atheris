@@ -12,9 +12,9 @@ import { cn } from "@/lib/utils";
 // `disableAnimation` (identique serveur/client) peut court-circuiter
 // l'animation, sans risque de mismatch.
 
-// DESIGN: M2 (DESIGN.md §5) — cascade d'enfants : stagger 80ms, durée 500ms,
-// easing M1 cubic-bezier(0.22, 1, 0.36, 1). Aucun spring, aucune boucle.
-const EASE_PREMIUM: [number, number, number, number] = [0.22, 1, 0.36, 1];
+// DESIGN v2 (§3.1) — courbe UNIQUE du site + durées R : 700ms, stagger 80ms.
+// Aucun spring, aucune boucle, aucune élastique.
+const EASE_PREMIUM: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 // Mapping explicite d'éléments motion (compile sans `any` ni `motion.create`).
 const MOTION_TAGS = {
@@ -37,11 +37,11 @@ type FadeInItemTag = keyof typeof MOTION_ITEM_TAGS;
 // Le conteneur FadeIn orchestre la timing (staggerChildren) ; chaque
 // FadeInItem porte sa propre durée + easing dans sa variante `visible`.
 const ITEM_VARIANTS: Variants = {
-  hidden: { opacity: 0, y: 16 },
+  hidden: { opacity: 0, y: 24 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.5, ease: EASE_PREMIUM },
+    transition: { duration: 0.7, ease: EASE_PREMIUM },
   },
 };
 

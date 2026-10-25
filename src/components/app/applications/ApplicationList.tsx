@@ -111,7 +111,7 @@ const TH_CLASS = "py-3 pr-4 text-xs font-medium uppercase tracking-wide text-mut
 
 /** Pastille de statut de compte — couleurs §12.2, texte toujours présent. */
 const STATUS_TONE_CLASSES: Record<UserStatus, string> = {
-  pending: "border-[rgba(59,130,246,0.25)] bg-[rgba(59,130,246,0.12)] text-accent",
+  pending: "border-[rgba(143,166,200,0.30)] bg-[rgba(143,166,200,0.14)] text-accent",
   active: "border-[rgba(52,211,153,0.25)] bg-[rgba(52,211,153,0.10)] text-success",
   rejected: "border-[rgba(248,113,113,0.25)] bg-[rgba(248,113,113,0.12)] text-danger",
   disabled: "border-line bg-surface-2 text-muted",

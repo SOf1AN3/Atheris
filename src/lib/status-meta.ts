@@ -56,13 +56,13 @@ export const PROSPECT_STATUS_META: Record<ProspectStatus, StatusMeta> = {
   // texte blanc : 15,5:1 — arbitrage n°2 du §12.2).
   qualifie: {
     text: "text-white",
-    bg: "bg-[rgba(59,130,246,0.12)]",
-    border: "border-[rgba(59,130,246,0.25)]",
+    bg: "bg-[rgba(143,166,200,0.14)]",
+    border: "border-[rgba(143,166,200,0.30)]",
   },
   en_livraison: {
     text: "text-white",
-    bg: "bg-[rgba(59,130,246,0.12)]",
-    border: "border-[rgba(59,130,246,0.25)]",
+    bg: "bg-[rgba(143,166,200,0.14)]",
+    border: "border-[rgba(143,166,200,0.30)]",
   },
   // DESIGN §12.2 — ambre `#F59E0B` (6,9:1, palette mockups §2.1).
   devis_envoye: {

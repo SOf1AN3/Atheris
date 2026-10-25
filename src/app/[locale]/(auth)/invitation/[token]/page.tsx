@@ -48,7 +48,7 @@ export default async function InvitationPage({
   const { signup, validation, login, invitation } = dict.auth;
 
   return (
-    <div className="flex flex-col gap-6 text-center">
+    <div className="flex flex-col gap-6 rounded-[20px] border border-line-2 border-t-white/[0.18] bg-surface p-6 text-center shadow-[0_50px_90px_-60px_rgba(0,0,0,0.9)] md:p-8">
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl font-bold tracking-[-0.02em] text-fg">
           {invitation.title}

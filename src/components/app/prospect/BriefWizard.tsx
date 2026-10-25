@@ -256,7 +256,7 @@ export function BriefWizard({
                     className={cn(
                       "flex size-10 shrink-0 items-center justify-center rounded-full border text-[13px] font-semibold tabular-nums transition-colors duration-200",
                       isCurrent
-                        ? "border-accent bg-accent text-white"
+                        ? "border-accent bg-accent text-ink"
                         : isDone
                           ? "border-line bg-surface text-success"
                           : "border-line bg-surface text-muted",

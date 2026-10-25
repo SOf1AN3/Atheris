@@ -6,10 +6,10 @@ import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
-// DESIGN: M1 (DESIGN.md §5) — reveal au scroll « retenue Apple » :
-// opacity 0→1 + y 16px→0, 500ms, cubic-bezier(0.22, 1, 0.36, 1),
-// whileInView once: true, viewport margin -80px. Aucun spring, aucune boucle.
-const EASE_PREMIUM: [number, number, number, number] = [0.22, 1, 0.36, 1];
+// DESIGN v2 (§3.1) — courbe UNIQUE du site : `cubic-bezier(0.16, 1, 0.3, 1)`.
+// Révélation M1 : opacity 0→1 + y 24px→0, 700ms, whileInView once.
+// Aucun spring, aucune boucle.
+const EASE_PREMIUM: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 // Mapping explicite d'éléments motion (solution compilant sans `any`
 // ni `motion.create` — un seul objet référencé par la prop `as`).
@@ -28,7 +28,7 @@ export type RevealProps = {
   className?: string;
   /** Délai en secondes, défaut 0 */
   delay?: number;
-  /** Déplacement vertical initial en px, défaut 16 */
+  /** Déplacement vertical initial en px, défaut 24 */
   y?: number;
   /** Composant HTML rendu, défaut "div" */
   as?: RevealTag;
@@ -46,7 +46,7 @@ export function Reveal({
   children,
   className,
   delay = 0,
-  y = 16,
+  y = 24,
   as = "div",
   disableAnimation = false,
 }: RevealProps): ReactNode {
@@ -73,7 +73,7 @@ export function Reveal({
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, margin: "-80px" }}
-      transition={{ duration: 0.5, delay, ease: EASE_PREMIUM }}
+      transition={{ duration: 0.7, delay, ease: EASE_PREMIUM }}
     >
       {children}
     </MotionTag>

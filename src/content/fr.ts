@@ -33,7 +33,7 @@ export const fr: SiteContent = {
 
   hero: {
     badge: "✦ Studio d’Ingénierie Logicielle & Design Web",
-    title: "Nous concevons et développons des produits digitaux sur-mesure.",
+    title: "Nous concevons et développons des produits digitaux *sur-mesure*.",
     subtitle:
       "Applications Web, Mobile & Desktop à forte valeur ajoutée. Architectures scalables, code d’excellence et design d’interface haut de gamme.",
     primaryCta: "Lancer un projet",
@@ -48,7 +48,7 @@ export const fr: SiteContent = {
 
   services: {
     eyebrow: "Expertise",
-    title: "Pôles d’Expertise",
+    title: "Pôles d’*Expertise*",
     description:
       "De la conception à la mise en production, nous couvrons l’ensemble du cycle de vie de vos produits digitaux.",
     items: [
@@ -89,7 +89,7 @@ export const fr: SiteContent = {
 
   cases: {
     eyebrow: "Portfolio",
-    title: "Projets & Réalisations",
+    title: "Projets & *Réalisations*",
     description:
       "Une sélection de produits digitaux livrés en production, du SaaS métier aux applications temps réel.",
     filters: {
@@ -148,7 +148,7 @@ export const fr: SiteContent = {
 
   techStack: {
     eyebrow: "Technologies",
-    title: "Stack Technique Maîtrisée",
+    title: "*Stack* technique maîtrisée",
     description:
       "Des technologies éprouvées, choisies selon votre contexte et maintenues dans la durée.",
     groups: [
@@ -209,7 +209,7 @@ export const fr: SiteContent = {
 
   process: {
     eyebrow: "Méthode",
-    title: "Notre Processus de Développement",
+    title: "Notre processus de *développement*",
     description:
       "Un cadre éprouvé qui sécurise les délais, le budget et la qualité livrée à chaque étape.",
     steps: [
@@ -242,7 +242,7 @@ export const fr: SiteContent = {
 
   testimonials: {
     eyebrow: "Témoignages",
-    title: "Ils nous font confiance",
+    title: "Ils nous font *confiance*",
     description:
       "Des dirigeants qui nous ont confié la conception et le développement de leurs produits.",
     items: [
@@ -281,7 +281,7 @@ export const fr: SiteContent = {
 
   faq: {
     eyebrow: "FAQ",
-    title: "Questions fréquentes",
+    title: "Questions *fréquentes*",
     description:
       "Les points qui reviennent le plus souvent avant le démarrage d’un projet avec nous.",
     items: [
@@ -320,7 +320,7 @@ export const fr: SiteContent = {
 
   contact: {
     eyebrow: "Contact",
-    title: "Concrétisons votre projet",
+    title: "Concrétisons *votre projet*",
     description:
       "Décrivez-nous votre besoin\u00A0: nous revenons vers vous sous 24h ouvrées avec une première lecture et la suite à donner.",
     channels: [

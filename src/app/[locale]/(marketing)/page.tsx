@@ -4,6 +4,7 @@ import { CaseStudies } from "@/components/sections/CaseStudies";
 import { Contact } from "@/components/sections/Contact";
 import { Faq } from "@/components/sections/Faq";
 import { Hero } from "@/components/sections/Hero";
+import { Marquee } from "@/components/sections/Marquee";
 import { Process } from "@/components/sections/Process";
 import { Services } from "@/components/sections/Services";
 import { TechStack } from "@/components/sections/TechStack";
@@ -32,6 +33,7 @@ export default async function HomePage({ params }: HomePageProps) {
   return (
     <main id="main" tabIndex={-1}>
       <Hero hero={dict.hero} />
+      <Marquee />
       <Services services={dict.services} />
       <CaseStudies cases={dict.cases} filtersLabel={dict.a11y.filtersLabel} />
       <TechStack

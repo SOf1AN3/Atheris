@@ -509,7 +509,7 @@ export default async function DashboardPage({
           {role === "vendeur" ? (
             <Link
               href={earningsHref}
-              className="group flex items-center justify-between rounded-xl border border-line bg-surface p-5 transition-colors duration-150 hover:border-[rgba(59,130,246,0.4)] hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
+              className="group flex items-center justify-between rounded-xl border border-line bg-surface p-5 transition-colors duration-150 hover:border-line-2 hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
             >
               <span className="text-[15px] font-semibold text-fg">{earningsLabel}</span>
               <span

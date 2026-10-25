@@ -13,14 +13,19 @@ type FaqProps = {
 };
 
 /**
- * Section « FAQ » (§4.9 + §3.9) : split desktop (SectionHeading sticky `span 2`
- * / accordéon `span 3`), empilé mobile. Accordéon contrôlé : un seul élément
- * ouvert à la fois, premier fermé au chargement (`openId === null`).
+ * Section « FAQ » `06` (densité normale §2.3) : split desktop (SectionHeading
+ * sticky `span 2` / accordéon `span 3` conservé), empilé mobile. Accordéon
+ * contrôlé : un seul élément ouvert à la fois, premier fermé au chargement
+ * (`openId === null`).
  *
- * Ouverture (M8, 220ms ease-out) : `grid-template-rows 0fr ↔ 1fr` — aucune
- * mesure JS, robuste au contenu dynamique (alternative Framer `height: auto`
- * écartée pour cette raison). `prefers-reduced-motion` neutralise la transition
- * via `motion-reduce:transition-none` (§6.8).
+ * Ouverture (M8, 300ms courbe unique `cubic-bezier(0.16,1,0.3,1)`) :
+ * `grid-template-rows 0fr ↔ 1fr` — aucune mesure JS, robuste au contenu
+ * dynamique (alternative Framer `height: auto` écartée pour cette raison).
+ * `prefers-reduced-motion` neutralise la transition via
+ * `motion-reduce:transition-none` (§3.4).
+ *
+ * Chaque question porte son index numéroté `01…05` en `.micro` aligné sur la
+ * baseline de la question.
  *
  * A11y (§6) : `<h3>` par question (hiérarchie h2 → h3 sans saut), bouton
  * `type="button"` avec `aria-expanded` / `aria-controls`, réponse en
@@ -42,7 +47,7 @@ export function Faq({ faq }: FaqProps): ReactNode {
     <section
       id="faq"
       aria-labelledby="faq-title"
-      className="py-[72px] md:py-24 lg:py-[120px]"
+      className="py-[clamp(80px,10vh,128px)]"
     >
       <div className="mx-auto max-w-[1200px] px-[clamp(1.25rem,5vw,2.5rem)]">
         {/* Split §4.9 : titre `span 2` / accordéon `span 3` en desktop. */}
@@ -50,7 +55,7 @@ export function Faq({ faq }: FaqProps): ReactNode {
           {/* Colonne gauche : SectionHeading left + sticky sans JS (choix §4.9). */}
           <div className="lg:col-span-2 lg:sticky lg:top-28 lg:self-start">
             <SectionHeading
-              align="left"
+              index="06"
               headingId="faq-title"
               eyebrow={faq.eyebrow}
               title={faq.title}
@@ -65,7 +70,7 @@ export function Faq({ faq }: FaqProps): ReactNode {
               <Reveal>
                 {/* Séparateurs : `border-t` par item + `border-b` final pour fermer. */}
                 <div className="border-b border-line">
-                  {faq.items.map((item) => {
+                  {faq.items.map((item, index) => {
                     const isOpen = openId === item.id;
                     const questionId = `faq-q-${item.id}`;
                     const answerId = `faq-a-${item.id}`;
@@ -81,8 +86,18 @@ export function Faq({ faq }: FaqProps): ReactNode {
                             onClick={() => handleToggle(item.id)}
                             className="flex w-full items-center justify-between gap-4 py-6 text-left"
                           >
-                            <span className="text-[17px] font-semibold leading-snug text-fg">
-                              {item.question}
+                            {/* Index numéroté aligné sur la baseline de la
+                                question (lecture « instrument » §2.5). */}
+                            <span className="flex min-w-0 flex-1 items-baseline gap-4">
+                              <span
+                                aria-hidden="true"
+                                className="micro shrink-0 text-faint"
+                              >
+                                {String(index + 1).padStart(2, "0")}
+                              </span>
+                              <span className="text-[17px] font-semibold leading-snug text-fg">
+                                {item.question}
+                              </span>
                             </span>
 
                             {/* Chevron inline (pattern SVG du projet, pas de lucide). */}
@@ -90,7 +105,7 @@ export function Faq({ faq }: FaqProps): ReactNode {
                               aria-hidden="true"
                               viewBox="0 0 24 24"
                               className={cn(
-                                "size-5 shrink-0 text-muted transition-all duration-[220ms] motion-reduce:transition-none",
+                                "size-5 shrink-0 text-muted transition-all duration-[300ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none",
                                 isOpen && "rotate-180",
                               )}
                               fill="none"
@@ -107,14 +122,15 @@ export function Faq({ faq }: FaqProps): ReactNode {
                         </h3>
 
                         {/* DESIGN: M8 implémenté via grid-rows (0fr↔1fr) — plus robuste
-                            que height:auto en mesure JS. Reduced-motion neutralise la
-                            transition (§6.8) sans casser l'ouverture. */}
+                            que height:auto en mesure JS. 300ms courbe unique du site ;
+                            reduced-motion neutralise la transition (§3.4) sans casser
+                            l'ouverture. */}
                         <div
                           id={answerId}
                           role="region"
                           aria-labelledby={questionId}
                           aria-hidden={!isOpen}
-                          className="grid transition-[grid-template-rows] duration-[220ms] ease-out motion-reduce:transition-none"
+                          className="grid transition-[grid-template-rows] duration-[300ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none"
                           style={{ gridTemplateRows: isOpen ? "1fr" : "0fr" }}
                         >
                           <div className="overflow-hidden">

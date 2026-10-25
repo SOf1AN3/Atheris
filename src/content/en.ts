@@ -32,7 +32,7 @@ export const en: SiteContent = {
 
   hero: {
     badge: "✦ Software Engineering & Web Design Studio",
-    title: "We design and build custom digital products.",
+    title: "We design and build *custom digital products*.",
     subtitle:
       "Web, Mobile & Desktop applications with high added value. Scalable architectures, excellent code, and premium interface design.",
     primaryCta: "Start a project",
@@ -47,7 +47,7 @@ export const en: SiteContent = {
 
   services: {
     eyebrow: "Expertise",
-    title: "Areas of Expertise",
+    title: "Areas of *Expertise*",
     description:
       "From first concept to production, we cover the full lifecycle of your digital products.",
     items: [
@@ -88,7 +88,7 @@ export const en: SiteContent = {
 
   cases: {
     eyebrow: "Portfolio",
-    title: "Projects & Case Studies",
+    title: "Projects & *Case Studies*",
     description:
       "A selection of digital products shipped to production, from business SaaS to real-time applications.",
     filters: {
@@ -147,7 +147,7 @@ export const en: SiteContent = {
 
   techStack: {
     eyebrow: "Technologies",
-    title: "Technologies We Work With",
+    title: "Technologies we *work with*",
     description:
       "Proven technologies, chosen for your context and maintained over time.",
     groups: [
@@ -208,7 +208,7 @@ export const en: SiteContent = {
 
   process: {
     eyebrow: "Process",
-    title: "Our Development Process",
+    title: "Our development *process*",
     description:
       "A proven framework that protects timelines, budget and quality at every stage.",
     steps: [
@@ -241,7 +241,7 @@ export const en: SiteContent = {
 
   testimonials: {
     eyebrow: "Testimonials",
-    title: "Trusted by Founders",
+    title: "Trusted by *Founders*",
     description:
       "Founders who entrusted us with the design and development of their products.",
     items: [
@@ -280,7 +280,7 @@ export const en: SiteContent = {
 
   faq: {
     eyebrow: "FAQ",
-    title: "Frequently Asked Questions",
+    title: "Frequently asked *questions*",
     description:
       "The questions we hear most often before starting a project with us.",
     items: [
@@ -319,7 +319,7 @@ export const en: SiteContent = {
 
   contact: {
     eyebrow: "Contact",
-    title: "Let's bring your project to life",
+    title: "Let's bring your project *to life*",
     description:
       "Tell us about your needs: we get back to you within one business day with an initial read and the recommended next steps.",
     channels: [

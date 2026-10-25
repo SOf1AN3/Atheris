@@ -107,7 +107,7 @@ export function DocList(props: DocListProps): ReactNode {
               href={item.href}
               target="_blank"
               rel="noopener noreferrer"
-              className="block rounded-xl border border-line bg-surface px-4 py-3 transition-colors duration-150 hover:border-[rgba(59,130,246,0.4)] hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
+              className="block rounded-xl border border-line bg-surface px-4 py-3 transition-colors duration-150 hover:border-line-2 hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
             >
               {/* Mobile : carte empilée. */}
               <div className="flex flex-col gap-1 md:hidden">

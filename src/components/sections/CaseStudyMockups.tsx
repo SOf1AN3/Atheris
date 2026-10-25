@@ -5,10 +5,12 @@ import { Sparkles } from "lucide-react";
 import type { MockupKind } from "@/content/types";
 import { cn } from "@/lib/utils";
 
-// DESIGN: §4.5 — mockups produit 100% CSS, `aria-hidden` + `role="presentation"`
-// (§6.6). Aucune image, aucun `<img>`, aucun texte lisible FR/EN : uniquement des
-// barres/pastilles de forme + chiffres non traduisibles. Max 3 teintes de données
-// par mockup (§2.1), fond `ink-2` avec lueur radiale très discrète en tête.
+// DESIGN §2.5 — mockups produit 100% CSS, `aria-hidden` + `role="presentation"`.
+// Aucune image, aucun `<img>`, aucun texte lisible FR/EN : uniquement des
+// barres/blocs de forme + chiffres non traduisibles. Zone `.mock` de hauteur
+// FIXE (240px) : chaque mockup tient dans ce cadre. Palette : fond `#0B0E14`,
+// lignes `bg-white/10`, blocs `border-line bg-white/[0.03]` — et **au plus UN
+// élément volt** par mockup (la donnée mise en avant uniquement, §2.1).
 type CaseStudyMockupProps = {
   kind: MockupKind;
 };
@@ -18,7 +20,7 @@ function MockupFrame({ children }: { children: ReactNode }): ReactNode {
     <div
       aria-hidden="true"
       role="presentation"
-      className="relative aspect-[16/10] w-full overflow-hidden rounded-[16px] border border-line bg-ink-2 bg-[radial-gradient(70%_70%_at_50%_0%,rgba(255,255,255,0.04),transparent)] lg:aspect-[16/9]"
+      className="relative h-full w-full overflow-hidden bg-[#0B0E14]"
     >
       {children}
     </div>
@@ -29,23 +31,21 @@ function MockupFrame({ children }: { children: ReactNode }): ReactNode {
 /* 1. clinic — agenda hebdomadaire d'un cabinet                        */
 /* ------------------------------------------------------------------ */
 
-type ClinicSlotKind = "accent" | "strong" | "neutral";
+type ClinicSlotKind = "active" | "neutral";
 
-// Colonnes de jours (en-tête = barre grise) + pastilles de rendez-vous.
-// DESIGN autorisation (§2.1) : les pastilles accent = données actives
-// (rendez-vous) → usage multiple toléré ici UNIQUEMENT (rapporté au Lead).
+// Colonnes de jours (en-tête = filet) + créneaux. UN seul créneau actif :
+// c'est la donnée volt du mockup (le rendez-vous à venir).
 const CLINIC_COLUMNS: readonly (readonly ClinicSlotKind[])[] = [
-  ["neutral", "accent", "neutral"],
-  ["accent", "neutral", "neutral", "neutral"],
-  ["strong", "neutral", "accent", "neutral"],
-  ["neutral", "accent"],
-  ["accent", "neutral", "neutral"],
+  ["neutral", "neutral", "neutral"],
+  ["neutral", "neutral", "neutral", "neutral"],
+  ["neutral", "active", "neutral", "neutral", "neutral"],
+  ["neutral", "neutral"],
+  ["neutral", "neutral", "neutral"],
 ];
 
 const CLINIC_SLOT_CLASSES: Record<ClinicSlotKind, string> = {
-  accent: "h-6 rounded-md border border-accent/30 bg-accent/15",
-  strong: "h-6 rounded-md bg-accent/90",
-  neutral: "h-6 rounded-md bg-white/[0.06]",
+  active: "h-7 rounded-md bg-accent",
+  neutral: "h-7 rounded-md border border-line bg-white/[0.03]",
 };
 
 function ClinicMockup(): ReactNode {
@@ -59,8 +59,8 @@ function ClinicMockup(): ReactNode {
             columnIndex === 2 && "bg-white/[0.03]",
           )}
         >
-          {/* En-tête de jour : barre grise, jamais de texte. */}
-          <span className="h-2 rounded bg-white/[0.08]" />
+          {/* En-tête de jour : filet, jamais de texte. */}
+          <span className="h-2 rounded bg-white/10" />
           {slots.map((slot, slotIndex) => (
             <span
               key={`slot-${columnIndex}-${slotIndex}`}
@@ -94,35 +94,35 @@ function PaperNoteMockup(): ReactNode {
   return (
     <div className="flex h-full">
       {/* Colonne gauche : le document. */}
-      <div className="flex-1 space-y-2.5 p-4">
-        <span className="block h-3 w-40 rounded bg-white/[0.18]" />
+      <div className="min-w-0 flex-1 space-y-2.5 p-4">
+        <span className="block h-3 w-40 rounded bg-white/10" />
         {NOTE_BODY_WIDTHS.map((width, index) => (
           <span
             key={`line-${index}`}
-            className={cn("block h-2 rounded bg-white/[0.08]", width)}
+            className={cn("block h-2 rounded bg-white/10", width)}
           />
         ))}
       </div>
 
-      {/* Panneau droit : la synthèse IA (bloc accent = « donnée active »). */}
+      {/* Panneau droit : la synthèse IA (bloc neutre, data volt = le score). */}
       <div className="w-[38%] shrink-0 border-l border-line p-3">
-        <div className="rounded-lg border border-accent/30 bg-accent/10 p-2.5">
+        <div className="rounded-xl border border-line bg-white/[0.03] p-2.5">
           <Sparkles
             aria-hidden="true"
             focusable="false"
-            className="size-3.5 text-accent"
+            className="size-3.5 text-muted"
             strokeWidth={1.5}
           />
           <div className="mt-2.5 space-y-1.5">
             {NOTE_SUMMARY_WIDTHS.map((width, index) => (
               <span
                 key={`summary-${index}`}
-                className={cn("block h-1.5 rounded bg-white/[0.14]", width)}
+                className={cn("block h-1.5 rounded bg-white/10", width)}
               />
             ))}
           </div>
-          {/* Chiffre non traduisible (score de synthèse) — autorisé. */}
-          <p className="mt-3 text-[10px] font-medium tabular-nums text-muted">
+          {/* Chiffre non traduisible (score de synthèse) — LA donnée clé. */}
+          <p className="mt-3 text-[10px] font-medium tabular-nums text-accent">
             94 %
           </p>
         </div>
@@ -147,7 +147,7 @@ const WAVE_PLAYED_COUNT = 14;
 
 function RadioMockup(): ReactNode {
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-4 p-5">
+    <div className="flex h-full flex-col items-center justify-center gap-5 p-5">
       <div className="flex h-16 items-center gap-1">
         {WAVE_HEIGHTS.map((height, index) => (
           <span
@@ -156,30 +156,31 @@ function RadioMockup(): ReactNode {
               "w-1 rounded-full",
               height,
               index < WAVE_PLAYED_COUNT
-                ? "bg-white/[0.25]"
-                : "bg-white/[0.12]",
+                ? "bg-white/[0.22]"
+                : "bg-white/[0.08]",
             )}
           />
         ))}
       </div>
 
       <div className="flex w-[85%] items-center gap-4">
-        {/* Bouton play rond : l'UNIQUE accent de ce mockup. */}
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent">
+        {/* Transport neutre : le VOLT est réservé à la ligne de lecture. */}
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-line bg-white/[0.03]">
           <svg
             aria-hidden="true"
             focusable="false"
             viewBox="0 0 12 14"
-            className="ml-0.5 h-3.5 w-3 fill-white"
+            className="ml-0.5 h-3.5 w-3 fill-fg"
           >
             <path d="M0 0l12 7-12 7z" />
           </svg>
         </span>
-        <span className="h-1 flex-1 overflow-hidden rounded-full bg-white/[0.10]">
-          <span className="block h-full w-1/3 rounded-full bg-white/[0.40]" />
+        {/* Ligne de progression = LA donnée active du mockup (unique volt). */}
+        <span className="h-1 flex-1 overflow-hidden rounded-full bg-white/10">
+          <span className="block h-full w-1/3 rounded-full bg-accent" />
         </span>
         {/* Durée : chiffre non traduisible — autorisé. */}
-        <span className="shrink-0 text-[10px] tabular-nums text-faint">
+        <span className="shrink-0 text-[10px] tabular-nums text-muted">
           02:14
         </span>
       </div>
@@ -210,7 +211,8 @@ type Bubble = {
   width: string;
 };
 
-// Alternance gauche (reçues) / droite (envoyées, accent = « ses messages »).
+// Alternance gauche (reçues) / droite (envoyées) — toutes en neutre :
+// le seul volt du mockup est la conversation active (ci-dessus).
 const BUBBLES: readonly Bubble[] = [
   { id: "msg-1", side: "left", width: "w-[70%]" },
   { id: "msg-2", side: "right", width: "w-[54%]" },
@@ -221,18 +223,20 @@ const BUBBLES: readonly Bubble[] = [
 function TiberiumMockup(): ReactNode {
   return (
     <div className="flex h-full">
-      {/* Sidebar des conversations. */}
+      {/* Sidebar des conversations : l'onglet actif = l'unique donnée volt. */}
       <div className="w-[32%] shrink-0 space-y-1.5 border-r border-line p-2">
         {CONVERSATIONS.map((conversation) => (
           <div
             key={conversation.id}
             className={cn(
               "relative flex items-center gap-2 rounded-md p-1.5",
-              conversation.isActive && "bg-white/[0.05]",
+              conversation.isActive
+                ? "border border-accent/30 bg-accent/10"
+                : "border border-transparent",
             )}
           >
             <span className="relative shrink-0">
-              <span className="block size-6 rounded-full bg-white/[0.10]" />
+              <span className="block size-6 rounded-full bg-white/10" />
               {conversation.isOnline ? (
                 <span
                   aria-hidden="true"
@@ -243,7 +247,7 @@ function TiberiumMockup(): ReactNode {
             <span className="min-w-0 flex-1 space-y-1">
               <span
                 className={cn(
-                  "block h-2 rounded bg-white/[0.12]",
+                  "block h-2 rounded bg-white/10",
                   conversation.nameWidth,
                 )}
               />
@@ -268,7 +272,7 @@ function TiberiumMockup(): ReactNode {
             <span
               key={bubble.id}
               className={cn(
-                "ml-auto h-7 max-w-[65%] rounded-2xl rounded-tr-sm border border-accent/30 bg-accent/20",
+                "ml-auto h-7 max-w-[65%] rounded-2xl rounded-tr-sm border border-line bg-white/[0.10]",
                 bubble.width,
               )}
             />
@@ -283,9 +287,9 @@ function TiberiumMockup(): ReactNode {
 /* ------------------------------------------------------------------ */
 
 /**
- * Visuel produit 100% CSS d'une étude de cas (§4.5).
+ * Visuel produit 100% CSS d'une étude de cas (§2.5).
  * Rend UNIQUEMENT l'illustration décorative (`aria-hidden`) — le conteneur
- * carte est porté par `CaseStudyCard`.
+ * carte et la zone `.mock` sont portés par `CaseStudyCard`.
  */
 export function CaseStudyMockup({ kind }: CaseStudyMockupProps): ReactNode {
   switch (kind) {

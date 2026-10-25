@@ -27,6 +27,23 @@ const CONTAINER_CLASS =
   "px-[clamp(1.25rem,5vw,2.5rem)] mx-auto max-w-[1200px]";
 const FOCUS_RING =
   "focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-[3px]";
+/** Courbe UNIQUE du site (DESIGN §3.1) — aucune autre easing. */
+const EASE_CURVE = "ease-[cubic-bezier(0.16,1,0.3,1)]";
+/** Le filet volt est un pseudo-élément : il porte SA propre timing function
+ *  (`transition-timing-function` n'est pas hérité). */
+const AFTER_EASE_CURVE = "after:ease-[cubic-bezier(0.16,1,0.3,1)]";
+const EASE_PREMIUM: [number, number, number, number] = [0.16, 1, 0.3, 1];
+/** Nav desktop : mono 12px uppercase +0.1em (DESIGN §2.6).
+ *  `.micro` est hors-layer (prioritaire) et fige 11px : on redéclare donc
+ *  les propriétés en utilitaires pour garder le 12px demandé. */
+const NAV_LINK_BASE =
+  "relative font-mono text-[12px] uppercase leading-normal tracking-[0.1em] " +
+  "transition-colors duration-150 " +
+  EASE_CURVE +
+  " after:absolute after:inset-x-0 after:-bottom-2 after:h-0.5 after:origin-left " +
+  "after:bg-accent after:scale-x-0 after:transition-transform after:duration-200 " +
+  AFTER_EASE_CURVE +
+  " after:content-[''] hover:after:scale-x-100";
 
 /** Monogramme « A » constructiviste (DESIGN §3.7) — décoratif. */
 function Monogram({ className }: { className?: string }): ReactNode {
@@ -58,28 +75,22 @@ function Monogram({ className }: { className?: string }): ReactNode {
 function BrandLink({
   brand,
   onNavigate,
-  topState = false,
 }: {
   brand: Brand;
   onNavigate?: () => void;
-  /** État « overlay transparent » du header au repos (hero bleue). */
-  topState?: boolean;
 }): ReactNode {
   return (
     <Link
       href="#top"
       onClick={onNavigate}
       className={cn(
-        "inline-flex items-center gap-2.5 rounded-lg transition-colors duration-150",
+        "inline-flex min-h-11 items-center gap-2.5 rounded-lg transition-colors duration-150",
         FOCUS_RING,
       )}
     >
-      <Monogram className={topState ? "border-white/25" : undefined} />
+      <Monogram />
       <span className="text-[15px] font-bold tracking-[-0.02em] text-fg">
-        {brand.name}{" "}
-        <span className={topState ? "text-white/70" : "text-muted"}>
-          {brand.suffix}
-        </span>
+        {brand.name} <span className="text-muted">{brand.suffix}</span>
       </span>
     </Link>
   );
@@ -234,7 +245,8 @@ export function Header({ nav, a11y, className }: HeaderProps): ReactNode {
           // DESIGN: l'interpolation `bg-transparent → bg-ink/80` (couleur →
           // couleur) et `border-transparent → border-line` est couverte par la
           // transition existante sur background-color/border-color.
-          "sticky top-0 z-50 h-16 border-b transition-[background-color,border-color,box-shadow,backdrop-filter] duration-[240ms] ease-out md:h-[72px]",
+          "sticky top-0 z-50 h-16 border-b transition-[background-color,border-color,box-shadow,backdrop-filter] duration-[240ms] md:h-[72px]",
+          EASE_CURVE,
           scrolled
             ? "border-line bg-ink/80 shadow-[0_1px_0_rgba(255,255,255,0.03)] backdrop-blur-[20px] backdrop-saturate-[1.6]"
             : "border-transparent bg-transparent",
@@ -248,9 +260,9 @@ export function Header({ nav, a11y, className }: HeaderProps): ReactNode {
           )}
         >
           {/* Gauche — marque */}
-          <BrandLink brand={nav.brand} topState={!scrolled} />
+          <BrandLink brand={nav.brand} />
 
-          {/* Centre — navigation desktop */}
+          {/* Centre — navigation desktop : mono uppercase + filet volt 2px */}
           <nav className="hidden items-center gap-8 lg:flex">
             {nav.items.map((item) => {
               const sectionId = item.href.startsWith("#")
@@ -264,15 +276,9 @@ export function Header({ nav, a11y, className }: HeaderProps): ReactNode {
                   href={item.href}
                   aria-current={isActive ? "true" : undefined}
                   className={cn(
-                    "rounded-sm text-sm font-medium transition-colors duration-150",
+                    NAV_LINK_BASE,
                     FOCUS_RING,
-                    scrolled
-                      ? isActive
-                        ? "text-fg"
-                        : "text-muted hover:text-fg"
-                      : isActive
-                        ? "text-white"
-                        : "text-white/75 hover:text-white",
+                    isActive ? "text-fg after:scale-x-100" : "text-muted hover:text-fg",
                   )}
                 >
                   {item.label}
@@ -283,17 +289,8 @@ export function Header({ nav, a11y, className }: HeaderProps): ReactNode {
 
           {/* Droite — locale + CTA */}
           <div className="hidden items-center gap-4 lg:flex">
-            {/* DESIGN: switcher conservé en style sombre (lisible sur bleu,
-                non surchargeable proprement par `className` : seules les
-                classes du conteneur passeraient via twMerge, les pilules
-                internes resteraient en `bg-surface-2`/`text-muted`). */}
             <LocaleSwitcher label={a11y.switchLocale} />
-            <Button
-              variant="primary"
-              size="sm"
-              href="#contact"
-              className={cn(!scrolled && "ring-1 ring-white/20")}
-            >
+            <Button variant="primary" size="sm" href="#contact">
               {nav.ctaLabel}
             </Button>
           </div>
@@ -308,10 +305,9 @@ export function Header({ nav, a11y, className }: HeaderProps): ReactNode {
             onClick={() => setMenuOpen((open) => !open)}
             className={cn(
               "inline-flex h-11 w-11 items-center justify-center rounded-xl transition-colors duration-150 lg:hidden",
+              EASE_CURVE,
               FOCUS_RING,
-              scrolled
-                ? "text-fg hover:text-muted"
-                : "text-white hover:text-white/80",
+              "text-fg hover:text-muted",
             )}
           >
             <span aria-hidden="true">
@@ -341,7 +337,7 @@ export function Header({ nav, a11y, className }: HeaderProps): ReactNode {
             exit={{ opacity: 0, y: reducedMotion ? 0 : -8 }}
             transition={{
               duration: reducedMotion ? 0 : 0.22,
-              ease: "easeOut",
+              ease: EASE_PREMIUM,
             }}
           >
             {/* Barre haute : logo + fermeture */}
@@ -359,6 +355,7 @@ export function Header({ nav, a11y, className }: HeaderProps): ReactNode {
                 onClick={() => closeMenu(true)}
                 className={cn(
                   "inline-flex h-11 w-11 items-center justify-center rounded-xl text-fg transition-colors duration-150 hover:text-muted",
+                  EASE_CURVE,
                   FOCUS_RING,
                 )}
               >

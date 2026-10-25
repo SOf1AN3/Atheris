@@ -45,5 +45,14 @@ next-env.d.ts
 /atheris-*.png
 /page_fr.html
 
-# Asset de travail pr�existant (maquette landing)
+# Asset de travail pr�existant (maquette landing)
 /hero.png
+
+# Note business confidentielle (jamais poussé)
+BUSINESS.md
+
+# Fichiers de travail du Directeur Artistique (jamais poussés)
+# - DESIGN.md    : référentiel de design (audit + direction artistique)
+# - preview.html : prototype interactif local ouvert dans le navigateur
+DESIGN.md
+preview.html

@@ -5,90 +5,128 @@ import { Badge } from "@/components/ui/Badge";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import type { TestimonialsContent } from "@/content/types";
 
-// DESIGN: stagger M2 (§5) appliqué manuellement par carte (0 / 80 / 160ms)
-// via <Reveal delay> — même pattern que `Services` : chaque carte est un
-// `motion.article` autonome (≤3 enfants animés respectés, M1+M2).
+// DESIGN: stagger M2 (§3.2) appliqué par témoignage (0 / 80 / 160ms) via
+// `<Reveal delay={index * 0.08}>` — chaque bloc est autonome (M1 + M2),
+// ≤6 éléments animés et cascade totale ≤ 480ms respectés.
 const CARD_DELAY_STEP = 0.08;
+
+/**
+ * Carte standard (DESIGN §2.6) : surface + hairline, rayon 20px, survol
+ * lumière (bordure `line-2` + -3px, 240ms courbe unique) — jamais d'ombre
+ * noire. `card` = marqueur de carte du prototype ; `spot` = spotlight
+ * suiveur (M11). Les classes Tailwind explicites doublent le rendu (les
+ * styles `card` du prototype ne sont pas encore portés dans `globals.css`).
+ */
+const CARD_CLASSES =
+  "card spot rounded-[20px] border border-line bg-surface transition-[border-color,translate] duration-[240ms] ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-[3px] hover:border-line-2";
 
 type TestimonialsProps = {
   testimonials: TestimonialsContent;
 };
 
 /**
- * Section « Témoignages » (§4.8) : SectionHeading centré + grille 3 colonnes
- * de cartes citation (§3.3) révélées en cascade (M1/M2).
+ * Section « Témoignages » `05` — densité AÉRÉE (DESIGN §2.3).
  *
- * Carte : guillemet décoratif discret → citation (16px blanc, sans italique,
- * §4.8) → filet séparateur → avatar typographique + nom/rôle + badge
- * « Projet vérifié » (§3.2) → wordmark société (micro, `text-faint`).
- * Cartes non cliquables (aucun lien, aucun `tabIndex`).
- * Composant serveur — l'animation est portée par `Reveal` (client).
+ * Composition 12 colonnes asymétrique (jamais `align="center"`) :
+ * - col 7 : citation éditoriale `items[0]` en `.voix` (serif italique 24→36px)
+ *   + guillemets, puis `<figcaption>` filet `border-t` : avatar typographique
+ *   rond, nom/rôle, `<Badge variant="verified">` aligné à droite ;
+ * - col 5 : les 2 autres témoignages en cartes compactes (citation 15px
+ *   `fg-2`, filet séparateur, pied avatar + nom/rôle + `company` en `.micro`).
+ *
+ * Cartes non cliquables (aucun lien, aucun `tabIndex`). Zéro string en dur :
+ * tout vient du dict `testimonials`. Composant serveur — l'animation est
+ * portée par `Reveal` (client), sans `useReducedMotion` local.
  */
 export function Testimonials({ testimonials }: TestimonialsProps): ReactNode {
+  // Edge case : `items` vide → aucun rendu d'item, aucun crash.
+  const featured = testimonials.items[0];
+  const others = testimonials.items.slice(1);
+
   return (
-    // DESIGN: `id="temoignages"` = ancre utile (footer/liens futurs),
-    // même convention que `Services` (`id="services"`).
+    // DESIGN: `id="temoignages"` = ancre utile (footer/liens),
+    // même convention que `Services` / `Faq` / `Contact`.
     <section
       id="temoignages"
       aria-labelledby="testimonials-title"
-      className="py-[72px] md:py-24 lg:py-[120px]"
+      className="py-[clamp(96px,14vh,176px)]"
     >
       <div className="mx-auto max-w-[1200px] px-[clamp(1.25rem,5vw,2.5rem)]">
         <SectionHeading
-          align="center"
+          index="05"
           headingId="testimonials-title"
           eyebrow={testimonials.eyebrow}
           title={testimonials.title}
           description={testimonials.description}
         />
 
-        <div className="mt-12 grid grid-cols-1 gap-4 md:mt-16 md:grid-cols-3 md:gap-6">
-          {testimonials.items.map((item, index) => (
-            <Reveal
-              key={item.id}
-              as="article"
-              delay={index * CARD_DELAY_STEP}
-              className="flex h-full flex-col rounded-[20px] border border-line bg-surface p-7 md:p-8 transition-[translate,border-color,box-shadow] duration-[260ms] ease-[cubic-bezier(0.4,0,0.2,1)] hover:-translate-y-1 hover:border-[rgba(59,130,246,0.4)] hover:shadow-[0_20px_40px_-16px_rgba(0,0,0,0.5)]"
-            >
-              {/* Guillemet ouvrant décoratif (§4.8) — `text-line` silencieux. */}
-              <span
-                aria-hidden="true"
-                className="text-[32px] font-bold leading-none text-line"
-              >
-                {"\u201C"}
-              </span>
-
-              {/* Citation : droit, blanc 16px — italique interdit (§4.8). */}
-              <blockquote className="mt-5 text-[16px] leading-relaxed text-fg">
-                <p>{item.quote}</p>
+        {/* Grille 12 col : citation `span 7` / cartes compactes `span 5`. */}
+        <div className="mt-12 grid grid-cols-1 gap-6 md:mt-16 lg:grid-cols-12 lg:gap-8">
+          {featured ? (
+            <Reveal as="figure" className="m-0 lg:col-span-7">
+              {/* Citation éditoriale : la rupture d'échelle typographique (§2.5). */}
+              <blockquote className="voix text-[clamp(1.5rem,2.7vw,2.25rem)] leading-[1.35] tracking-[-0.02em] text-fg">
+                <span aria-hidden="true">{"\u201C"}</span>
+                {featured.quote}
+                <span aria-hidden="true">{"\u201D"}</span>
               </blockquote>
 
-              <div aria-hidden="true" className="mt-6 h-px bg-line" />
-
-              {/* Identité : avatar typographique + nom/rôle + badge vérifié.
-                  `flex-wrap` évite la compression du badge en mobile. */}
-              <div className="mt-5 flex flex-wrap items-center gap-3">
+              {/* Identité : filet hairline + avatar typographique + badge. */}
+              <figcaption className="mt-8 flex flex-wrap items-center gap-4 border-t border-line pt-7">
                 <span
                   aria-hidden="true"
-                  className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface-2 text-[13px] font-semibold text-muted"
+                  className="flex size-11 shrink-0 items-center justify-center rounded-full border border-line bg-surface-2 font-mono text-[13px] text-muted"
                 >
-                  {item.initials}
+                  {featured.initials}
                 </span>
-                <div>
-                  <p className="text-sm font-semibold text-fg">{item.name}</p>
-                  <p className="text-[13px] text-muted">{item.role}</p>
+                <div className="min-w-0">
+                  <p className="font-semibold text-fg">{featured.name}</p>
+                  <p className="text-[13px] text-muted">{featured.role}</p>
                 </div>
-                <Badge variant="verified">
-                  {item.verifiedLabel}
+                <Badge variant="verified" className="ml-auto">
+                  {featured.verifiedLabel}
                 </Badge>
-              </div>
-
-              {/* Wordmark société : marque typographique discrète (§4.8). */}
-              <span className="mt-4 block text-[12px] font-medium uppercase tracking-[0.08em] text-faint">
-                {item.company}
-              </span>
+              </figcaption>
             </Reveal>
-          ))}
+          ) : null}
+
+          {others.length > 0 ? (
+            <div className="flex flex-col gap-4 lg:col-span-5">
+              {others.map((item, index) => (
+                <Reveal
+                  key={item.id}
+                  as="article"
+                  delay={(index + 1) * CARD_DELAY_STEP}
+                  className={`${CARD_CLASSES} flex flex-1 flex-col p-6`}
+                >
+                  <blockquote className="text-[15px] leading-[1.6] text-fg-2">
+                    {item.quote}
+                  </blockquote>
+
+                  <div aria-hidden="true" className="mt-5 h-px bg-line" />
+
+                  {/* Pied : avatar + nom/rôle + wordmark société à droite. */}
+                  <div className="mt-5 flex items-center gap-3">
+                    <span
+                      aria-hidden="true"
+                      className="flex size-10 shrink-0 items-center justify-center rounded-full border border-line bg-surface-2 font-mono text-[12px] text-muted"
+                    >
+                      {item.initials}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-fg">
+                        {item.name}
+                      </p>
+                      <p className="text-[13px] text-muted">{item.role}</p>
+                    </div>
+                    <span className="micro ml-auto shrink-0 text-faint">
+                      {item.company}
+                    </span>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+          ) : null}
         </div>
       </div>
     </section>

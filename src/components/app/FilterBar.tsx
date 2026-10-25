@@ -59,7 +59,7 @@ function chipClasses(isActive: boolean): string {
     "inline-flex min-h-11 items-center whitespace-nowrap rounded-xl px-4 text-sm transition-colors duration-150",
     "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
     isActive
-      ? "border border-accent bg-accent font-semibold text-white"
+      ? "border border-accent bg-accent font-semibold text-ink"
       : "border border-line bg-surface font-medium text-muted hover:text-fg",
   );
 }
