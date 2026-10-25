@@ -38,12 +38,13 @@
 | Formulaire landing | **Câblé au CRM** (T34, validé) |
 | Portail client | **Périmètre initial** |
 
-### ⚠ Règle DB-PENDING (accord utilisateur)
+### ✅ GATES DB — PASSÉES le 25/10/2026
 
-`DATABASE_URL` fourni **à la fin du plan** (`.env.local` = placeholder). Conséquences :
-- Les pistes **écrivent et auto-valident** normalement (typecheck/lint/build).
-- **Reportées** à l'arrivée de la chaîne Neon (liste `DB-PENDING`) : application des migrations, seed réel, requêtes DB réelles, E2E complet.
-- `DB-PENDING` : **T12** (seed exécuté), **T36** (E2E complet avec comptes réels), toutes les vérifications runtime impliquant `getDb()`.
+`DATABASE_URL` Neon réel fourni et écrit dans `.env.local` (**ignoré par git**), `AUTH_SECRET` régénéré (64 car.) :
+- `npm run db:migrate` → **13 tables appliquées** sur Neon (`migrations applied successfully`).
+- `SEED_DEMO=1 npm run db:seed` → **idempotent** (2ᵉ run : mêmes comptes, zéro doublon) : 6 comptes, 6 prospects, brief 3/5, devis signé 2 500 USD, acompte 750 USD, 2 commissions dues, projet + 5 jalons, message, activité.
+- **Smoke login réel (3 rôles + rejet)** : `ceo` → session Auth.js active, dashboard 200 (130 Ko, agrégats SQL réels), pipeline 200, commissions 200, équipe 200, détail prospect 200 · `vendeur` → **4 prospects visibles sur 6** (scoping serveur prouvé), `/equipe`+`/projet` = **307 refus**, ses gains 200 · `client` → portail 200, pipeline/dashboard = **307 refus** · mauvais mot de passe → session refusée · landing `/fr` 200 (230 Ko) intacte.
+- Reste : **T36** (E2E complet `Tester`).
 
 ---
 
