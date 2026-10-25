@@ -29,6 +29,7 @@ export const fr: SiteContent = {
       { label: "Méthode", href: "#methode" },
     ],
     ctaLabel: "Demander un devis",
+    loginLabel: "Connexion",
   },
 
   hero: {
@@ -101,9 +102,10 @@ export const fr: SiteContent = {
     items: [
       {
         id: "clinique",
-        category: "web",
+        categories: ["web"],
         featured: true,
         mockup: "clinic",
+        image: "projects/dental.jpg",
         title: "SaaS de Gestion Clinique",
         description:
           "Plateforme SaaS complète de gestion médicale\u00A0: agendas, dossiers patients, facturation et statistiques cabinet, déclinée en multi-tenant sur Next.js et PostgreSQL.",
@@ -112,18 +114,43 @@ export const fr: SiteContent = {
       },
       {
         id: "papernote",
-        category: "ai",
+        categories: ["web", "ai", "mobile"],
         featured: false,
         mockup: "papernote",
-        title: "Papernote AI",
+        image: "projects/papernote.jpg",
+        title: "Papernote",
         description:
-          "Plateforme SaaS d’analyse et de synthèse de documents académiques par IA\u00A0: ingestion, indexation vectorielle et restitutions structurées en quelques secondes.",
+          "Plateforme SaaS d'analyse et de synthèse de documents académiques par IA\u00A0: ingestion, indexation vectorielle et restitutions structurées en quelques secondes.",
         tags: ["Next.js", "OpenAI", "Vector DB", "PostgreSQL"],
         metric: { value: "8\u00A0s", label: "de synthèse par document" },
       },
       {
+        id: "delyx",
+        categories: ["web", "mobile"],
+        featured: false,
+        mockup: "delyx",
+        image: "projects/delyx.jpg",
+        title: "Delyx Delivery",
+        description:
+          "Plateforme de livraison à moto à travers l'Algérie\u00A0: le client décrit sa course, choisit son livreur, suit le trajet en direct par géolocalisation et paie à la livraison.",
+        tags: ["Next.js", "PostgreSQL", "TypeScript", "Tailwind CSS"],
+        metric: { value: "Direct", label: "suivi géolocalisé du trajet" },
+      },
+      {
+        id: "tiberium",
+        categories: ["web"],
+        featured: false,
+        mockup: "tiberium",
+        image: "projects/tiberium.jpg",
+        title: "Tiberium Consulting",
+        description:
+          "Plateforme de consulting avec messagerie temps réel sécurisée via WebSockets, notifications, historique persistant et mise à l'échelle Redis.",
+        tags: ["MongoDB", "Express", "React", "Node.js", "Socket.io"],
+        metric: { value: "<\u00A0100\u00A0ms", label: "de latence de livraison" },
+      },
+      {
         id: "myks-radio",
-        category: "mobile",
+        categories: ["mobile"],
         featured: false,
         mockup: "radio",
         title: "MYKS Radio",
@@ -131,17 +158,6 @@ export const fr: SiteContent = {
           "Infrastructure web et mobile de streaming audio temps réel, avec dashboard de gestion personnalisé et applications iOS et Android diffusant les flux en HLS.",
         tags: ["React Native", "WebSockets", "Node.js", "HLS"],
         metric: { value: "3 plateformes", label: "web, iOS et Android" },
-      },
-      {
-        id: "tiberium",
-        category: "web",
-        featured: false,
-        mockup: "tiberium",
-        title: "Tiberium Enterprise",
-        description:
-          "Solution web de consulting intégrant une messagerie temps réel sécurisée via WebSockets, avec notifications, historique persistant et mise à l’échelle Redis.",
-        tags: ["Next.js", "WebSockets", "Redis", "TypeScript"],
-        metric: { value: "<\u00A0100\u00A0ms", label: "de latence de livraison" },
       },
     ],
   },
@@ -335,8 +351,8 @@ export const fr: SiteContent = {
         id: "whatsapp",
         icon: "whatsapp",
         label: "WhatsApp Entreprise",
-        value: "+213 555 00 00 00",
-        href: "https://wa.me/213555000000",
+        value: "+213 551 79 73 13",
+        href: "https://wa.me/213551797313",
       },
       {
         id: "location",
@@ -376,9 +392,129 @@ export const fr: SiteContent = {
     },
   },
 
+  careers: {
+    eyebrow: "Recrutement",
+    title: "Rejoignez *l'équipe*",
+    description:
+      "Nous recrutons des Lead Generators pour développer notre portefeuille clients, à distance.",
+    role: "Lead Generator",
+    meta: ["Collaborateur indépendant", "Rémunération à la commission", "100 % remote"],
+    intro:
+      "Identifiez et qualifiez des prospects pour Atheris Labs\u00A0— studio d'ingénierie logicielle (applications Web, Mobile et Desktop sur-mesure) — et accompagnez-les jusqu'au premier échange commercial.",
+    sections: [
+      {
+        id: "missions",
+        heading: "Vos responsabilités",
+        bullets: [
+          "Prospecter activement par les canaux autorisés\u00A0: réseaux, prospection ciblée, bouche-à-oreille et canaux digitaux encadrés.",
+          "Qualifier le besoin\u00A0: type de produit, budget, délai et décideur.",
+          "Inscrire le prospect sur la plateforme avec une fiche complète et à jour.",
+          "Assurer le suivi jusqu'au rendez-vous ou à l'envoi du devis.",
+          "Remonter les signaux marché\u00A0: objections, prix concurrents, attentes récurrentes.",
+        ],
+      },
+      {
+        id: "profil",
+        heading: "Profil recherché",
+        bullets: [
+          "Expérience en prospection B2B ou en génération de leads (appréciée).",
+          "Bonne compréhension des enjeux digitaux des PME.",
+          "Rigueur, autonomie, sens du suivi et fiabilité dans vos engagements.",
+          "Français écrit soigné\u00A0; anglais ou arabe appréciés.",
+          "Disponibilité régulière, entièrement à distance.",
+        ],
+      },
+      {
+        id: "remuneration",
+        heading: "Rémunération",
+        bullets: [
+          "Commission de 10 % à 20 % du montant TTC des devis signés, selon le barème progressif.",
+          "Paliers comptés sur les clients ayant payé l'acompte, jamais rétroactifs.",
+          "Aucun salaire fixe\u00A0; commission acquise à l'encaissement du premier versement.",
+        ],
+      },
+      {
+        id: "process",
+        heading: "Processus de sélection",
+        bullets: [
+          "Candidature\u00A0: formulaire et CV.",
+          "Entretien de 30 minutes, au créneau de votre choix.",
+          "Validation par le CEO, puis accès à la plateforme (validation manuelle).",
+        ],
+      },
+    ],
+    applyTitle: "Candidature",
+    applyDescription:
+      "Renseignez vos coordonnées et joignez votre CV\u00A0: nous revenons vers vous sous 24 h ouvrées.",
+    form: {
+      firstNameLabel: "Prénom",
+      lastNameLabel: "Nom",
+      emailLabel: "Email",
+      messageLabel: "Message (optionnel)",
+      messagePlaceholder: "Quelques mots sur votre expérience…",
+      fileLabel: "CV (PDF, DOC ou DOCX)",
+      fileHint: "5 Mo maximum.",
+      submitLabel: "Envoyer ma candidature",
+      note: "Vos informations restent strictement confidentielles.",
+      errors: {
+        firstNameRequired: "Merci d'indiquer votre prénom.",
+        lastNameRequired: "Merci d'indiquer votre nom.",
+        emailRequired: "Merci d'indiquer votre adresse email.",
+        emailInvalid: "Merci de saisir une adresse email valide.",
+        fileRequired: "Merci de joindre votre CV.",
+        fileTooLarge: "Le fichier dépasse la limite de 5 Mo.",
+        fileBadType: "Format accepté\u00A0: PDF, DOC ou DOCX.",
+        generic: "L'envoi a échoué. Merci de réessayer dans un instant.",
+      },
+      successTitle: "Candidature envoyée.",
+      successMessage:
+        "Votre dossier a bien été transmis. Nous revenons vers vous sous 24 h ouvrées.",
+      successAction: "Envoyer une autre candidature",
+    },
+  },
+
+  interview: {
+    badge: "Entretien · Atheris Labs",
+    title: "Réservez votre *entretien*",
+    description:
+      "Choisissez le créneau qui vous convient\u00A0: 1 heure, à l'heure locale de votre fuseau.",
+    hoursNote: "Créneaux de 9 h à 20 h · 3 prochains jours",
+    timezoneHint: "Créneaux affichés dans votre fuseau horaire",
+    stepProfile: "Vos informations",
+    stepSlot: "Votre créneau",
+    notFoundTitle: "Lien invalide",
+    javascriptRequired:
+      "Cet agenda nécessite JavaScript\u00A0: activez-le dans votre navigateur pour choisir un créneau.",
+    notFoundMessage:
+      "Ce lien d'entretien n'existe plus ou a été annulé. Contactez votre recruteur.",
+    form: {
+      firstNameLabel: "Prénom",
+      lastNameLabel: "Nom",
+      emailLabel: "Email",
+      slotLabel: "Créneau souhaité",
+      submitLabel: "Confirmer mon créneau",
+      note: "Une confirmation vous sera envoyée par email.",
+      errors: {
+        firstNameRequired: "Merci d'indiquer votre prénom.",
+        lastNameRequired: "Merci d'indiquer votre nom.",
+        emailRequired: "Merci d'indiquer votre adresse email.",
+        emailInvalid: "Merci de saisir une adresse email valide.",
+        slotRequired: "Merci de sélectionner un créneau.",
+        slotTaken: "Ce créneau vient d'être pris. Choisissez-en un autre.",
+        rateLimited: "Trop de tentatives. Merci de réessayer dans une minute.",
+        generic: "L'envoi a échoué. Merci de réessayer dans un instant.",
+      },
+      successTitle: "Entretien réservé.",
+      successMessage:
+        "Votre créneau est confirmé. Un récapitulatif vous a été envoyé par email.",
+      successAction: "Modifier mon créneau",
+    },
+  },
+
   footer: {
     tagline: "Ingénierie logicielle et design web\u00A0: des produits digitaux conçus pour durer.",
     navLabel: "Navigation",
+    links: [{ label: "Recrutement", href: "/fr/recrutement" }],
     contactLabel: "Contact",
     rights: "Tous droits réservés.",
     legal: "Mentions légales",

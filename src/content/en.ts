@@ -28,6 +28,7 @@ export const en: SiteContent = {
       { label: "Process", href: "#methode" },
     ],
     ctaLabel: "Request a quote",
+    loginLabel: "Sign in",
   },
 
   hero: {
@@ -100,29 +101,55 @@ export const en: SiteContent = {
     items: [
       {
         id: "clinique",
-        category: "web",
+        categories: ["web"],
         featured: true,
         mockup: "clinic",
-        title: "Clinic Management SaaS",
+        image: "projects/dental.jpg",
+        title: "Dental Clinic Management SaaS",
         description:
-          "A complete SaaS platform for medical practice management: scheduling, patient records, billing and practice analytics, deployed multi-tenant on Next.js and PostgreSQL.",
+          "A complete SaaS platform for dental practice management: online booking, digital patient records and automated billing, deployed multi-tenant on Next.js and PostgreSQL.",
         tags: ["Next.js", "PostgreSQL", "Multi-tenant", "Stripe"],
         metric: { value: "+100h", label: "saved per year, per practice" },
       },
       {
         id: "papernote",
-        category: "ai",
+        categories: ["web", "ai", "mobile"],
         featured: false,
         mockup: "papernote",
-        title: "Papernote AI",
+        image: "projects/papernote.jpg",
+        title: "Papernote",
         description:
-          "A SaaS platform that analyzes and summarizes academic documents with AI: ingestion, vector indexing and structured outputs in seconds.",
+          "An AI-powered SaaS tool for accelerated review, comparative analysis and synthesis of complex academic publications and theses.",
         tags: ["Next.js", "OpenAI", "Vector DB", "PostgreSQL"],
         metric: { value: "8\u00A0s", label: "to summarize a document" },
       },
       {
+        id: "delyx",
+        categories: ["web", "mobile"],
+        featured: false,
+        mockup: "delyx",
+        image: "projects/delyx.jpg",
+        title: "Delyx Delivery",
+        description:
+          "A motorbike delivery platform across Algeria: customers describe their errand, pick their courier, follow the route live by geolocation and pay on arrival.",
+        tags: ["Next.js", "PostgreSQL", "TypeScript", "Tailwind CSS"],
+        metric: { value: "Live", label: "route geolocation tracking" },
+      },
+      {
+        id: "tiberium",
+        categories: ["web"],
+        featured: false,
+        mockup: "tiberium",
+        image: "projects/tiberium.jpg",
+        title: "Tiberium Consulting",
+        description:
+          "A consulting platform with secure real-time messaging over WebSockets, notifications, persistent history and Redis-backed scaling.",
+        tags: ["MongoDB", "Express", "React", "Node.js", "Socket.io"],
+        metric: { value: "<\u00A0100\u00A0ms", label: "delivery latency" },
+      },
+      {
         id: "myks-radio",
-        category: "mobile",
+        categories: ["mobile"],
         featured: false,
         mockup: "radio",
         title: "MYKS Radio",
@@ -130,17 +157,6 @@ export const en: SiteContent = {
           "A web and mobile infrastructure for real-time audio streaming, with a custom management dashboard and iOS and Android apps broadcasting HLS feeds.",
         tags: ["React Native", "WebSockets", "Node.js", "HLS"],
         metric: { value: "3 platforms", label: "web, iOS and Android" },
-      },
-      {
-        id: "tiberium",
-        category: "web",
-        featured: false,
-        mockup: "tiberium",
-        title: "Tiberium Enterprise",
-        description:
-          "A consulting web platform with secure real-time messaging over WebSockets, including notifications, persistent history and Redis-backed scaling.",
-        tags: ["Next.js", "WebSockets", "Redis", "TypeScript"],
-        metric: { value: "<\u00A0100\u00A0ms", label: "delivery latency" },
       },
     ],
   },
@@ -334,8 +350,8 @@ export const en: SiteContent = {
         id: "whatsapp",
         icon: "whatsapp",
         label: "Business WhatsApp",
-        value: "+213 555 00 00 00",
-        href: "https://wa.me/213555000000",
+        value: "+213 551 79 73 13",
+        href: "https://wa.me/213551797313",
       },
       {
         id: "location",
@@ -375,9 +391,129 @@ export const en: SiteContent = {
     },
   },
 
+  careers: {
+    eyebrow: "Careers",
+    title: "Join the *team*",
+    description:
+      "We are hiring Lead Generators to grow our client portfolio, fully remote.",
+    role: "Lead Generator",
+    meta: ["Independent contractor", "Commission-based", "100% remote"],
+    intro:
+      "Identify and qualify prospects for Atheris Labs — a software engineering studio building custom Web, Mobile and Desktop applications — and follow them through the first sales conversation.",
+    sections: [
+      {
+        id: "missions",
+        heading: "Your responsibilities",
+        bullets: [
+          "Actively prospect through approved channels: networks, targeted outreach, word of mouth and controlled digital channels.",
+          "Qualify the need: product type, budget, timeline and decision maker.",
+          "Register the prospect on the platform with a complete, up-to-date profile.",
+          "Follow up until the meeting or the quote is sent.",
+          "Report market feedback: objections, competitor pricing, recurring expectations.",
+        ],
+      },
+      {
+        id: "profil",
+        heading: "Profile",
+        bullets: [
+          "Experience in B2B prospecting or lead generation (preferred).",
+          "Solid understanding of SME digital challenges.",
+          "Rigour, autonomy, follow-through and reliability in your commitments.",
+          "Excellent written French; English or Arabic is a plus.",
+          "Regular availability, fully remote.",
+        ],
+      },
+      {
+        id: "remuneration",
+        heading: "Compensation",
+        bullets: [
+          "10% to 20% commission on the VAT-inclusive amount of signed quotes, on a progressive scale.",
+          "Tiers counted on clients who paid the deposit, never retroactive.",
+          "No fixed salary; commission earned once the first payment is received.",
+        ],
+      },
+      {
+        id: "process",
+        heading: "Selection process",
+        bullets: [
+          "Application: form and CV.",
+          "A 30-minute interview, at the slot of your choice.",
+          "CEO approval, then platform access (manual validation).",
+        ],
+      },
+    ],
+    applyTitle: "Apply",
+    applyDescription:
+      "Fill in your details and attach your CV: we get back to you within 24 business hours.",
+    form: {
+      firstNameLabel: "First name",
+      lastNameLabel: "Last name",
+      emailLabel: "Email",
+      messageLabel: "Message (optional)",
+      messagePlaceholder: "A few words about your experience…",
+      fileLabel: "CV (PDF, DOC or DOCX)",
+      fileHint: "5 MB max.",
+      submitLabel: "Send my application",
+      note: "Your information is strictly confidential.",
+      errors: {
+        firstNameRequired: "Please enter your first name.",
+        lastNameRequired: "Please enter your last name.",
+        emailRequired: "Please enter your email address.",
+        emailInvalid: "Please enter a valid email address.",
+        fileRequired: "Please attach your CV.",
+        fileTooLarge: "The file exceeds the 5 MB limit.",
+        fileBadType: "Accepted formats: PDF, DOC or DOCX.",
+        generic: "Sending failed. Please try again in a moment.",
+      },
+      successTitle: "Application sent.",
+      successMessage:
+        "Your file has been submitted. We get back to you within 24 business hours.",
+      successAction: "Send another application",
+    },
+  },
+
+  interview: {
+    badge: "Interview · Atheris Labs",
+    title: "Book your *interview*",
+    description:
+      "Pick the slot that suits you: 1 hour, at your own local time.",
+    hoursNote: "Slots from 9 AM to 8 PM · next 3 days",
+    timezoneHint: "Slots shown in your own time zone",
+    stepProfile: "Your details",
+    stepSlot: "Your slot",
+    notFoundTitle: "Invalid link",
+    javascriptRequired:
+      "This scheduler requires JavaScript: please enable it in your browser to pick a slot.",
+    notFoundMessage:
+      "This interview link no longer exists or has been cancelled. Please contact your recruiter.",
+    form: {
+      firstNameLabel: "First name",
+      lastNameLabel: "Last name",
+      emailLabel: "Email",
+      slotLabel: "Preferred slot",
+      submitLabel: "Confirm my slot",
+      note: "A confirmation will be sent to you by email.",
+      errors: {
+        firstNameRequired: "Please enter your first name.",
+        lastNameRequired: "Please enter your last name.",
+        emailRequired: "Please enter your email address.",
+        emailInvalid: "Please enter a valid email address.",
+        slotRequired: "Please select a slot.",
+        slotTaken: "This slot was just taken. Please pick another one.",
+        rateLimited: "Too many attempts. Please try again in a minute.",
+        generic: "Sending failed. Please try again in a moment.",
+      },
+      successTitle: "Interview booked.",
+      successMessage:
+        "Your slot is confirmed. A summary has been sent to you by email.",
+      successAction: "Change my slot",
+    },
+  },
+
   footer: {
     tagline: "Software engineering and web design: digital products built to last.",
     navLabel: "Navigation",
+    links: [{ label: "Careers", href: "/en/recrutement" }],
     contactLabel: "Contact",
     rights: "All rights reserved.",
     legal: "Legal Notice",

@@ -1,4 +1,9 @@
+"use client";
+
+import { useState } from "react";
 import type { MouseEvent, ReactNode } from "react";
+
+import Image from "next/image";
 
 import { CaseStudyMockup } from "@/components/sections/CaseStudyMockups";
 import { Badge } from "@/components/ui/Badge";
@@ -7,7 +12,7 @@ import { cn } from "@/lib/utils";
 
 type CaseStudyCardProps = {
   study: CaseStudy;
-  /** Libellé localisé de la catégorie (`cases.filters[category]`). */
+  /** Libellé localisé de la 1re catégorie (`cases.filters[categories[0]]`). */
   categoryLabel?: string;
   /**
    * Variante large — API conservée pour compatibilité. Le rail `02` applique
@@ -29,10 +34,17 @@ function handleSpotlight(event: MouseEvent<HTMLElement>): void {
   element.style.setProperty("--y", `${event.clientY - rect.top}px`);
 }
 
+/** `CaseStudy.image` est fournie SANS slash (`projects/dental.jpg`). */
+function toImageSrc(path: string): string {
+  return path.startsWith("/") ? path : `/${path}`;
+}
+
 /**
  * Carte d'étude de cas (`02`) : zone mockup 240px (zoom `scale(1.03)` +
  * balayage `.shine` au survol), puis catégorie + filet, titre, description,
  * tags à gauche et métrique business volt à droite (la donnée qui compte).
+ * Visuel : `<Image>` réelle si `study.image`, sinon (image absente OU erreur
+ * de chargement) repli sur le mockup 100 % CSS `CaseStudyMockup`.
  * Carte NON interactive (pas de page détail) — le hover reste purement visuel.
  */
 export function CaseStudyCard({
@@ -40,7 +52,13 @@ export function CaseStudyCard({
   categoryLabel,
   className,
 }: CaseStudyCardProps): ReactNode {
-  const category = categoryLabel ?? study.category;
+  const [imageFailed, setImageFailed] = useState<boolean>(false);
+
+  const category = categoryLabel ?? study.categories[0];
+  const imageSrc =
+    study.image !== undefined && study.image !== "" && !imageFailed
+      ? toImageSrc(study.image)
+      : null;
 
   return (
     // DESIGN §2.6 — carte standard : hairline → `line-2`, lift -3px,
@@ -54,9 +72,24 @@ export function CaseStudyCard({
     >
       {/* Zone mockup `.mock` : hauteur fixe, arrondi haut, filet de séparation. */}
       <div className="mock relative h-[240px] overflow-hidden rounded-t-[14px] border-b border-line bg-[#0B0E14]">
-        {/* Zoom maîtrisé : le conteneur `.mock` découpe le scale 1.03. */}
-        <div className="mock-inner h-full w-full transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.03]">
-          <CaseStudyMockup kind={study.mockup} />
+        {/* Zoom maîtrisé : le conteneur `.mock` découpe le scale 1.03.
+            `relative` = bloc conteneur explicite pour l'<Image fill>. */}
+        <div className="mock-inner relative h-full w-full transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.03]">
+          {imageSrc !== null ? (
+            <Image
+              src={imageSrc}
+              alt={study.title}
+              fill
+              // Le rail est tirable à la souris : l'image ne doit jamais
+              // déclencher la DnD native du navigateur.
+              draggable={false}
+              sizes="(max-width: 639.98px) 85vw, (max-width: 1023.98px) 62vw, 46vw"
+              className="object-cover"
+              onError={() => setImageFailed(true)}
+            />
+          ) : (
+            <CaseStudyMockup kind={study.mockup} />
+          )}
         </div>
 
         {/* Voile `.shine` — balayage lumineux au survol de la carte (M13). */}
@@ -73,7 +106,9 @@ export function CaseStudyCard({
         <div className="flex items-center gap-3">
           {/* Catégorie = métadonnée → `muted`. Le VOLT est réservé à la
               métrique (l'unique donnée clé de la carte, DESIGN §2.1). */}
-          <span className="micro text-muted">{category}</span>
+          {category !== undefined ? (
+            <span className="micro text-muted">{category}</span>
+          ) : null}
           <span aria-hidden="true" className="h-px min-w-6 flex-1 bg-line" />
         </div>
 
@@ -83,9 +118,16 @@ export function CaseStudyCard({
           {study.description}
         </p>
 
-        {/* Ligne séparée : tags à gauche, métrique volt à droite. */}
+        {/* Ligne séparée : tags à gauche, métrique volt à droite.
+            `metric` est OPTIONNEL : sans lui, les tags occupent toute la
+            largeur (`w-full`) et aucun bloc vide n'est réservé. */}
         <div className="mt-auto flex flex-wrap items-end justify-between gap-4 border-t border-line pt-5">
-          <div className="flex flex-wrap gap-2">
+          <div
+            className={cn(
+              "flex flex-wrap gap-2",
+              study.metric === undefined && "w-full",
+            )}
+          >
             {study.tags.map((tag) => (
               <Badge key={tag} variant="tech">
                 {tag}
@@ -93,12 +135,14 @@ export function CaseStudyCard({
             ))}
           </div>
 
-          <div className="flex shrink-0 flex-col items-end gap-1.5">
-            <span className="font-mono text-[24px] leading-none text-accent">
-              {study.metric.value}
-            </span>
-            <span className="micro text-faint">{study.metric.label}</span>
-          </div>
+          {study.metric !== undefined ? (
+            <div className="flex shrink-0 flex-col items-end gap-1.5">
+              <span className="font-mono text-[24px] leading-none text-accent">
+                {study.metric.value}
+              </span>
+              <span className="micro text-faint">{study.metric.label}</span>
+            </div>
+          ) : null}
         </div>
       </div>
     </article>

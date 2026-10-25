@@ -23,9 +23,11 @@ type ButtonProps = {
 } & Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "href" | "type"> &
   Omit<ButtonHTMLAttributes<HTMLButtonElement>, "type">;
 
-/* DESIGN §2.6 — PILL unique : arrondi = action. Courbe unique du site. */
+/* DESIGN §2.6 — PILL unique : arrondi = action. Courbe unique du site.
+   `cursor-pointer` EXPLICITE : Tailwind Preflight ne pose plus `cursor:pointer`
+   sur `<button>`, les CTA retombaient sur le curseur par défaut. */
 const BASE_CLASSES =
-  "inline-flex items-center justify-center font-semibold tracking-[-0.01em] transition-all duration-[180ms] ease-[cubic-bezier(0.16,1,0.3,1)] rounded-full focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-[3px]";
+  "inline-flex items-center justify-center font-semibold tracking-[-0.01em] transition-all duration-[180ms] ease-[cubic-bezier(0.16,1,0.3,1)] rounded-full cursor-pointer disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-[3px]";
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   /* SEUL aplat volt de la page (§2.1) : contraste maximal obsidienne ↔ signal.

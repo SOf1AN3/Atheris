@@ -285,6 +285,113 @@ function TiberiumMockup(): ReactNode {
 }
 
 /* ------------------------------------------------------------------ */
+/* 5. delyx — plateforme de livraison : carte + itinéraire              */
+/* ------------------------------------------------------------------ */
+
+// Îlots de la carte (blocs neutres) : position en % du cadre 240px.
+const CITY_BLOCKS: readonly { position: string; size: string }[] = [
+  { position: "left-[6%] top-[40%]", size: "h-7 w-14" },
+  { position: "left-[36%] top-[40%]", size: "h-10 w-16" },
+  { position: "left-[36%] top-[6%]", size: "h-6 w-20" },
+  { position: "right-[6%] top-[76%]", size: "h-8 w-16" },
+];
+
+// Commandes en cours (sidebar) : avatar + 2 barres, tous NEUTRES.
+const DELIVERY_ORDERS: readonly { id: string; width: string }[] = [
+  { id: "order-1", width: "w-[70%]" },
+  { id: "order-2", width: "w-[54%]" },
+  { id: "order-3", width: "w-[62%]" },
+];
+
+// Itinéraire du coursier dans le repère `viewBox` 0-100 (% du cadre).
+const ROUTE_PATH = "M16 80 H34 V46 H70 V24";
+const ROUTE_PICKUP = { x: 16, y: 80 };
+const ROUTE_DROPOFF = { x: 70, y: 24 };
+
+function DelyxMockup(): ReactNode {
+  return (
+    <div className="flex h-full">
+      {/* Carte stylisée 100% CSS/SVG : trame de rues + îlots + itinéraire.
+          L'itinéraire est le SEUL élément volt du mockup (§2.1). */}
+      <div className="relative min-w-0 flex-1 overflow-hidden">
+        {/* Trame de rues : 2 avenues horizontales + 2 verticales. */}
+        <div aria-hidden="true" className="absolute inset-0">
+          <span className="absolute inset-x-0 top-[30%] h-px bg-white/10" />
+          <span className="absolute inset-x-0 top-[68%] h-px bg-white/10" />
+          <span className="absolute inset-y-0 left-[30%] w-px bg-white/10" />
+          <span className="absolute inset-y-0 left-[72%] w-px bg-white/10" />
+          {CITY_BLOCKS.map((block) => (
+            <span
+              key={`${block.position}-${block.size}`}
+              className={cn(
+                "absolute rounded-md border border-line bg-white/[0.03]",
+                block.position,
+                block.size,
+              )}
+            />
+          ))}
+        </div>
+
+        {/* Itinéraire = LA donnée active (unique volt du mockup). */}
+        <svg
+          aria-hidden="true"
+          focusable="false"
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+          className="absolute inset-0 h-full w-full text-accent"
+        >
+          <path
+            d={ROUTE_PATH}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            vectorEffect="non-scaling-stroke"
+          />
+        </svg>
+
+        {/* Repères départ / arrivée — neutres (le volt est réservé au trajet). */}
+        <span
+          aria-hidden="true"
+          className="absolute size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-line bg-[#0B0E14]"
+          style={{ left: `${ROUTE_PICKUP.x}%`, top: `${ROUTE_PICKUP.y}%` }}
+        />
+        <span
+          aria-hidden="true"
+          className="absolute size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/40 bg-white/10"
+          style={{ left: `${ROUTE_DROPOFF.x}%`, top: `${ROUTE_DROPOFF.y}%` }}
+        />
+      </div>
+
+      {/* Sidebar commandes : filets + blocs neutres, ETA chiffrée. */}
+      <div className="w-[36%] shrink-0 space-y-2 border-l border-line p-3">
+        <span className="block h-2.5 w-20 rounded bg-white/10" />
+        {DELIVERY_ORDERS.map((order) => (
+          <div
+            key={order.id}
+            className="flex items-center gap-2 rounded-md border border-line bg-white/[0.03] p-1.5"
+          >
+            <span className="size-5 shrink-0 rounded-full bg-white/10" />
+            <span className="min-w-0 flex-1 space-y-1">
+              <span
+                className={cn("block h-1.5 rounded bg-white/10", order.width)}
+              />
+              <span className="block h-1.5 w-[70%] rounded bg-white/[0.06]" />
+            </span>
+          </div>
+        ))}
+        <div className="flex items-center justify-between pt-1">
+          <span className="block h-1.5 w-14 rounded bg-white/10" />
+          {/* Chiffre non traduisible (ETA) — autorisé. */}
+          <span className="text-[10px] tabular-nums text-muted">18:40</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 
 /**
  * Visuel produit 100% CSS d'une étude de cas (§2.5).
@@ -315,6 +422,12 @@ export function CaseStudyMockup({ kind }: CaseStudyMockupProps): ReactNode {
       return (
         <MockupFrame>
           <TiberiumMockup />
+        </MockupFrame>
+      );
+    case "delyx":
+      return (
+        <MockupFrame>
+          <DelyxMockup />
         </MockupFrame>
       );
   }

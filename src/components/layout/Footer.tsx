@@ -92,6 +92,34 @@ export function Footer({ footer, nav, year }: FooterProps): ReactNode {
                 </li>
               ))}
             </ul>
+
+            {/* Liens PROPREMENT footer (PLAN Q7) — hors nav principale :
+                le header n'affiche jamais cette liste. Séparés par un filet
+                pour signaler qu'on quitte la navigation de page. */}
+            {footer.links.length > 0 ? (
+              <ul className="flex flex-col border-t border-line pt-2">
+                {footer.links.map((item) => (
+                  <li key={item.href}>
+                    <a
+                      href={item.href}
+                      className={cn(
+                        "group inline-flex min-h-11 items-center gap-2 text-sm text-fg/80 hover:text-fg",
+                        LINK_TRANSITION,
+                        FOCUS_RING,
+                      )}
+                    >
+                      {item.label}
+                      <span
+                        aria-hidden="true"
+                        className="transition-transform duration-200 group-hover:translate-x-1"
+                      >
+                        →
+                      </span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </div>
 
           {/* Contact */}

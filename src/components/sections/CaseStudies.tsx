@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import type { KeyboardEvent, ReactNode } from "react";
+import type { KeyboardEvent, MouseEvent, PointerEvent, ReactNode } from "react";
 
 import { AnimatePresence, motion } from "framer-motion";
+import { MoveHorizontal } from "lucide-react";
 
 import { CaseStudyCard } from "@/components/sections/CaseStudyCard";
 import { SectionHeading } from "@/components/ui/SectionHeading";
@@ -29,6 +30,15 @@ const EASE_OBSIDIAN: [number, number, number, number] = [0.16, 1, 0.3, 1];
 // le rail déborde toujours d'au moins une carte = on peut faire défiler.
 const RAIL_ITEM_CLASS = "w-[85%] shrink-0 sm:w-[62%] lg:w-[46%]";
 
+/** Seuil (px) distinguant un simple clic d'un TIRAGE du rail (décision Lead). */
+const DRAG_THRESHOLD_PX = 6;
+
+/** État d'un tirage en cours : position de départ + scroll au départ. */
+type RailDrag = {
+  startX: number;
+  startScrollLeft: number;
+};
+
 /** Garantit une clé de `cases.filters` avant indexation (i18n strict). */
 function isFilterKey(value: string): value is FilterKey {
   return FILTERS.some((filter) => filter === value);
@@ -47,13 +57,28 @@ export function CaseStudies({
   // délégué à MotionConfig(reducedMotion="user").
   const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
 
+  /* ------------------------------- tirage à la souris du rail (souris only) */
+  const railDragRef = useRef<RailDrag | null>(null);
+  /** Pointer actuellement capturé par le rail (le snap est neutralisé). */
+  const [railDragging, setRailDragging] = useState<boolean>(false);
+  /** Dépassement du seuil 6px : le prochain `click` sera ANNULÉ. */
+  const [dragged, setDragged] = useState<boolean>(false);
+
   const visibleItems = useMemo(
     () =>
       activeFilter === "all"
         ? cases.items
-        : cases.items.filter((item) => item.category === activeFilter),
+        : cases.items.filter((item) => item.categories.includes(activeFilter)),
     [activeFilter, cases.items],
   );
+
+  /** Libellé localisé de la PREMIÈRE catégorie (micro-label de la carte). */
+  function firstCategoryLabel(categories: readonly string[]): string | undefined {
+    const first = categories[0];
+    return first !== undefined && isFilterKey(first)
+      ? cases.filters[first]
+      : undefined;
+  }
 
   // Focus des onglets pour le déplacement clavier (tabIndex roving).
   const tabRefs = useRef<Partial<Record<FilterKey, HTMLButtonElement | null>>>(
@@ -89,6 +114,53 @@ export function CaseStudies({
     tabRefs.current[nextFilter]?.focus();
   }
 
+  /* ------------------------------------------------ tirage du rail à la souris
+     Le scroll TACTILE reste natif : le drag ne s'active que pour la souris
+     (`pointerType === "mouse"`, bouton gauche). Au-delà de 6px de déplacement,
+     le `click` issu du même geste est annulé (clic ≠ tirage). */
+  function handleRailPointerDown(event: PointerEvent<HTMLDivElement>): void {
+    if (event.pointerType !== "mouse" || event.button !== 0) return;
+
+    const rail = event.currentTarget;
+    railDragRef.current = {
+      startX: event.clientX,
+      startScrollLeft: rail.scrollLeft,
+    };
+    setDragged(false);
+    setRailDragging(true);
+    rail.setPointerCapture(event.pointerId);
+  }
+
+  function handleRailPointerMove(event: PointerEvent<HTMLDivElement>): void {
+    const start = railDragRef.current;
+    if (start === null) return;
+
+    const deltaX = event.clientX - start.startX;
+    if (Math.abs(deltaX) > DRAG_THRESHOLD_PX) setDragged(true);
+    event.currentTarget.scrollLeft = start.startScrollLeft - deltaX;
+  }
+
+  function handleRailPointerEnd(event: PointerEvent<HTMLDivElement>): void {
+    const start = railDragRef.current;
+    if (start === null) return;
+
+    railDragRef.current = null;
+    setRailDragging(false);
+
+    const rail = event.currentTarget;
+    if (rail.hasPointerCapture(event.pointerId)) {
+      rail.releasePointerCapture(event.pointerId);
+    }
+  }
+
+  // Capture : si le geste était un TIRAGE, on invalide le clic qui suit.
+  // `dragged` est réinitialisé au `pointerdown` suivant.
+  function handleRailClickCapture(event: MouseEvent<HTMLDivElement>): void {
+    if (!dragged) return;
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
   return (
     // DESIGN: `id="realisations"` = ancre de la nav header. Densité NORMALE.
     <section
@@ -110,95 +182,112 @@ export function CaseStudies({
             className="md:flex-1"
           />
 
-          <div
-            role="tablist"
-            aria-label={filtersLabel}
-            onKeyDown={handleTabKeyDown}
-            className="hide-scroll inline-flex max-w-full shrink-0 gap-1 self-start overflow-x-auto rounded-full border border-line bg-surface p-1 md:self-end"
-          >
-            {FILTERS.map((filter) => {
-              const isActive = filter === activeFilter;
+          <div className="flex max-w-full shrink-0 items-center gap-3 self-start md:self-end">
+            {/* Affordance « faites glisser » : PUREMENT décorative (aucun texte
+                → zéro string i18n), visible desktop là où la souris existe. */}
+            <span
+              aria-hidden="true"
+              className="hidden shrink-0 items-center text-faint md:inline-flex"
+            >
+              <MoveHorizontal className="h-4 w-4" strokeWidth={1.5} />
+            </span>
+            <div
+              role="tablist"
+              aria-label={filtersLabel}
+              onKeyDown={handleTabKeyDown}
+              className="hide-scroll inline-flex max-w-full gap-1 overflow-x-auto rounded-full border border-line bg-surface p-1"
+            >
+              {FILTERS.map((filter) => {
+                const isActive = filter === activeFilter;
 
-              return (
-                <button
-                  key={filter}
-                  id={`filter-${filter}`}
-                  ref={(node) => {
-                    tabRefs.current[filter] = node;
-                  }}
-                  type="button"
-                  role="tab"
-                  aria-selected={isActive}
-                  aria-controls="cases-grid"
-                  tabIndex={isActive ? 0 : -1}
-                  onClick={() => setActiveFilter(filter)}
-                  className={cn(
-                    // §2.7 : cible ≥44px (`min-h-11`). État actif = fond volt
-                    // + texte `ink` (15:1) — jamais de blanc sur volt.
-                    "relative min-h-11 shrink-0 rounded-full px-[18px] py-2.5 text-[15px] font-medium transition-colors duration-150",
-                    isActive
-                      ? "font-semibold text-ink"
-                      : "text-muted hover:text-fg",
-                  )}
-                >
-                  {/* Indicateur animé (M5) : glissement 240ms, courbe unique.
-                      Le snap reduced-motion est neutralisé par MotionConfig. */}
-                  {isActive ? (
-                    <motion.span
-                      aria-hidden="true"
-                      layoutId="cases-tab-indicator"
-                      className="absolute inset-0 rounded-full bg-accent"
-                      transition={{ duration: 0.24, ease: EASE_OBSIDIAN }}
-                    />
-                  ) : null}
-                  <span className="relative z-10">{cases.filters[filter]}</span>
-                </button>
-              );
-            })}
+                return (
+                  <button
+                    key={filter}
+                    id={`filter-${filter}`}
+                    ref={(node) => {
+                      tabRefs.current[filter] = node;
+                    }}
+                    type="button"
+                    role="tab"
+                    aria-selected={isActive}
+                    aria-controls="cases-grid"
+                    tabIndex={isActive ? 0 : -1}
+                    onClick={() => setActiveFilter(filter)}
+                    className={cn(
+                      // §2.7 : cible ≥44px (`min-h-11`). État actif = fond volt
+                      // + texte `ink` (15:1) — jamais de blanc sur volt.
+                      "relative min-h-11 shrink-0 rounded-full px-[18px] py-2.5 text-[15px] font-medium transition-colors duration-150",
+                      isActive
+                        ? "font-semibold text-ink"
+                        : "text-muted hover:text-fg",
+                    )}
+                  >
+                    {/* Indicateur animé (M5) : glissement 240ms, courbe unique.
+                        Le snap reduced-motion est neutralisé par MotionConfig. */}
+                    {isActive ? (
+                      <motion.span
+                        aria-hidden="true"
+                        layoutId="cases-tab-indicator"
+                        className="absolute inset-0 rounded-full bg-accent"
+                        transition={{ duration: 0.24, ease: EASE_OBSIDIAN }}
+                      />
+                    ) : null}
+                    <span className="relative z-10">{cases.filters[filter]}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
         {/* Rail horizontal scroll-snap : `.rail` (globals.css) porte le
-            flex + `overflow-x` + `scroll-snap-type: x mandatory`. */}
+            flex + `overflow-x` + `scroll-snap-type: x mandatory`.
+            TIRAGE souris (6px de seuil) : snap neutralisé pendant le geste,
+            clic annulé au-delà du seuil, scroll tactile laissé natif. */}
         <div
           id="cases-grid"
           role="tabpanel"
           aria-labelledby={`filter-${activeFilter}`}
           tabIndex={0}
-          className="rail mt-12"
+          onPointerDown={handleRailPointerDown}
+          onPointerMove={handleRailPointerMove}
+          onPointerUp={handleRailPointerEnd}
+          onPointerCancel={handleRailPointerEnd}
+          onClickCapture={handleRailClickCapture}
+          style={railDragging ? { scrollSnapType: "none" } : undefined}
+          className={cn(
+            "rail no-select mt-12",
+            // Poignée visuelle : desktop uniquement (le tactile garde son
+            // propre affordance = scroll natif + doigt).
+            "md:cursor-grab md:active:cursor-grabbing",
+          )}
         >
           {/* DESIGN: les 4 filtres sont peuplés (content), pas d'état vide
               prévu — si un filtre venait à être vide, le mapping rend simplement
               rien et la structure reste valide (pas de message inventé). */}
           <AnimatePresence mode="popLayout">
-            {visibleItems.map((item) => {
-              const categoryLabel = isFilterKey(item.category)
-                ? cases.filters[item.category]
-                : undefined;
-
-              return (
-                // DESIGN: M7 — entrée 180ms (opacity + scale 0.98→1),
-                // sortie fade 140ms ; `popLayout` évite le reflow pendant l'exit.
-                <motion.div
-                  key={item.id}
-                  layout
-                  className={RAIL_ITEM_CLASS}
-                  initial={{ opacity: 0, scale: 0.98 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{
-                    opacity: 0,
-                    transition: { duration: 0.14, ease: EASE_OBSIDIAN },
-                  }}
-                  transition={{ duration: 0.18, ease: EASE_OBSIDIAN }}
-                >
-                  <CaseStudyCard
-                    study={item}
-                    categoryLabel={categoryLabel}
-                    className="h-full"
-                  />
-                </motion.div>
-              );
-            })}
+            {visibleItems.map((item) => (
+              // DESIGN: M7 — entrée 180ms (opacity + scale 0.98→1),
+              // sortie fade 140ms ; `popLayout` évite le reflow pendant l'exit.
+              <motion.div
+                key={item.id}
+                layout
+                className={RAIL_ITEM_CLASS}
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{
+                  opacity: 0,
+                  transition: { duration: 0.14, ease: EASE_OBSIDIAN },
+                }}
+                transition={{ duration: 0.18, ease: EASE_OBSIDIAN }}
+              >
+                <CaseStudyCard
+                  study={item}
+                  categoryLabel={firstCategoryLabel(item.categories)}
+                  className="h-full"
+                />
+              </motion.div>
+            ))}
           </AnimatePresence>
         </div>
       </div>

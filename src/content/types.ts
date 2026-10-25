@@ -21,7 +21,12 @@ export type CaseCategory = "web" | "mobile" | "ai";
 export type TechGroupId = "frontend" | "backend" | "mobile" | "cloud";
 
 /** Variante d'illustration (mockup) utilisée par une étude de cas. */
-export type MockupKind = "clinic" | "papernote" | "radio" | "tiberium";
+export type MockupKind =
+  | "clinic"
+  | "papernote"
+  | "radio"
+  | "tiberium"
+  | "delyx";
 
 /** Wordmark de la marque : ex. `{ name: "ATHERIS", suffix: "LABS" }`. */
 export interface Brand {
@@ -55,6 +60,8 @@ export interface NavContent {
   /** 4 items : Services, Réalisations, Technologies, Méthode. */
   items: NavItem[];
   ctaLabel: string;
+  /** Accès dashboard — lien SUBTIL du header, jamais dans `items`. */
+  loginLabel: string;
 }
 
 /** Statistique de preuve sociale (chiffre + libellé). */
@@ -99,16 +106,19 @@ export interface ServicesContent {
 /** Une étude de cas (réalisation). */
 export interface CaseStudy {
   id: string;
-  category: CaseCategory;
+  /** Catégories MULTIPLIES : un projet peut être web + mobile + ai. */
+  categories: CaseCategory[];
   /** `true` UNIQUEMENT pour la carte 1. */
   featured: boolean;
   mockup: MockupKind;
+  /** Visuel reel du portfolio. Absent -> repli sur `mockup`. */
+  image?: string;
+  /** Absent si aucun chiffre fiable n'est a afficher. */
+  metric?: { value: string; label: string };
   title: string;
   description: string;
   /** 2-4 tags. */
   tags: string[];
-  /** ex. `{ value: "+100h", label: "économisées/an par cabinet" }`. */
-  metric: { value: string; label: string };
 }
 
 /** Contenu de la section « Réalisations ». */
@@ -117,7 +127,7 @@ export interface CasesContent {
   title: string;
   description: string;
   filters: { all: string; web: string; mobile: string; ai: string };
-  /** Exactement 4 items. */
+  /** 5 items (4 projets portfolio + MYKS Radio). */
   items: CaseStudy[];
 }
 
@@ -258,6 +268,8 @@ export interface FooterContent {
   rights: string;
   /** ex. `"Mentions légales"`. */
   legal: string;
+  /** Liens PROPREMENT pied de page (jamais rendus par le header). */
+  links: NavItem[];
 }
 
 /** Métadonnées SEO. */
@@ -265,6 +277,94 @@ export interface SeoMeta {
   title: string;
   description: string;
   keywords: string[];
+}
+
+
+/** Un bloc de l'offre d'emploi (heading + puces). */
+export interface CareersSection {
+  id: string;
+  heading: string;
+  bullets: string[];
+}
+
+/** Chaînes du formulaire de candidature (pièce jointe CV). */
+export interface CareersFormStrings {
+  firstNameLabel: string;
+  lastNameLabel: string;
+  emailLabel: string;
+  messageLabel: string;
+  messagePlaceholder: string;
+  fileLabel: string;
+  fileHint: string;
+  submitLabel: string;
+  note: string;
+  errors: {
+    firstNameRequired: string;
+    lastNameRequired: string;
+    emailRequired: string;
+    emailInvalid: string;
+    fileRequired: string;
+    fileTooLarge: string;
+    fileBadType: string;
+    generic: string;
+  };
+  successTitle: string;
+  successMessage: string;
+  successAction: string;
+}
+
+/** Contenu de la page /recrutement. */
+export interface CareersContent {
+  eyebrow: string;
+  title: string;
+  description: string;
+  role: string;
+  /** 3 meta : contrat, rémunération, remote. */
+  meta: string[];
+  intro: string;
+  sections: CareersSection[];
+  applyTitle: string;
+  applyDescription: string;
+  form: CareersFormStrings;
+}
+
+/** Chaînes du formulaire d'entretien (créneaux). */
+export interface InterviewFormStrings {
+  firstNameLabel: string;
+  lastNameLabel: string;
+  emailLabel: string;
+  slotLabel: string;
+  submitLabel: string;
+  note: string;
+  errors: {
+    firstNameRequired: string;
+    lastNameRequired: string;
+    emailRequired: string;
+    emailInvalid: string;
+    slotRequired: string;
+    slotTaken: string;
+    rateLimited: string;
+    generic: string;
+  };
+  successTitle: string;
+  successMessage: string;
+  successAction: string;
+}
+
+/** Contenu de la page /entretien/{token}. */
+export interface InterviewContent {
+  badge: string;
+  title: string;
+  description: string;
+  hoursNote: string;
+  timezoneHint: string;
+  stepProfile: string;
+  stepSlot: string;
+  notFoundTitle: string;
+  notFoundMessage: string;
+  /** Bloc <noscript> : l'agenda se calcule côté client (fuseau du navigateur). */
+  javascriptRequired: string;
+  form: InterviewFormStrings;
 }
 
 /** Racine du contenu de la landing page (FR ou EN). */
@@ -279,6 +379,8 @@ export interface SiteContent {
   testimonials: TestimonialsContent;
   faq: FaqContent;
   contact: ContactContent;
+  careers: CareersContent;
+  interview: InterviewContent;
   footer: FooterContent;
   seo: SeoMeta;
 }

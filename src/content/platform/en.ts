@@ -41,6 +41,7 @@ export const en = {
       { label: "Pipeline", href: "/espace/prospects" },
       { label: "Commissions", href: "/espace/commissions" },
       { label: "Team", href: "/espace/equipe" },
+      { label: "Interviews", href: "/espace/entretien" },
     ],
     manager: [
       { label: "Dashboard", href: "/espace/tableau-de-bord" },
@@ -387,6 +388,45 @@ export const en = {
       label: "Tier",
       current: "Current tier",
       nextTier: "Next tier: {tier} at {rate}",
+    },
+  },
+
+  interviews: {
+    title: "Interviews",
+    intro:
+      "Generate a unique link, send it to the candidate: they pick a slot and the booking shows up here.",
+    createTitle: "Create an interview link",
+    createHint:
+      "Each link is single-use: once it has been booked, it can no longer be shared.",
+    create: "Create an interview link",
+    creating: "Creating…",
+    linkTitle: "Link ready to send",
+    linkLabel: "Public interview URL",
+    copy: "Copy",
+    copied: "Copied",
+    copyFallback: "Copy failed: the field is selected, use Ctrl+C.",
+    openLink: "Open the link",
+    listTitle: "Interviews",
+    empty: "No interviews yet.",
+    emptyHint: "Create a link to invite a candidate to pick a slot.",
+    booked: "Booked",
+    notBooked: "Not booked yet",
+    timezoneNote: "Times shown in Algiers (UTC+1)",
+    columns: {
+      created: "Created",
+      slot: "Slot",
+      candidate: "Candidate",
+      link: "Link",
+    },
+    status: {
+      pending: "Pending",
+      cancelled: "Cancelled",
+      done: "Completed",
+    },
+    errors: {
+      forbidden: "Access denied: this action is reserved for the CEO.",
+      invalid: "Invalid request: reload the page and try again.",
+      failed: "Link creation failed. Please try again in a few moments.",
     },
   },
 

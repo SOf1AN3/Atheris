@@ -45,6 +45,7 @@ export const fr: PlatformContent = {
       { label: "Pipeline", href: "/espace/prospects" },
       { label: "Commissions", href: "/espace/commissions" },
       { label: "Équipe", href: "/espace/equipe" },
+      { label: "Entretiens", href: "/espace/entretien" },
     ],
     manager: [
       { label: "Tableau de bord", href: "/espace/tableau-de-bord" },
@@ -393,6 +394,45 @@ export const fr: PlatformContent = {
       label: "Palier",
       current: "Palier actuel",
       nextTier: "Palier suivant : {tier} à {rate}",
+    },
+  },
+
+  interviews: {
+    title: "Entretiens",
+    intro:
+      "Générez un lien unique, envoyez-le au candidat : il choisit son créneau et la réservation apparaît ici.",
+    createTitle: "Créer un lien d’entretien",
+    createHint:
+      "Chaque lien est à usage unique : une fois réservé, il ne peut plus être partagé.",
+    create: "Créer un lien d’entretien",
+    creating: "Création en cours…",
+    linkTitle: "Lien prêt à envoyer",
+    linkLabel: "URL publique de l’entretien",
+    copy: "Copier",
+    copied: "Copié",
+    copyFallback: "Copie impossible : le champ est sélectionné, utilisez Ctrl+C.",
+    openLink: "Ouvrir le lien",
+    listTitle: "Entretiens",
+    empty: "Aucun entretien pour le moment.",
+    emptyHint: "Créez un lien pour inviter un candidat à choisir son créneau.",
+    booked: "Réservé",
+    notBooked: "Pas encore réservé",
+    timezoneNote: "Horaires affichés à Alger (UTC+1)",
+    columns: {
+      created: "Créé le",
+      slot: "Créneau",
+      candidate: "Candidat",
+      link: "Lien",
+    },
+    status: {
+      pending: "En attente",
+      cancelled: "Annulé",
+      done: "Terminé",
+    },
+    errors: {
+      forbidden: "Accès refusé : cette action est réservée au CEO.",
+      invalid: "Demande invalide : rechargez la page puis réessayez.",
+      failed: "La création du lien a échoué. Réessayez dans quelques instants.",
     },
   },
 

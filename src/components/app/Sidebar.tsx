@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  CalendarClock,
   Circle,
   Coins,
   FolderKanban,
@@ -55,6 +56,7 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   "/espace/commissions": Coins,
   "/espace/equipe": UsersRound,
   "/espace/projet": FolderKanban,
+  "/espace/entretien": CalendarClock,
 };
 
 /** Icône rendue quand le `href` n'est pas dans `NAV_ICONS`. */

@@ -78,6 +78,11 @@ export const ROUTE_ACCESS: ReadonlyArray<{ prefix: string; roles: readonly Role[
   { prefix: "/commissions", roles: ["ceo", "manager", "vendeur"] },
   { prefix: "/equipe", roles: ["ceo", "manager"] },
   { prefix: "/projet", roles: ["client"] },
+  // Entretiens LDG (PLAN Q3) : réservé CEO — miroir des contrôles de
+  // `createInterviewLink`/`listInterviews` et de la garde de la page. Sans
+  // cette entrée, le préfixe "/" (ALL_ROLES) gagne et le middleware laisse
+  // passer tous les rôles actifs : la sécurité reposerait sur un seul filet.
+  { prefix: "/entretien", roles: ["ceo"] },
 ];
 
 /** Retire la locale éventuelle et isole le suffixe sous `/espace`. */

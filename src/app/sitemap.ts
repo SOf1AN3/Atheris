@@ -16,6 +16,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
   };
 
+  /** Alternates de la page recrutement (même pattern, chemin imbriqué). */
+  const recrutementAlternates = {
+    languages: {
+      fr: `${SITE_URL}/fr/recrutement`,
+      en: `${SITE_URL}/en/recrutement`,
+    },
+  };
+
   return [
     {
       url: `${SITE_URL}/fr`,
@@ -30,6 +38,20 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly",
       priority: 0.9,
       alternates,
+    },
+    {
+      url: `${SITE_URL}/fr/recrutement`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.7,
+      alternates: recrutementAlternates,
+    },
+    {
+      url: `${SITE_URL}/en/recrutement`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.6,
+      alternates: recrutementAlternates,
     },
   ];
 }

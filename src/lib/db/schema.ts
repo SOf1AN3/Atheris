@@ -66,6 +66,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import type { PgColumn } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 // ---------------------------------------------------------------------------
 // Enums — types SQL exportés tels quels par la migration.
@@ -159,6 +160,20 @@ export const documentKindEnum = pgEnum("document_kind", [
 export const documentOwnerEnum = pgEnum("document_owner", [
   "prospect",
   "project",
+]);
+
+/**
+ * État d'un lien d'entretien (PLAN §1.1) : `pending` = créneau réservé,
+ * `cancelled` = annulé (le créneau redevient libre, voir l'index partiel de
+ * `interviews`), `done` = entretien réalisé.
+ *
+ * Nom d'export `interviewStatus` (et non `*Enum`) : c'est le nom figé par le
+ * contrat inter-pistes du PLAN §Contrats (`import { interviews, interviewStatus }`).
+ */
+export const interviewStatus = pgEnum("interview_status", [
+  "pending",
+  "cancelled",
+  "done",
 ]);
 
 // ---------------------------------------------------------------------------
@@ -547,5 +562,71 @@ export const loginAttempts = pgTable(
   (t) => [
     // Lecture « count des échecs récents pour (email, ip) » : index composite.
     index("login_attempts_email_created_at_idx").on(t.email, t.createdAt),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// 14. interviews — lien d'entretien LDG (PLAN §1.1). Table autopportante :
+//     aucune FK vers `users`/`prospects` (le lien est PUBLIC et ouvert par un
+//     candidat anonyme ; le rattachement éventuel se fait côté applicatif).
+// ---------------------------------------------------------------------------
+
+/**
+ * Entretien planifié via un lien à usage unique (token 32 bytes hex).
+ *
+ * - **Stockage UTC** : `startsAt`/`notifiedAt`/`createdAt` sont tous
+ *   `timestamptz` (helper `tstz`, convention n° 2 de l'en-tête) — l'instant
+ *   absolu du créneau est stocké en UTC, quel que soit le fuseau du candidat ;
+ *   le rendu « heure locale du candidat » (`localDate`/`localHour` en text) et
+ *   le fuseau IANA (`timezone`) sont conservés tels que choisis côté client et
+ *   **revalidés serveur** (anti-falsification + DST, PLAN §Sécurité 3) avant
+ *   l'INSERT. `localDate`/`localHour` sont donc des valeurs de présentation,
+ *   pas une source de vérité temporelle.
+ * - **Index unique PARTIEL** `interviews_pending_starts_at_uq` : il ne
+ *   contraint que les lignes **réellement réservées**, c'est-à-dire
+ *   `status = 'pending' AND email_norm <> ''`. Cette double condition est
+ *   indispensable :
+ *   1. `email_norm <> ''` — une ligne est créée **avant** la réservation
+ *      (le lien est pré-généré : `emailNorm = ""` marque « pas encore
+ *      réservé », `startsAt` y porte une sentinelle = instant de création).
+ *      Sans cette clause, deux liens créés dans la même milliseconde se
+ *      heurteraient déjà à l'index, et la sentinelle d'une ligne libre
+ *      pourrait entrer en collision avec un créneau réservé ailleurs.
+ *   2. `status = 'pending'` — une annulation (`cancelled`) ou un entretien
+ *      `done` **libère** le créneau ; un unique non partiel bloquerait
+ *      définitivement son réemploi.
+ *   Le conflit d'index n'a donc lieu QUE sur une double réservation du même
+ *   créneau : il est intercepté par le backend et renvoyé en code `taken`
+ *   (PLAN §2.3).
+ */
+export const interviews = pgTable(
+  "interviews",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    // Jeton d'accès public (32 bytes hex) : UNIQUE = 404 générique sans
+    // énumération possible (PLAN §Sécurité 1).
+    token: text("token").notNull().unique(),
+    firstName: text("first_name").notNull(),
+    lastName: text("last_name").notNull(),
+    email: text("email").notNull(),
+    // Forme normalisée (minuscules) — convention `*_norm` du fichier.
+    emailNorm: text("email_norm").notNull(),
+    // Instant absolu du créneau, en UTC (1 h, 9 h → 20 h dans le tz candidat).
+    startsAt: tstz("starts_at").notNull(),
+    // Fuseau IANA du candidat au moment de la réservation.
+    timezone: text("timezone").notNull(),
+    localDate: text("local_date").notNull(), // AAAA-MM-JJ (tz candidat)
+    localHour: text("local_hour").notNull(), // HH:mm (tz candidat)
+    status: interviewStatus("status").notNull().default("pending"),
+    // NULL = e-mail Récap non envoyé (échec Resend ≠ échec réservation, §2.3).
+    notifiedAt: tstz("notified_at"),
+    createdAt: tstz("created_at").defaultNow().notNull(),
+  },
+  (t) => [
+    // PARTIEL : voir le JSDoc ci-dessus — réservations en cours UNIQUEMENT.
+    uniqueIndex("interviews_pending_starts_at_uq")
+      .on(t.startsAt)
+      .where(sql`status = 'pending' AND email_norm <> ''`),
+    index("interviews_created_at_idx").on(t.createdAt),
   ],
 );

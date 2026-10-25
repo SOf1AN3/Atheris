@@ -261,15 +261,26 @@ body {
   display: none;
 }
 
-/* Numéraux géants en contour (Process — §4.7 v2). */
+/* Texte non sélectionnable — sensation d'image (décision Q6) : le remplacement
+   `-webkit-user-select` couvre les anciens WebKit, `user-select` le reste. */
+.no-select {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Numéraux géants — contour + REMPLISSAGE blanc 20 % (Q6) : lisible sur
+   obsidienne, mais impossible à sélectionner (on croit à une image). */
 .num {
   font-weight: 700;
   letter-spacing: -0.05em;
   line-height: 0.8;
-  color: transparent;
+  color: rgba(255, 255, 255, 0.2);
+  user-select: none;
+  -webkit-user-select: none;
   -webkit-text-stroke: 1.4px rgba(255, 255, 255, 0.2);
   transition: -webkit-text-stroke-color 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
+/* Survol : le contour bascule en VOLT pour rester net sur le remplissage. */
 .step:hover .num {
   -webkit-text-stroke-color: rgba(204, 255, 74, 0.75);
 }
@@ -288,13 +299,16 @@ body {
   box-shadow: 0 0 14px rgba(204, 255, 74, 0.45);
 }
 
-/* Wordmark géant en contour (footer). */
+/* Wordmark géant en contour (footer) — même traitement Q6 : remplissage
+   blanc 20 % + non sélectionnable (feeling « image de marque »). */
 .wordmark {
   font-weight: 700;
   letter-spacing: -0.04em;
   line-height: 0.85;
   white-space: nowrap;
-  color: transparent;
+  color: rgba(255, 255, 255, 0.2);
+  user-select: none;
+  -webkit-user-select: none;
   -webkit-text-stroke: 1.2px rgba(255, 255, 255, 0.16);
 }
 

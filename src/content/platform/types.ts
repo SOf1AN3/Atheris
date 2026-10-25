@@ -28,6 +28,7 @@
 import type {
   commissionStatusEnum,
   documentKindEnum,
+  interviewStatus,
   milestoneKeyEnum,
   milestoneStatusEnum,
   prospectStatusEnum,
@@ -54,6 +55,9 @@ export type QuoteStatus = (typeof quoteStatusEnum.enumValues)[number];
 
 /** État d'une commission, dérivé de l'enum `commission_status` (T02). */
 export type CommissionStatus = (typeof commissionStatusEnum.enumValues)[number];
+
+/** Statut d'un entretien, dérivé de l'enum `interview_status` (PLAN §1.1). */
+export type InterviewStatus = (typeof interviewStatus.enumValues)[number];
 
 /** Les 5 jalons imposés, dérivés de l'enum `milestone_key` (T02). */
 export type MilestoneKey = (typeof milestoneKeyEnum.enumValues)[number];
@@ -550,6 +554,77 @@ export interface CommissionsContent {
 }
 
 // ---------------------------------------------------------------------------
+// Entretiens (liens de réservation — espace CEO, PLAN Q3).
+// ---------------------------------------------------------------------------
+
+/** Libellés des 3 états de la table `interviews` (enum `interview_status`). */
+export type InterviewStatusLabels = Record<InterviewStatus, string>;
+
+/**
+ * Codes d'échec de `createInterviewLink`, **traduits localement** : le serveur
+ * ne renvoie jamais de message, uniquement un code (contrat §2.3).
+ */
+export interface InterviewLinkErrors {
+  /** Session absente, compte non `active` ou rôle non `ceo`. */
+  forbidden: string;
+  /** Locale refusée par la validation serveur. */
+  invalid: string;
+  /** Repli : échec d'infra (collision d'index, base indisponible). */
+  failed: string;
+}
+
+/** Contenu de la page « Entretiens » (`/espace/entretien`, CEO seul). */
+export interface InterviewsContent {
+  /** Titre de la page (`<h1>` + métadonnées). */
+  title: string;
+  /** Description courte sous le titre. */
+  intro: string;
+  /** Titre du bloc de création (carte haute). */
+  createTitle: string;
+  /** Aide permanente sous le titre de création. */
+  createHint: string;
+  /** Libellé du bouton de création (unique aplat volt de la page). */
+  create: string;
+  /** Libellé du bouton pendant l'appel serveur. */
+  creating: string;
+  /** Titre du bloc « lien fraîchement créé ». */
+  linkTitle: string;
+  /** Label visible + `aria-label` du champ URL. */
+  linkLabel: string;
+  /** Bouton de copie (résultat de création + chaque ligne réservable). */
+  copy: string;
+  /** Retour visuel et `aria-live` après une copie réussie (1,5 s). */
+  copied: string;
+  /** Retour `aria-live` si l'API Clipboard échoue (champ sélectionné). */
+  copyFallback: string;
+  /** Lien direct vers la page publique `/{locale}/entretien/{token}`. */
+  openLink: string;
+  /** Titre de la liste. */
+  listTitle: string;
+  /** État vide : phrase principale. */
+  empty: string;
+  /** État vide : phrase secondaire sous l'icône. */
+  emptyHint: string;
+  /** Badge « Réservé » d'une ligne déjà pourvue d'un créneau. */
+  booked: string;
+  /** Texte de remplacement d'une ligne pas encore réservée. */
+  notBooked: string;
+  /** Note sous le titre de la liste : fuseau d'affichage (`Africa/Algiers`). */
+  timezoneNote: string;
+  /** Micro-labels des blocs d'information de chaque ligne. */
+  columns: {
+    created: string;
+    slot: string;
+    candidate: string;
+    link: string;
+  };
+  /** Statuts de la table `interviews`. */
+  status: InterviewStatusLabels;
+  /** Codes de `createInterviewLink` traduits côté client. */
+  errors: InterviewLinkErrors;
+}
+
+// ---------------------------------------------------------------------------
 // Portail client.
 // ---------------------------------------------------------------------------
 
@@ -716,6 +791,7 @@ export interface PlatformContent {
   brief: BriefContent;
   dashboard: DashboardContent;
   commissions: CommissionsContent;
+  interviews: InterviewsContent;
   client: ClientContent;
   applications: ApplicationsContent;
   activities: ActivitiesContent;

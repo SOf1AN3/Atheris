@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Atheris Labs">
+  <!-- Monogramme « A » — identité Obsidian Instrument : corps obsidienne,
+       arête lumineuse en haut, signal volt sur la barre horizontale. -->
+  <defs>
+    <linearGradient id="a-edge" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity=".22"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="a-body" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#161A22"/>
+      <stop offset="1" stop-color="#0A0C11"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="64" height="64" rx="14" fill="url(#a-body)"/>
+  <rect x="0.5" y="0.5" width="63" height="63" rx="13.5" fill="none" stroke="rgba(255,255,255,.12)"/>
+  <path d="M0.5 14.5C0.5 6.8 6.8 0.5 14.5 0.5h35C57.2 0.5 63.5 6.8 63.5 14.5" fill="none" stroke="url(#a-edge)" stroke-width="1"/>
+
+  <!-- Le A : deux diagonales blanches chaudes + barre volt -->
+  <path d="M16 48 32 14l16 34" fill="none" stroke="#F4F2ED" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M23.5 35.5h17" fill="none" stroke="#CCFF4A" stroke-width="5.5" stroke-linecap="round"/>
+</svg>

@@ -1,9 +1,9 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Menu, X } from "lucide-react";
+import { LogIn, Menu, X } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useParams, usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
@@ -44,6 +44,25 @@ const NAV_LINK_BASE =
   "after:bg-accent after:scale-x-0 after:transition-transform after:duration-200 " +
   AFTER_EASE_CURVE +
   " after:content-[''] hover:after:scale-x-100";
+
+/**
+ * URL d'accès au dashboard : `/{locale}/connexion`.
+ * Le locale est lu dans les paramètres d'URL (`[locale]`), avec repli sur le
+ * premier segment du pathname — AUCUN code langue en dur (i18n stricte).
+ */
+function buildLoginHref(
+  pathname: string,
+  localeParam: string | string[] | undefined,
+): string {
+  const fromParams = typeof localeParam === "string" ? localeParam : "";
+  const fromPath = pathname.split("/")[1] ?? "";
+  const locale = fromParams !== "" ? fromParams : fromPath;
+  // Segmente uniquement une locale plausible (`fr`, `en`, `fr-DZ`) : on ne
+  // préfixe jamais une route déjà pleine (ex. `/connexion` sans locale).
+  return /^[a-z]{2}(-[A-Za-z]{2,4})?$/.test(locale)
+    ? `/${locale}/connexion`
+    : "/connexion";
+}
 
 /** Monogramme « A » constructiviste (DESIGN §3.7) — décoratif. */
 function Monogram({ className }: { className?: string }): ReactNode {
@@ -99,6 +118,8 @@ function BrandLink({
 export function Header({ nav, a11y, className }: HeaderProps): ReactNode {
   const reducedMotion = useReducedMotion();
   const pathname = usePathname();
+  const params = useParams();
+  const loginHref = buildLoginHref(pathname, params["locale"]);
   const [scrolled, setScrolled] = useState<boolean>(false);
   const [menuOpen, setMenuOpen] = useState<boolean>(false);
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
@@ -287,9 +308,32 @@ export function Header({ nav, a11y, className }: HeaderProps): ReactNode {
             })}
           </nav>
 
-          {/* Droite — locale + CTA */}
-          <div className="hidden items-center gap-4 lg:flex">
+          {/* Droite — accès dashboard SUBTIL + locale + CTA */}
+          <div className="hidden items-center gap-3 lg:flex">
             <LocaleSwitcher label={a11y.switchLocale} />
+            {/* Lien fantôme `.micro` : `text-faint` → `text-fg` au survol,
+                cible ≥ 44px, libellé 100 % i18n (`nav.loginLabel`).
+                Le libellé est masqué entre 1024 et 1279px : à ce palier,
+                nav + locale + CTA consomment déjà toute la largeur (le libellé
+                reste porteur du nom accessible via `aria-label`). */}
+            <Link
+              href={loginHref}
+              aria-label={nav.loginLabel}
+              className={cn(
+                "inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 px-1 micro text-faint",
+                "transition-colors duration-150 hover:text-fg",
+                EASE_CURVE,
+                FOCUS_RING,
+              )}
+            >
+              <LogIn
+                aria-hidden="true"
+                focusable="false"
+                className="h-4 w-4 shrink-0"
+                strokeWidth={1.5}
+              />
+              <span className="hidden xl:inline">{nav.loginLabel}</span>
+            </Link>
             <Button variant="primary" size="sm" href="#contact">
               {nav.ctaLabel}
             </Button>
@@ -387,9 +431,28 @@ export function Header({ nav, a11y, className }: HeaderProps): ReactNode {
               </nav>
             </div>
 
-            {/* Pied du panneau : locale + CTA */}
+            {/* Pied du panneau : locale + accès dashboard subtil + CTA */}
             <div className="flex shrink-0 flex-col gap-4 border-t border-line px-[clamp(1.25rem,5vw,2.5rem)] py-6">
               <LocaleSwitcher label={a11y.switchLocale} className="self-start" />
+              {/* Même lien fantôme qu'en desktop : cible ≥ 44px, fantôme. */}
+              <Link
+                href={loginHref}
+                onClick={() => closeMenu(false)}
+                className={cn(
+                  "inline-flex min-h-11 items-center gap-1.5 micro text-faint",
+                  "transition-colors duration-150 hover:text-fg",
+                  EASE_CURVE,
+                  FOCUS_RING,
+                )}
+              >
+                <LogIn
+                  aria-hidden="true"
+                  focusable="false"
+                  className="h-4 w-4 shrink-0"
+                  strokeWidth={1.5}
+                />
+                {nav.loginLabel}
+              </Link>
               <Button
                 variant="primary"
                 size="md"
