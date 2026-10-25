@@ -80,6 +80,8 @@ export const en = {
         rate_limited: "Too many sign-in attempts. Please try again in a few minutes.",
         pending: "Your account is awaiting admin approval.",
         rejected: "Your application was rejected. Contact an administrator for details.",
+        config:
+          "The sign-in service is temporarily unavailable. Please try again in a few moments.",
         generic: "Something went wrong. Please try again.",
       },
     },

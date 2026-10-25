@@ -85,6 +85,8 @@ export const fr: PlatformContent = {
         pending: "Votre compte est en attente de validation par un administrateur.",
         rejected:
           "Votre candidature a été refusée. Contactez un administrateur pour plus d’informations.",
+        config:
+          "Le service de connexion est momentanément indisponible. Réessayez dans quelques instants.",
         generic: "Une erreur est survenue. Veuillez réessayer.",
       },
     },

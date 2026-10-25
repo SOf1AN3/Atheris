@@ -118,8 +118,19 @@ export function LoginForm({ locale, labels, messages }: LoginFormProps) {
   const onSubmit = handleSubmit(async (values) => {
     setServerError(null);
     setIsSubmitting(true);
+    // GARDE-FOU PROD : si la Server Action ne répond jamais (500 d'infra,
+    // réseau coupé, timeout), on ne reste pas bloqué sur « submitting » à vie.
+    // 20 s largement au-delà d'un login normal (~1-2 s).
+    let settled = false;
+    const guard = setTimeout(() => {
+      if (!settled) {
+        setServerError(messages.errors.generic);
+        setIsSubmitting(false);
+      }
+    }, 20000);
     try {
       const result = await login(values);
+      settled = true;
       if (result.ok) {
         const target = resolvePostLoginPath(
           searchParams.get("callbackUrl"),
@@ -127,13 +138,17 @@ export function LoginForm({ locale, labels, messages }: LoginFormProps) {
         );
         router.push(target);
         router.refresh();
+        clearTimeout(guard);
         return; // reste en état « submitting » jusqu'à la navigation
       }
+      clearTimeout(guard);
       setServerError(messages.errors[result.code]);
       setIsSubmitting(false);
     } catch {
       // Server Action rethrow d'une erreur d'infrastructure (DB, réseau…) :
       // aucun détail interne n'est fuité, repli sur le message générique.
+      settled = true;
+      clearTimeout(guard);
       setServerError(messages.errors.generic);
       setIsSubmitting(false);
     }

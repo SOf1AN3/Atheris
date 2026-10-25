@@ -70,7 +70,13 @@ export type DocumentKind = (typeof documentKindEnum.enumValues)[number];
  * pour garder la couche de contenu indépendante des Server Actions ; les deux
  * doivent rester alignés (invalid | rate_limited | pending | rejected).
  */
-export type LoginErrorCode = "invalid" | "rate_limited" | "pending" | "rejected";
+export type LoginErrorCode =
+  | "invalid"
+  | "rate_limited"
+  | "pending"
+  | "rejected"
+  /** Erreur de configuration du service auth côté serveur (pas une faute client). */
+  | "config";
 
 /** Les 5 blocs de la fiche projet (structure.md §5.1, colonne `prospect_briefs`). */
 export type BriefBlockKey = "context" | "need" | "constraints" | "tech" | "followUp";
@@ -147,6 +153,9 @@ export interface LoginErrorsContent {
   rate_limited: string;
   pending: string;
   rejected: string;
+  /** Service auth mal configuré côté serveur (ex. secret absent) — n'accuse
+   *  jamais l'utilisateur, la réessayer n'aidera pas mais reste honnête. */
+  config: string;
   /** Repli pour tout code inattendu. */
   generic: string;
 }

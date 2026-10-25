@@ -31,7 +31,14 @@ import { z } from "zod";
 import { signIn, signOut } from "@/auth";
 
 /** Codes d'échec de connexion, exposés au client (jamais de message). */
-export type LoginFailureCode = "invalid" | "rate_limited" | "pending" | "rejected";
+export type LoginFailureCode =
+  | "invalid"
+  | "rate_limited"
+  | "pending"
+  | "rejected"
+  /** Erreur de configuration du service auth côté serveur (500), pas le
+   *  client : le message d'UI diffère pour ne pas accuser l'utilisateur. */
+  | "config";
 
 /** Contrat de `login` : union discriminé par `ok`. */
 export type LoginResult =
@@ -96,6 +103,13 @@ function mapSignInResult(result: unknown): LoginResult {
 
   if (error === null) return { ok: true };
 
+  // Erreur de configuration Auth.js (AUTH_SECRET/AUTH_URL manquants) : code
+  // explicitement distingué côté serveur, affiché sans accuser l'utilisateur.
+  if (error === "Configuration") {
+    console.error("[auth] Erreur de configuration Auth.js (vérifier AUTH_SECRET)");
+    return { ok: false, code: "config" };
+  }
+
   switch (code) {
     case "rate_limited":
       return { ok: false, code: "rate_limited" };
@@ -147,9 +161,16 @@ export async function login(input: LoginInput): Promise<LoginResult> {
   } catch (error) {
     if (error instanceof AuthError) {
       // signIn n'est censé renvoyer l'erreur que via l'URL (redirect:false) ;
-      // filet de sécurité si le comportement du runtime change.
+      // filet de sécurité si le comportement du runtime change. Les types
+      // « configuration » (secret absent, hôte non approuvé, endpoints) ne
+      // sont PAS une faute client : on les distingue pour un message honnête.
       console.error("[auth] AuthError pendant la connexion", error.type);
-      return { ok: false, code: "invalid" };
+      const isConfigType =
+        error.type === "MissingSecret" ||
+        error.type === "UntrustedHost" ||
+        error.type === "InvalidEndpoints" ||
+        error.type === "MissingAuthorize";
+      return { ok: false, code: isConfigType ? "config" : "invalid" };
     }
     // Erreur d'infrastructure (DB, réseau…) : journalisée puis propagée → 500.
     console.error("[auth] Erreur inattendue pendant la connexion", error);
