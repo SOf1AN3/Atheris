@@ -1,7 +1,7 @@
 "use server";
 
 /**
- * Atheris — Server Actions **entretien LDG** (PLAN §2.3 · §Contrats).
+ * Atheris — Server Actions **entretien Sales Partner** (PLAN §2.3 · §Contrats).
  *
  * CONTRAT PUBLIC (codes BRUTS uniquement — le client traduit, jamais de
  * message serveur, voir `SiteContent.interview.errors.*`) :
@@ -32,8 +32,10 @@
  *
  * SÉQUENCE `submitInterview` (PLAN §2.3) : rate-limit 1/60 s/IP (motif
  * `src/actions/contact.ts`) → Zod → token existant + `pending` +
- * non réservé → `isValidSlot()` (fenêtre + DST + anti-falsification) →
- * écriture (violation d'index unique partielle → `taken`) → `sendMail()`.
+ * non réservé → `isValidSlot()` sur la fenêtre **J+1 → J+3 dérivée du
+ * `createdAt` de la ligne en base** (Lot 2 : fenêtre figée à la génération,
+ * plus rien ne vient du client) → écriture (violation d'index unique
+ * partielle → `taken`) → `sendMail()`.
  *
  * RÈGLE ABSOLUE (PLAN §Sécurité 4) : **l'échec d'e-mail ne fait jamais
  * échouer la réservation** — écriture d'abord, échec mail → `notifiedAt`
@@ -61,7 +63,7 @@ import { getDb } from "@/lib/db";
 import { interviewStatus, interviews } from "@/lib/db/schema";
 import { sendMail } from "@/lib/mail";
 import { normalizeEmail } from "@/lib/prospect-dedup";
-import { isValidSlot, toRecruiterTime } from "@/lib/slots";
+import { getSlotsForWindowDates, isValidSlot, toRecruiterTime } from "@/lib/slots";
 import type { Role } from "@/lib/permissions";
 
 // ---------------------------------------------------------------------------
@@ -283,7 +285,8 @@ function hourFr(localHour: string): string {
 /**
  * Récapitulatif interne **en français** — heure du candidat ET équivalent
  * `Africa/Algiers` (via `toRecruiterTime`), aucune donnée secrète : le
- * jeton du lien n'y figure jamais.
+ * jeton du lien n'y figure jamais. Mentionne aussi la consigne métier
+ * « présent 5 min avant · ~30 min » (PLAN §5 · clé `interview.meetNote`).
  */
 function buildRecapText(args: {
   firstName: string;
@@ -305,6 +308,7 @@ function buildRecapText(args: {
     `Créneau : ${toRecruiterTime(instant, timezone)}`,
     `Date et heure choisies : ${formatDateFr(localDate)} à ${hourFr(localHour)} (fuseau ${timezone})`,
     "Statut : en attente de réalisation",
+    "Rappel entretien : présent 5 min avant · ~30 min (Google Meet)",
     "",
     "Récapitulatif interne — aucun jeton ni donnée confidentielle ne figure dans ce message.",
   ].join("\n");
@@ -455,7 +459,14 @@ async function processSubmission(input: SubmitInterviewInput): Promise<SubmitInt
     // 3. Token existant, `pending` et **pas déjà réservé** (usage unique) :
     //    lien inconnu / annulé / déjà consommé → même code, aucun détail.
     const rows = await db
-      .select({ id: interviews.id, status: interviews.status, emailNorm: interviews.emailNorm })
+      .select({
+        id: interviews.id,
+        status: interviews.status,
+        emailNorm: interviews.emailNorm,
+        // Création du lien → sert à dériver la fenêtre J+1 → J+3 (source
+        // serveur : le client ne choisit ni le jour, ni l'étendue).
+        createdAt: interviews.createdAt,
+      })
       .from(interviews)
       .where(eq(interviews.token, token))
       .limit(1);
@@ -464,9 +475,13 @@ async function processSubmission(input: SubmitInterviewInput): Promise<SubmitInt
       return { ok: false, code: "not_found" };
     }
 
-    // 4. Revalidation SERVEUR du créneau : fenêtre 3 jours × HOURS dans le
-    //    fuseau reçu, instant exact, trou DST rejeté (PLAN §Sécurité 3).
-    if (!isValidSlot({ timezone, localDate, localHour, instant })) {
+    // 4. Revalidation SERVEUR du créneau (Lot 2) : la fenêtre **figée**
+    //    J+1 → J+3 est dérivée du `createdAt` de CETTE ligne (serveur,
+    //    jamais le client) — grille ancrée en heure algérienne, rendue dans
+    //    le fuseau reçu, instant exact, trou DST rejeté (PLAN §Sécurité 3).
+    //    `createdAt` illisible → `[]` → rejet `invalid` (défaut sûr).
+    const dates = getSlotsForWindowDates(row.createdAt);
+    if (!isValidSlot({ timezone, localDate, localHour, instant }, dates)) {
       return { ok: false, code: "invalid" };
     }
 

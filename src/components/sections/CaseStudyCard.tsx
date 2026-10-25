@@ -12,6 +12,8 @@ import { cn } from "@/lib/utils";
 
 type CaseStudyCardProps = {
   study: CaseStudy;
+  /** Libellé i18n du bouton de visite — `cases.visitLabel` (dict FR/EN, LEAD). */
+  visitLabel: string;
   /** Libellé localisé de la 1re catégorie (`cases.filters[categories[0]]`). */
   categoryLabel?: string;
   /**
@@ -49,6 +51,7 @@ function toImageSrc(path: string): string {
  */
 export function CaseStudyCard({
   study,
+  visitLabel,
   categoryLabel,
   className,
 }: CaseStudyCardProps): ReactNode {
@@ -144,6 +147,44 @@ export function CaseStudyCard({
             </div>
           ) : null}
         </div>
+
+        {/* PLAN §4.1 — bouton « Visiter le site » : uniquement si `study.url`
+            existe (MYKS : aucun bouton ET aucun espace réservé → rendu
+            conditionnel total). Le bloc est TOUJOURS présent quand l'URL existe
+            (masqué en `opacity-0 translate-y-2`) : la place est réservée, le
+            survol ne fait donc JAMAIS sauter la métrique au-dessus.
+            Révélation `group-hover` ET `group-focus-within` (le lien reste
+            atteignable au clavier même sans survol) ; la transition est
+            neutralisée sous `prefers-reduced-motion` par la règle globale de
+            `globals.css` (aucun JS). */}
+        {study.url !== undefined ? (
+          <div className="mt-5 min-h-11">
+            <a
+              href={study.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`${visitLabel} — ${study.title}`}
+              // Le rail est tirable : le lien ne doit jamais déclencher la
+              // DnD native du navigateur (même garde que l'<Image>).
+              draggable={false}
+              className={cn(
+                "inline-flex h-11 items-center gap-2 rounded-full border border-line-2 px-4",
+                "text-[14px] font-semibold text-fg transition-all duration-200",
+                "ease-[cubic-bezier(0.16,1,0.3,1)] cursor-pointer",
+                "hover:border-line-3 hover:bg-white/[0.04]",
+                "focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-[3px]",
+                // Révélation : survol de la carte OU focus clavier dans la carte.
+                "opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0",
+                "group-focus-within:opacity-100 group-focus-within:translate-y-0",
+              )}
+            >
+              {visitLabel}
+              <span aria-hidden="true" className="inline-block">
+                →
+              </span>
+            </a>
+          </div>
+        ) : null}
       </div>
     </article>
   );

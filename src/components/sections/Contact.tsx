@@ -253,7 +253,7 @@ export function Contact({ contact }: ContactProps): ReactNode {
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-16">
           <div className="lg:col-span-5">
             <SectionHeading
-              index="07"
+              index="08"
               headingId="contact-title"
               eyebrow={contact.eyebrow}
               title={contact.title}

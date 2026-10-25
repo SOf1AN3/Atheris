@@ -33,6 +33,31 @@ const RAIL_ITEM_CLASS = "w-[85%] shrink-0 sm:w-[62%] lg:w-[46%]";
 /** Seuil (px) distinguant un simple clic d'un TIRAGE du rail (décision Lead). */
 const DRAG_THRESHOLD_PX = 6;
 
+/**
+ * Point d'ancrage le plus proche du scroll courant — début de la carte la
+ * plus proche (cf. `scroll-snap-align: start` du rail).
+ *
+ * Calculé via les rectangles plutôt que `offsetLeft` : `.rail` n'est pas
+ * positionné, les `offsetLeft` enfants seraient référencés à un ancêtre
+ * commun éloigné.
+ */
+function nearestSnapTarget(rail: HTMLDivElement): number {
+  const origin = rail.scrollLeft;
+  const railLeft = rail.getBoundingClientRect().left;
+  let best = origin;
+  let bestDistance = Number.POSITIVE_INFINITY;
+
+  for (const child of Array.from(rail.children)) {
+    const position = origin + (child.getBoundingClientRect().left - railLeft);
+    const distance = Math.abs(position - origin);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      best = position;
+    }
+  }
+  return best;
+}
+
 /** État d'un tirage en cours : position de départ + scroll au départ. */
 type RailDrag = {
   startX: number;
@@ -145,12 +170,48 @@ export function CaseStudies({
     if (start === null) return;
 
     railDragRef.current = null;
-    setRailDragging(false);
 
     const rail = event.currentTarget;
     if (rail.hasPointerCapture(event.pointerId)) {
       rail.releasePointerCapture(event.pointerId);
     }
+
+    // Clic simple (aucun déplacement > seuil) : rien à animer, on rend la main
+    // au navigateur — le scroll n'a pas bougé, donc aucun saut possible.
+    if (!dragged) {
+      setRailDragging(false);
+      return;
+    }
+
+    // DROP À MOITIÉ D'UNE CARTE → animation vers l'ancre la plus proche.
+    //
+    // Pourquoi ne pas simplement retirer `scrollSnapType: "none"` ? Mesuré :
+    // le navigateur applique alors le snap SANS l'interpoler (un snap
+    // déclenché par un scroll programmatique n'est jamais animé) — saut de
+    // 478 px en une seule frame. On anime donc nous-mêmes, en gardant le
+    // snap neutralisé PENDANT l'animation (sinon il reprend la main et
+    // annule notre transition), puis on le rend à la fin.
+    const target = nearestSnapTarget(rail);
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (reduce || Math.abs(target - rail.scrollLeft) < 1) {
+      setRailDragging(false);
+      return;
+    }
+
+    rail.scrollTo({ left: target, behavior: "smooth" });
+
+    let restored = false;
+    const restoreSnap = (): void => {
+      if (restored) return;
+      restored = true;
+      rail.removeEventListener("scrollend", restoreSnap);
+      setRailDragging(false);
+    };
+    rail.addEventListener("scrollend", restoreSnap);
+    // Filet : `scrollend` n'est pas universel, et ne se déclenche pas si le
+    // navigateur estime le scroll déjà terminé.
+    window.setTimeout(restoreSnap, 700);
   }
 
   // Capture : si le geste était un TIRAGE, on invalide le clic qui suit.
@@ -283,6 +344,7 @@ export function CaseStudies({
               >
                 <CaseStudyCard
                   study={item}
+                  visitLabel={cases.visitLabel}
                   categoryLabel={firstCategoryLabel(item.categories)}
                   className="h-full"
                 />

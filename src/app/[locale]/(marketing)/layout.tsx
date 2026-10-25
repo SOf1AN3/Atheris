@@ -12,7 +12,7 @@ const SITE_URL = "https://atherislabs.com";
 /** Identifiant JSON-LD stable référencé par `Service.provider`. */
 const ORGANIZATION_ID = `${SITE_URL}/#organization`;
 /** Contact commercial affiché dans le JSON-LD (`ContactPoint.email`). */
-const CONTACT_EMAIL = "contact@atherislabs.com";
+const CONTACT_EMAIL = "contact@sofianeasma.me";
 
 /** Formats `lang_TERRITORY` attendus par OpenGraph (`og:locale`). */
 const OG_LOCALES = {

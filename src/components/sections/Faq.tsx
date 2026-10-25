@@ -55,7 +55,7 @@ export function Faq({ faq }: FaqProps): ReactNode {
           {/* Colonne gauche : SectionHeading left + sticky sans JS (choix §4.9). */}
           <div className="lg:col-span-2 lg:sticky lg:top-28 lg:self-start">
             <SectionHeading
-              index="06"
+              index="07"
               headingId="faq-title"
               eyebrow={faq.eyebrow}
               title={faq.title}

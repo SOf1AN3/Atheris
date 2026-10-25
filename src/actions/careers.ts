@@ -319,7 +319,7 @@ async function processApplication(formData: FormData): Promise<ApplyToJobResult>
   const { firstName, lastName, email, message } = parsed.data;
   const mail = await sendMail({
     to: RECRUITER_EMAIL,
-    subject: `Candidature Lead Generator — ${firstName} ${lastName}`,
+    subject: `Candidature Sales Partner — ${firstName} ${lastName}`,
     text: buildApplicationText({
       firstName,
       lastName,

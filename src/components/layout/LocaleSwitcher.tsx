@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
@@ -24,6 +24,10 @@ type Locale = (typeof LOCALES)[number];
  * Aucune string de libellé n'est produite ici, uniquement des codes.
  */
 const FALLBACK_PATHNAME = "/fr";
+/** Courbe UNIQUE du site (DESIGN §3.1) — aucune autre easing. */
+const EASE_CURVE = "ease-[cubic-bezier(0.16,1,0.3,1)]";
+const FOCUS_RING =
+  "focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-[3px]";
 
 function isLocale(value: string): value is Locale {
   return value === "fr" || value === "en";
@@ -32,6 +36,11 @@ function isLocale(value: string): value is Locale {
 /**
  * Bascule de locale FR ↔ EN (segment 1 du pathname), en conservant le reste
  * du chemin ainsi que l'ancre (`hash`) de la page courante.
+ *
+ * Option A (DESIGN §1.6) : la locale n'est plus une « pill » hors-système
+ * (H1) mais DEUX liens mono 11px caps séparés par un `/` `line-3`.
+ * L'actif = `text-fg` + filet volt 1px sous le texte — pas de fond, pas de
+ * bordure, pas de rayon. Cible ≥ 44px, focus volt conservé.
  */
 export function LocaleSwitcher({
   label,
@@ -76,27 +85,43 @@ export function LocaleSwitcher({
     <div
       role="group"
       aria-label={label}
-      className={cn(
-        "inline-flex items-center gap-0.5 rounded-full border border-line bg-surface p-1",
-        className,
-      )}
+      className={cn("inline-flex shrink-0 items-center", className)}
     >
       {LOCALES.map((locale) => {
         const isActive = locale === currentLocale;
 
         return (
-          <Link
-            key={locale}
-            href={hrefFor(locale)}
-            hrefLang={locale}
-            aria-current={isActive ? "true" : undefined}
-            className={cn(
-              "inline-flex h-6 items-center rounded-full px-2.5 text-xs font-semibold uppercase tracking-wider transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-[3px]",
-              isActive ? "bg-surface-2 text-fg" : "text-muted hover:text-fg",
+          <Fragment key={locale}>
+            {locale === LOCALES[0] ? null : (
+              <span aria-hidden="true" className="px-1 micro text-line-3">
+                /
+              </span>
             )}
-          >
-            {locale}
-          </Link>
+            <Link
+              href={hrefFor(locale)}
+              hrefLang={locale}
+              aria-current={isActive ? "true" : undefined}
+              className={cn(
+                // Cible ≥ 44px : le filet est porté par un sous-élément en
+                // flex-col, il suit le texte (pas un offset figé au fond).
+                "relative inline-flex min-h-11 flex-col items-center justify-center gap-1 px-1 micro",
+                "transition-colors duration-150",
+                EASE_CURVE,
+                FOCUS_RING,
+                isActive ? "text-fg" : "text-faint hover:text-fg-2",
+              )}
+            >
+              {locale}
+              <span
+                aria-hidden="true"
+                className={cn(
+                  "h-px w-full origin-left bg-accent transition-transform duration-200",
+                  EASE_CURVE,
+                  isActive ? "scale-x-100" : "scale-x-0",
+                )}
+              />
+            </Link>
+          </Fragment>
         );
       })}
     </div>

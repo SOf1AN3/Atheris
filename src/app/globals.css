@@ -268,8 +268,14 @@ body {
   -webkit-user-select: none;
 }
 
-/* Numéraux géants — contour + REMPLISSAGE blanc 20 % (Q6) : lisible sur
-   obsidienne, mais impossible à sélectionner (on croit à une image). */
+/* Numéraux géants — APLAT UNIQUE blanc 20 % (Q6) : lisible sur obsidienne et
+   impossible à sélectionner (on croit à une image).
+
+   ⚠ PAS de `-webkit-text-stroke` : le contour est peint PAR-DESSUS le
+   remplissage. Deux couches semi-transparentes de même couleur se
+   cumulent sur la bande de jonction (1-(1-.2)² = ~36 % d'alpha effectif)
+   et produisent un liseré plus clair qui casse le lisse. Un seul calque
+   = rendu parfaitement homogène. */
 .num {
   font-weight: 700;
   letter-spacing: -0.05em;
@@ -277,12 +283,11 @@ body {
   color: rgba(255, 255, 255, 0.2);
   user-select: none;
   -webkit-user-select: none;
-  -webkit-text-stroke: 1.4px rgba(255, 255, 255, 0.2);
-  transition: -webkit-text-stroke-color 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: color 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
-/* Survol : le contour bascule en VOLT pour rester net sur le remplissage. */
+/* Survol : remontée en luminosité du même aplat (aucune teinte ajoutée). */
 .step:hover .num {
-  -webkit-text-stroke-color: rgba(204, 255, 74, 0.75);
+  color: rgba(255, 255, 255, 0.34);
 }
 
 /* Ligne de progression du Process (M15 — liée au scroll). */
@@ -299,8 +304,10 @@ body {
   box-shadow: 0 0 14px rgba(204, 255, 74, 0.45);
 }
 
-/* Wordmark géant en contour (footer) — même traitement Q6 : remplissage
-   blanc 20 % + non sélectionnable (feeling « image de marque »). */
+/* Wordmark géant (footer) — APLAT UNIQUE blanc 20 % (Q6) : non sélectionnable
+   (feeling « image de marque »). Même raison que `.num` : aucun
+   `-webkit-text-stroke`, sinon le contour cumulé au remplissage formerait
+   un liseré plus opaque (compositing) au lieu d'une forme lisse. */
 .wordmark {
   font-weight: 700;
   letter-spacing: -0.04em;
@@ -309,7 +316,6 @@ body {
   color: rgba(255, 255, 255, 0.2);
   user-select: none;
   -webkit-user-select: none;
-  -webkit-text-stroke: 1.2px rgba(255, 255, 255, 0.16);
 }
 
 /* ==================================================================

@@ -5,6 +5,7 @@ import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from "react";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AnimatePresence, motion } from "framer-motion";
+import { useParams, useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import type { UseFormRegisterReturn } from "react-hook-form";
 import { z } from "zod";
@@ -14,13 +15,15 @@ import { Reveal } from "@/components/motion/Reveal";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import type { InterviewContent, InterviewFormStrings } from "@/content/types";
+import { getSlotsForWindow } from "@/lib/slots";
 import { cn } from "@/lib/utils";
 
 /* ==========================================================================
-   Piste F1 — Prise de rendez-vous (PLAN §3.1).
+   Piste F1 — Prise de rendez-vous (PLAN §3.1 · Q1 · Q3).
    Page publique `/{locale}/entretien/{token}` : coordonnées + agenda des
-   3 prochains jours affiché DANS LE FUSEAU DU CANDIDAT (11 créneaux d'1 h,
-   de 9 h à 19 h inclus, heures passées désactivées).
+   3 jours algériens J+1→J+3 (7 créneaux d'1 h, 9 h → 15 h HEURE DE
+   L'ENTREPRISE) affichés DANS LE FUSEAU DU CANDIDAT (heures passées
+   désactivées). Après validation, le créneau n'est PLUS modifiable (Q3).
 
    CONTRAT FIGÉ (PLAN §Contrats) :
      submitInterview({ token, firstName, lastName, email, instant,
@@ -28,19 +31,18 @@ import { cn } from "@/lib/utils";
        → { ok: true } | { ok: false; code: "invalid" | "not_found" | "taken"
                                  | "rate_limited" | "failed" }
 
-   ⚠ `@/lib/slots` n'est PAS importé (écrit en parallèle par la piste
-   Backend) : la grille est calculée ICI avec `Intl` ; le serveur revalide
+   L'agenda est calculé par `@/lib/slots` (module PUR, exécuté ici côté
+   CLIENT) à partir des 3 dates algériennes fournies par la page serveur
+   (dérivées du `createdAt` en base) ; le serveur revalide le créneau soumis
    (anti-falsification + DST, PLAN §Sécurité 3).
    ========================================================================== */
 
 /** DESIGN §3.1 — courbe UNIQUE du site : aucun spring, aucun easing concurrent. */
 const EASE_PREMIUM: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
-/** Hypothèses actées (PLAN) : 11 créneaux d'1 h (9 h → 19 h) sur 3 jours. */
-const FIRST_HOUR = 9;
-const SLOT_COUNT = 11;
-const DAY_COUNT = 3;
-const MS_PER_DAY = 86_400_000;
+/** Squelette de chargement : 3 onglets jours × 7 créneaux (Q1 : 9 h → 15 h). */
+const SKELETON_DAY_COUNT = 3;
+const SKELETON_SLOT_COUNT = 7;
 
 // DESIGN §2.6 — champ 52 px, rayon 12 px, bordure `line-2` ; focus bordure
 // volt + ring volt localisé (jamais `outline: none`).
@@ -75,7 +77,7 @@ function createInterviewSchema(errors: InterviewFormStrings["errors"]) {
 type InterviewFormValues = z.infer<ReturnType<typeof createInterviewSchema>>;
 
 /* ==========================================================================
-   2. Modèle de l'agenda (calculé côté client avec `Intl`).
+   2. Modèle de l'agenda (calculé côté client via `@/lib/slots`).
    ========================================================================== */
 
 type Slot = {
@@ -89,12 +91,12 @@ type Slot = {
   instant: string;
   /** Libellé formaté selon la locale du NAVIGATEUR (jamais en dur). */
   label: string;
-  /** Heure déjà passée (jour J) ou heure rendue inexistante par un DST. */
+  /** Heure déjà passée (`past` calculé par `@/lib/slots`). */
   disabled: boolean;
 };
 
 type DayTab = {
-  /** `AAAA-MM-JJ` dans le fuseau détecté. */
+  /** `AAAA-MM-JJ` LOCALE du candidat (peut reculer d'un jour — Amériques). */
   date: string;
   /** Onglet formaté `Intl.DateTimeFormat(undefined, { weekday, day, month })`. */
   label: string;
@@ -108,96 +110,6 @@ type Agenda = {
   timeZoneShort: string;
   days: DayTab[];
 };
-
-function pad2(value: number): string {
-  return String(value).padStart(2, "0");
-}
-
-type WallClock = {
-  dateKey: string;
-  time: string;
-};
-
-/** Murailles (heure + date) d'un instant DANS un fuseau — jamais `getHours()`. */
-function wallClock(date: Date, timeZone: string): WallClock {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone,
-    hourCycle: "h23",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).formatToParts(date);
-  const value = (type: string): string =>
-    parts.find((part) => part.type === type)?.value ?? "0";
-  return {
-    dateKey: `${value("year")}-${value("month")}-${value("day")}`,
-    time: `${value("hour")}:${value("minute")}`,
-  };
-}
-
-/** Décalage UTC (ms) d'un fuseau à un instant donné, arrondi à la seconde. */
-function timeZoneOffsetMs(instant: number, timeZone: string): number {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone,
-    hourCycle: "h23",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  }).formatToParts(new Date(instant));
-  const value = (type: string): number =>
-    Number(parts.find((part) => part.type === type)?.value ?? "0");
-  const wall = Date.UTC(
-    value("year"),
-    value("month") - 1,
-    value("day"),
-    value("hour"),
-    value("minute"),
-    value("second"),
-  );
-  return Math.round((wall - instant) / 1000) * 1000;
-}
-
-/**
- * `AAAA-MM-JJ` + `HH:mm` dans le fuseau du candidat → instant UTC.
- * Double passe (offset à l'instant deviné, puis à l'instant corrigé) : la
- * version obtenue est re-formatée par l'appelant pour détecter une heure
- * supprimée par un changement d'heure (DST) → créneau désactivé.
- */
-function instantFor(dateKey: string, hour: number, timeZone: string): Date {
-  const segments = dateKey.split("-");
-  const target = Date.UTC(
-    Number(segments[0]),
-    Number(segments[1]) - 1,
-    Number(segments[2]),
-    hour,
-    0,
-    0,
-    0,
-  );
-  const firstOffset = timeZoneOffsetMs(target, timeZone);
-  const firstGuess = target - firstOffset;
-  const secondOffset = timeZoneOffsetMs(firstGuess, timeZone);
-  return new Date(target - secondOffset);
-}
-
-/** Ajoute des jours à une date clé en UTC (aucune DST possible en UTC). */
-function addDays(dateKey: string, days: number): string {
-  const segments = dateKey.split("-");
-  const base = Date.UTC(
-    Number(segments[0]),
-    Number(segments[1]) - 1,
-    Number(segments[2]),
-  );
-  const next = new Date(base + days * MS_PER_DAY);
-  return `${next.getUTCFullYear()}-${pad2(next.getUTCMonth() + 1)}-${pad2(
-    next.getUTCDate(),
-  )}`;
-}
 
 /** Onglet jour : `Intl.DateTimeFormat(undefined, …)` → fuseau du navigateur. */
 function formatDayLabel(dateKey: string): string {
@@ -213,22 +125,36 @@ function formatDayLabel(dateKey: string): string {
   }).format(date);
 }
 
-/** Libellé d'heure : `10:00` / `10:00 AM` selon la locale du navigateur. */
-function formatHourLabel(hour: number): string {
-  const date = new Date(Date.UTC(2000, 0, 1, hour, 0, 0));
+/** Libellé d'heure : forcé en **24 h sur 2 chiffres** (`09:00`, `22:00`)
+ *  pour que toutes les étiquettes de la grille fassent la même largeur,
+ *  quelle que soit la locale du navigateur (`hour: "numeric"` produisait
+ *  `9:00` selon la locale → colonne désalignée). */
+function formatHourLabel(localHour: string): string {
+  const [hour, minute] = localHour.split(":");
+  const date = new Date(
+    Date.UTC(2000, 0, 1, Number(hour ?? "0"), Number(minute ?? "0")),
+  );
   return new Intl.DateTimeFormat(undefined, {
-    hour: "numeric",
+    hour: "2-digit",
     minute: "2-digit",
+    hourCycle: "h23",
     timeZone: "UTC",
   }).format(date);
 }
 
 /**
- * Construit l'agenda complet côté CLIENT : la date du jour, le fuseau affiché
- * et les libellés dépendent du navigateur — ce n'est jamais exécuté pendant
+ * Construit l'agenda complet côté CLIENT à partir des 3 dates algériennes
+ * transmises par la page serveur : le fuseau détecté, les dates LOCALES du
+ * candidat et les libellés dépendent du navigateur — jamais exécuté pendant
  * le rendu serveur (mismatch d'hydratation évité via l'état `agenda`).
+ *
+ * Les onglets sont regroupés sur `localDate` — JAMAIS « J0/J1/J2 » : selon le
+ * fuseau, la date locale d'un créneau peut reculer d'un jour (Amériques) ou
+ * avancer (Océanie). Chaque onglet affiche exactement ce que `slots.ts` a
+ * calculé pour ses créneaux ; une heure rendue inexistante par un DST n'est
+ * tout simplement pas publiée par le module (aucun libellé faux à masquer).
  */
-function buildAgenda(now: Date): Agenda {
+function buildAgenda(dates: string[], now: Date): Agenda {
   const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
   // `||` (et non `??`) : un fuseau vide exploserait `formatToParts`.
   const timeZone = detected || "UTC";
@@ -239,36 +165,28 @@ function buildAgenda(now: Date): Agenda {
   const timeZoneShort =
     shortParts.find((part) => part.type === "timeZoneName")?.value ?? "";
 
-  const todayKey = wallClock(now, timeZone).dateKey;
-  const nowMs = now.getTime();
   const days: DayTab[] = [];
 
-  for (let dayIndex = 0; dayIndex < DAY_COUNT; dayIndex += 1) {
-    const dateKey = addDays(todayKey, dayIndex);
-    const slots: Slot[] = [];
+  for (const published of getSlotsForWindow(dates, timeZone, now)) {
+    const slot: Slot = {
+      id: `${published.localDate}|${published.localHour}`,
+      localDate: published.localDate,
+      localHour: published.localHour,
+      instant: published.instant,
+      label: formatHourLabel(published.localHour),
+      disabled: published.past,
+    };
 
-    for (let offset = 0; offset < SLOT_COUNT; offset += 1) {
-      const hour = FIRST_HOUR + offset;
-      const localHour = `${pad2(hour)}:00`;
-      const instant = instantFor(dateKey, hour, timeZone);
-      const roundTrip = wallClock(instant, timeZone);
-      // 1. Heure déjà passée (jour J) → désactivée (PLAN hypothèses).
-      // 2. L'instant re-formaté ne redonne pas la demande → heure rendue
-      //    inexistante par un changement d'heure : le serveur la rejeterait.
-      const past = instant.getTime() <= nowMs;
-      const missing = roundTrip.dateKey !== dateKey || roundTrip.time !== localHour;
-
-      slots.push({
-        id: `${dateKey}|${localHour}`,
-        localDate: dateKey,
-        localHour,
-        instant: instant.toISOString(),
-        label: formatHourLabel(hour),
-        disabled: past || missing,
+    const day = days.find((tab) => tab.date === slot.localDate);
+    if (day === undefined) {
+      days.push({
+        date: slot.localDate,
+        label: formatDayLabel(slot.localDate),
+        slots: [slot],
       });
+    } else {
+      day.slots.push(slot);
     }
-
-    days.push({ date: dateKey, label: formatDayLabel(dateKey), slots });
   }
 
   return { timeZone, timeZoneShort, days };
@@ -424,7 +342,7 @@ function AgendaSkeleton(): ReactNode {
   return (
     <div aria-busy="true" className="flex flex-col gap-4">
       <div className="flex gap-2">
-        {[0, 1, 2].map((index) => (
+        {Array.from({ length: SKELETON_DAY_COUNT }, (_, index) => (
           <span
             key={index}
             aria-hidden="true"
@@ -433,7 +351,7 @@ function AgendaSkeleton(): ReactNode {
         ))}
       </div>
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-        {Array.from({ length: SLOT_COUNT }, (_, index) => (
+        {Array.from({ length: SKELETON_SLOT_COUNT }, (_, index) => (
           <span
             key={index}
             aria-hidden="true"
@@ -452,19 +370,31 @@ function AgendaSkeleton(): ReactNode {
 type InterviewFormProps = {
   /** Jeton public lu dans l'URL — validé côté serveur avant d'arriver ici. */
   token: string;
+  /**
+   * 3 dates civiles ALGÉRIENNES (J+1→J+3) dérivées du `createdAt` en base et
+   * transmises par la page serveur — la fenêtre n'est JAMAIS recalculée ici
+   * (PLAN §Sécurité 1). `string[]` = sérialisable RSC.
+   */
+  dates: string[];
   /** `SiteContent.interview` : uniquement des strings → sérialisable RSC. */
   content: InterviewContent;
 };
 
 export function InterviewForm({
   token,
+  dates,
   content,
 }: InterviewFormProps): ReactNode {
   const errors = content.form.errors;
+  const router = useRouter();
+  // Locale lue dans l'URL (jamais de code langue en dur) — le bouton
+  // « Fermer » du succès quitte la page vers l'accueil de cette locale.
+  const { locale } = useParams<{ locale: string }>();
 
   // `null` = agenda encore à calculer (jamais pendant le rendu serveur :
   // fuseau et date du navigateur = mismatch d'hydratation garantie sinon).
   const [agenda, setAgenda] = useState<Agenda | null>(null);
+  const [agendaFailed, setAgendaFailed] = useState(false);
   const [dayIndex, setDayIndex] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [slotError, setSlotError] = useState<string | null>(null);
@@ -483,8 +413,15 @@ export function InterviewForm({
   });
 
   useEffect(() => {
-    setAgenda(buildAgenda(new Date()));
-  }, []);
+    const next = buildAgenda(dates, new Date());
+    // Fuseau illisible ou fenêtre vide : état d'erreur explicite — jamais un
+    // squelette « chargement » bloqué à l'infini.
+    if (next.days.length === 0) {
+      setAgendaFailed(true);
+      return;
+    }
+    setAgenda(next);
+  }, [dates]);
 
   const activeDay = agenda === null ? null : (agenda.days[dayIndex] ?? null);
   const selectedIndex =
@@ -590,11 +527,10 @@ export function InterviewForm({
     }
   };
 
-  const handleBackToGrid = (): void => {
-    setSent(false);
-    setSelectedId(null);
-    setSlotError(null);
-    setNotice(null);
+  // Q3 — le créneau validé n'est PLUS modifiable : « Fermer » ne rouvre
+  // aucun formulaire, il quitte la page vers l'accueil de la locale courante.
+  const handleClose = (): void => {
+    router.push(`/${locale}`);
   };
 
   return (
@@ -612,23 +548,32 @@ export function InterviewForm({
             {content.description}
           </p>
 
-          <div className="flex w-full flex-col gap-2 border-t border-line pt-5">
-            <p className="micro text-faint">{content.hoursNote}</p>
-            <p className="micro text-faint">
-              {content.timezoneHint}
-              {agenda !== null ? (
-                <span className="text-fg-2">
-                  {" — "}
-                  {agenda.timeZone}
-                  {agenda.timeZoneShort ? ` · ${agenda.timeZoneShort}` : ""}
-                </span>
-              ) : (
-                <span
-                  aria-hidden="true"
-                  className="ml-2 inline-block h-3 w-32 translate-y-[2px] rounded-full bg-white/10"
-                />
-              )}
+          {/* 3 consignes sobres (clés `note*`, PLAN §1.2) : jamais en volt,
+              13 px `text-muted` — le 3ᵉ rappelle Meet « 5 min avant · ~30 min
+              · créneau non modifiable ». */}
+          <div className="flex w-full flex-col gap-3 border-t border-line pt-5">
+            <p className="text-[13px] leading-relaxed text-muted">
+              {content.noteReferenceTz}
             </p>
+            <p className="text-[13px] leading-relaxed text-muted">
+              {content.noteNoNightWork}
+            </p>
+            <p className="text-[13px] leading-relaxed text-muted">
+              {content.noteMeetDay}
+            </p>
+            {/* Fuseau IANA réellement détecté (donnée, jamais une string UI) :
+                concrétise « affiché à votre heure locale » du paragraphe 1. */}
+            {agenda !== null ? (
+              <p className="micro text-faint">
+                {agenda.timeZone}
+                {agenda.timeZoneShort ? ` · ${agenda.timeZoneShort}` : ""}
+              </p>
+            ) : (
+              <span
+                aria-hidden="true"
+                className="inline-block h-3 w-32 rounded-full bg-white/10"
+              />
+            )}
           </div>
         </header>
       </Reveal>
@@ -681,12 +626,14 @@ export function InterviewForm({
                 <p className="mt-3 max-w-[38ch] text-[15px] text-muted">
                   {content.form.successMessage}
                 </p>
+                {/* Q3 : aucune action de modification — « Fermer » quitte la
+                    page (le créneau validé est immuable, cf. `successMessage`). */}
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="mt-6"
-                  onClick={handleBackToGrid}
+                  className="mt-6 cursor-pointer"
+                  onClick={handleClose}
                 >
                   {content.form.successAction}
                 </Button>
@@ -737,10 +684,19 @@ export function InterviewForm({
                   <StepLabel text={content.stepSlot} />
 
                   {agenda === null || activeDay === null ? (
-                    <AgendaSkeleton />
+                    agendaFailed ? (
+                      // État d'erreur de l'agenda (fuseau illisible) : message
+                      // générique du dict, annoncé — jamais un squelette figé.
+                      <p role="alert" className="text-[13px] text-danger">
+                        {errors.generic}
+                      </p>
+                    ) : (
+                      <AgendaSkeleton />
+                    )
                   ) : (
                     <div className="flex flex-col gap-4">
-                      {/* 3 jours (aujourd'hui / +1 / +2), labels Intl. */}
+                      {/* Onglets = dates LOCALES du candidat (regroupées sur
+                          `localDate`, jamais « J0/J1/J2 »), labels Intl. */}
                       <div className="hide-scroll -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
                         {agenda.days.map((day, index) => (
                           <button
@@ -749,7 +705,7 @@ export function InterviewForm({
                             aria-pressed={index === dayIndex}
                             onClick={() => handleDayChange(index)}
                             className={cn(
-                              "min-h-11 shrink-0 rounded-full border px-4 text-[13px] font-medium transition-colors duration-[180ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
+                              "min-h-11 shrink-0 cursor-pointer rounded-full border px-4 text-[13px] font-medium transition-colors duration-[180ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
                               index === dayIndex
                                 ? "border-fg bg-white/[0.06] text-fg"
                                 : "border-line-2 text-faint hover:border-line-3 hover:text-fg-2",
@@ -791,10 +747,13 @@ export function InterviewForm({
                                 isSelected
                                   ? // SEUL aplat volt « état actif » de la
                                     // page avec le CTA — texte FONCÉ (§2.1).
-                                    "border-accent bg-accent text-ink"
+                                    "cursor-pointer border-accent bg-accent text-ink"
                                   : slot.disabled
                                     ? "cursor-not-allowed border-line bg-white/[0.02] text-faint"
-                                    : "border-line-2 text-fg-2 hover:border-line-3 hover:bg-white/[0.04]",
+                                    : // BUG signalé : Tailwind Preflight ne
+                                      // pose plus `cursor: pointer` sur les
+                                      // `<button>` — actifs = pointeur.
+                                      "cursor-pointer border-line-2 text-fg-2 hover:border-line-3 hover:bg-white/[0.04]",
                               )}
                             >
                               {slot.label}

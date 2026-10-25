@@ -20,6 +20,8 @@ export type HeaderProps = {
 
 /** Seuil de bascule de l'état « scrolled » (DESIGN §3.7 / motion M9). */
 const SCROLL_THRESHOLD_PX = 24;
+/** Seuil de condensation (motion M19) : `64px → 56px` + repli du wordmark. */
+const SCROLL_CONDENSED_THRESHOLD_PX = 200;
 /** Bande de détection du scrollspy (DESIGN §3.7, lien actif option B). */
 const SECTION_ROOT_MARGIN = "-40% 0px -55%";
 /** Container §2.7 réutilisé par la barre du header et celle du menu mobile. */
@@ -64,13 +66,14 @@ function buildLoginHref(
     : "/connexion";
 }
 
-/** Monogramme « A » constructiviste (DESIGN §3.7) — décoratif. */
+/** Monogramme « A » constructiviste (DESIGN §3.7) — décoratif.
+ *  Glyphe SEUL : aucun `border`, aucun fond (3 → 1 bordure dans la barre). */
 function Monogram({ className }: { className?: string }): ReactNode {
   return (
     <span
       aria-hidden="true"
       className={cn(
-        "inline-flex h-7 w-7 items-center justify-center rounded-lg border border-line text-fg",
+        "inline-flex h-7 w-7 items-center justify-center text-fg",
         className,
       )}
     >
@@ -90,12 +93,17 @@ function Monogram({ className }: { className?: string }): ReactNode {
   );
 }
 
-/** Lien marque (logo + wordmark) — réutilisé par le header et le menu mobile. */
+/** Lien marque (glyphe seul + wordmark à deux voix) — réutilisé par le header
+ *  et le menu mobile. Au condensé (M19), le wordmark se replie sur le glyphe
+ *  (`opacity 1→0` + `translateX(-8px)`, 200ms) sans aucun décalage de layout :
+ *  le bloc reste en flux, seul son rendu s'efface. */
 function BrandLink({
   brand,
+  condensed = false,
   onNavigate,
 }: {
   brand: Brand;
+  condensed?: boolean;
   onNavigate?: () => void;
 }): ReactNode {
   return (
@@ -103,13 +111,23 @@ function BrandLink({
       href="#top"
       onClick={onNavigate}
       className={cn(
-        "inline-flex min-h-11 items-center gap-2.5 rounded-lg transition-colors duration-150",
+        "group inline-flex min-h-11 shrink-0 items-center gap-2.5 transition-colors duration-150",
         FOCUS_RING,
       )}
     >
       <Monogram />
-      <span className="text-[15px] font-bold tracking-[-0.02em] text-fg">
-        {brand.name} <span className="text-muted">{brand.suffix}</span>
+      <span
+        className={cn(
+          "text-[15px] font-bold tracking-[-0.02em] text-fg",
+          "transition-[opacity,transform] duration-200",
+          EASE_CURVE,
+          condensed && "pointer-events-none -translate-x-2 opacity-0",
+        )}
+      >
+        {brand.name}{" "}
+        <span className="font-mono text-[11px] font-normal tracking-[0.16em] text-faint transition-colors duration-150 group-hover:text-muted">
+          {brand.suffix}
+        </span>
       </span>
     </Link>
   );
@@ -121,6 +139,7 @@ export function Header({ nav, a11y, className }: HeaderProps): ReactNode {
   const params = useParams();
   const loginHref = buildLoginHref(pathname, params["locale"]);
   const [scrolled, setScrolled] = useState<boolean>(false);
+  const [condensed, setCondensed] = useState<boolean>(false);
   const [menuOpen, setMenuOpen] = useState<boolean>(false);
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
   const toggleRef = useRef<HTMLButtonElement>(null);
@@ -130,7 +149,11 @@ export function Header({ nav, a11y, className }: HeaderProps): ReactNode {
   /* ---------------------------------------------------------------- scroll */
   useEffect(() => {
     const handleScroll = (): void => {
-      setScrolled(window.scrollY > SCROLL_THRESHOLD_PX);
+      const scrollY = window.scrollY;
+      setScrolled(scrollY > SCROLL_THRESHOLD_PX);
+      // M19 — condensation : second booléen dans le MÊME handler, nettoyé au
+      // démontage avec l'état `scrolled` (un seul listener de scroll).
+      setCondensed(scrollY > SCROLL_CONDENSED_THRESHOLD_PX);
     };
     // Sync au montage : une page arrivée déjà scrollée (`/fr#contact`,
     // restoration de scroll) bascule en état « scrolled » sans attendre
@@ -256,6 +279,15 @@ export function Header({ nav, a11y, className }: HeaderProps): ReactNode {
   }, [menuOpen, closeMenu]);
 
   /* --------------------------------------------------------------- rendu */
+  // DEMANDE CLIENT : la page d'offre (`/recrutement`) s'affiche SANS header
+  // (conversion dédiée, lecture pleine largeur) — le footer, lui, est
+  // conservé. `return null` AVANT le JSX : aucun `<header>` ni panneau mobile
+  // n'est rendu sur cette route ; ailleurs zéro impact (la landing garde son
+  // offset `-mt-16`, le scrollspy ne trouve rien à observer ici et reste
+  // intact partout ailleurs). Le retour est post-hooks (règle des hooks) :
+  // l'état/les effets restent montés mais n'ont aucun DOM à piloter.
+  if (pathname.endsWith("/recrutement")) return null;
+
   // DESIGN: l'état `backdrop-filter` du header crée un bloc de conteneur pour
   // les descendants `fixed` : le panneau plein écran est rendu en FRAGMENT
   // à côté de `<header>` (et non à l'intérieur) pour rester en `inset-0`.
@@ -266,25 +298,37 @@ export function Header({ nav, a11y, className }: HeaderProps): ReactNode {
           // DESIGN: l'interpolation `bg-transparent → bg-ink/80` (couleur →
           // couleur) et `border-transparent → border-line` est couverte par la
           // transition existante sur background-color/border-color.
-          "sticky top-0 z-50 h-16 border-b transition-[background-color,border-color,box-shadow,backdrop-filter] duration-[240ms] md:h-[72px]",
+          // `height` rejoint la transition (M19 anime la hauteur du conteneur :
+          // la seule exception de perf admise par DESIGN §3.2 pour M19).
+          "sticky top-0 z-50 h-16 border-b transition-[background-color,border-color,box-shadow,backdrop-filter,height] duration-[240ms]",
           EASE_CURVE,
           scrolled
             ? "border-line bg-ink/80 shadow-[0_1px_0_rgba(255,255,255,0.03)] backdrop-blur-[20px] backdrop-saturate-[1.6]"
             : "border-transparent bg-transparent",
+          // M19 — condensation `scrollY > 200` : 64px → 56px (inchangé ailleurs).
+          condensed && "h-14",
           className,
         )}
       >
         <div
           className={cn(
             CONTAINER_CLASS,
-            "flex h-full items-center justify-between",
+            // 3 modules `[Marque] · [Nav] · [Module d'action]` (Option A) :
+            // `gap-6` (plancher 24px) en mobile ; `lg:gap-0` en desktop où
+            // les 2 spacers `flex-1` (min 24px) garantissent des respirations
+            // GAUCHE = DROITE par construction, jamais sous 24px.
+            "flex h-full items-center gap-6 lg:gap-0",
           )}
         >
-          {/* Gauche — marque */}
-          <BrandLink brand={nav.brand} />
+          {/* Module 1 — marque : glyphe seul + wordmark deux voix, zéro cadre */}
+          <BrandLink brand={nav.brand} condensed={condensed} />
 
-          {/* Centre — navigation desktop : mono uppercase + filet volt 2px */}
-          <nav className="hidden items-center gap-8 lg:flex">
+          {/* Spacer gauche (flex:1, plancher 24px) */}
+          <span aria-hidden="true" className="hidden min-w-6 flex-1 lg:block" />
+
+          {/* Module 2 — navigation desktop : mono 12px caps +0.1em, `muted` →
+              `fg`, filet volt 2px sous l'actif — scrollspy conservé intégralement */}
+          <nav className="hidden shrink-0 items-center gap-8 lg:flex">
             {nav.items.map((item) => {
               const sectionId = item.href.startsWith("#")
                 ? item.href.slice(1)
@@ -308,34 +352,44 @@ export function Header({ nav, a11y, className }: HeaderProps): ReactNode {
             })}
           </nav>
 
-          {/* Droite — accès dashboard SUBTIL + locale + CTA */}
-          <div className="hidden items-center gap-3 lg:flex">
-            <LocaleSwitcher label={a11y.switchLocale} />
-            {/* Lien fantôme `.micro` : `text-faint` → `text-fg` au survol,
-                cible ≥ 44px, libellé 100 % i18n (`nav.loginLabel`).
-                Le libellé est masqué entre 1024 et 1279px : à ce palier,
-                nav + locale + CTA consomment déjà toute la largeur (le libellé
-                reste porteur du nom accessible via `aria-label`). */}
+          {/* Spacer droit (flex:1, plancher 24px) — équilibre la respiration gauche */}
+          <span aria-hidden="true" className="hidden min-w-6 flex-1 lg:block" />
+
+          {/* Module 3 — module d'action UNIQUE : locale texte │ Connexion fantôme │ CTA */}
+          <div className="ml-auto flex shrink-0 items-center gap-3 lg:ml-0">
+            {/* Locale en TEXTE mono 11px caps (H1 : plus de pill, plus de
+                bordure, plus de rayon) — l'actif porte son filet volt 1px,
+                les deux liens sont séparés par un `/` en `line-3`. */}
+            <LocaleSwitcher
+              label={a11y.switchLocale}
+              className="hidden shrink-0 lg:inline-flex"
+            />
+            {/* Filet vertical 1×16px `line-2` : respire, sépare, n'ajoute qu'1 trait */}
+            <span
+              aria-hidden="true"
+              className="hidden h-4 w-px shrink-0 bg-line-2 lg:block"
+            />
+            {/* `Connexion` rétrogradée : fantôme mono 11px caps `faint` → `fg`
+                au survol, SANS icône (fin du 4ᵉ vocabulaire d'icône) et FIN du
+                `hidden xl:inline` (H2) : lisible de 1024 à 1440. Toujours
+                `/{locale}/connexion` via `useParams()` — aucun code en dur. */}
             <Link
               href={loginHref}
-              aria-label={nav.loginLabel}
               className={cn(
-                "inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 px-1 micro text-faint",
-                "transition-colors duration-150 hover:text-fg",
+                "hidden min-h-11 shrink-0 items-center px-2 micro text-faint",
+                "transition-colors duration-150 hover:text-fg lg:inline-flex",
                 EASE_CURVE,
                 FOCUS_RING,
               )}
             >
-              <LogIn
-                aria-hidden="true"
-                focusable="false"
-                className="h-4 w-4 shrink-0"
-                strokeWidth={1.5}
-              />
-              <span className="hidden xl:inline">{nav.loginLabel}</span>
+              {nav.loginLabel}
             </Link>
+            {/* CTA §2.6 — SEUL aplat volt de la barre : libellé long `ctaLabel`
+                ≥ 1280px (xl), libellé court `ctaShort` entre 1024 et 1279px ET
+                sur mobile (H7 : le devis est à 1 clic, pas à 2). */}
             <Button variant="primary" size="sm" href="#contact">
-              {nav.ctaLabel}
+              <span className="hidden xl:inline">{nav.ctaLabel}</span>
+              <span className="xl:hidden">{nav.ctaShort}</span>
             </Button>
           </div>
 
@@ -348,7 +402,7 @@ export function Header({ nav, a11y, className }: HeaderProps): ReactNode {
             aria-controls="mobile-menu"
             onClick={() => setMenuOpen((open) => !open)}
             className={cn(
-              "inline-flex h-11 w-11 items-center justify-center rounded-xl transition-colors duration-150 lg:hidden",
+              "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors duration-150 lg:hidden",
               EASE_CURVE,
               FOCUS_RING,
               "text-fg hover:text-muted",
@@ -388,7 +442,7 @@ export function Header({ nav, a11y, className }: HeaderProps): ReactNode {
             <div
               className={cn(
                 CONTAINER_CLASS,
-                "flex h-16 shrink-0 items-center justify-between border-b border-line md:h-[72px]",
+                "flex h-16 shrink-0 items-center justify-between border-b border-line",
               )}
             >
               <BrandLink brand={nav.brand} onNavigate={() => closeMenu(false)} />

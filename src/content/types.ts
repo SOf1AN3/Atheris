@@ -60,6 +60,8 @@ export interface NavContent {
   /** 4 items : Services, Réalisations, Technologies, Méthode. */
   items: NavItem[];
   ctaLabel: string;
+  /** Libellé COMPACT du CTA — barre 1024–1279px (spec header v2.1 H4). */
+  ctaShort: string;
   /** Accès dashboard — lien SUBTIL du header, jamais dans `items`. */
   loginLabel: string;
 }
@@ -113,6 +115,8 @@ export interface CaseStudy {
   mockup: MockupKind;
   /** Visuel reel du portfolio. Absent -> repli sur `mockup`. */
   image?: string;
+  /** URL publique du projet. Absente -> aucun bouton « visiter ». */
+  url?: string;
   /** Absent si aucun chiffre fiable n'est a afficher. */
   metric?: { value: string; label: string };
   title: string;
@@ -126,6 +130,8 @@ export interface CasesContent {
   eyebrow: string;
   title: string;
   description: string;
+  /** Libellé du bouton « visiter » révélé au survol d'une carte. */
+  visitLabel: string;
   filters: { all: string; web: string; mobile: string; ai: string };
   /** 5 items (4 projets portfolio + MYKS Radio). */
   items: CaseStudy[];
@@ -356,8 +362,15 @@ export interface InterviewContent {
   badge: string;
   title: string;
   description: string;
-  hoursNote: string;
-  timezoneHint: string;
+  /** Paragraphe 1/3 — heure de référence de l'entreprise + affichage local. */
+  noteReferenceTz: string;
+  /** Paragraphe 2/3 — le décalage ne décale PAS les horaires de travail. */
+  noteNoNightWork: string;
+  /** Paragraphe 3/3 — Google Meet 5 min avant, ~30 min, créneau non modifiable. */
+  noteMeetDay: string;
+  /** Fenêtre J+1→J+3 déjà dépassée (liée à la génération du lien). */
+  expiredTitle: string;
+  expiredMessage: string;
   stepProfile: string;
   stepSlot: string;
   notFoundTitle: string;
@@ -365,6 +378,36 @@ export interface InterviewContent {
   /** Bloc <noscript> : l'agenda se calcule côté client (fuseau du navigateur). */
   javascriptRequired: string;
   form: InterviewFormStrings;
+}
+
+/** Contenu de la page 404 (route inconnue). */
+export interface NotFoundContent {
+  code: string;
+  /** Peut porter un accent `*…*` rendu en voix serif. */
+  title: string;
+  description: string;
+  primaryCta: string;
+  secondaryCta: string;
+}
+
+/** Une priorité de l'entreprise (section « À propos »). */
+export interface AboutPriority {
+  id: string;
+  title: string;
+  description: string;
+}
+
+/** Contenu de la section « À propos » (nouvelle startup algérienne). */
+export interface AboutContent {
+  eyebrow: string;
+  /** Peut porter un accent `*…*` rendu en voix serif. */
+  title: string;
+  description: string;
+  /** Exactement 3 priorités. */
+  priorities: AboutPriority[];
+  /** Garantie de satisfaction — encart distinct. */
+  guaranteeTitle: string;
+  guaranteeDescription: string;
 }
 
 /** Racine du contenu de la landing page (FR ou EN). */
@@ -379,7 +422,9 @@ export interface SiteContent {
   testimonials: TestimonialsContent;
   faq: FaqContent;
   contact: ContactContent;
+  about: AboutContent;
   careers: CareersContent;
+  notFound: NotFoundContent;
   interview: InterviewContent;
   footer: FooterContent;
   seo: SeoMeta;

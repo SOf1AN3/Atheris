@@ -14,7 +14,7 @@ export type FooterProps = {
  * Seule string en dur autorisée (contrainte de tâche) : email professionnel,
  * identique FR/EN et non traduisible.
  */
-const CONTACT_EMAIL = "contact@atherislabs.com";
+const CONTACT_EMAIL = "contact@sofianeasma.me";
 
 const FOCUS_RING =
   "focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-[3px]";

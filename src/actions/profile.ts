@@ -1,7 +1,7 @@
 "use server";
 
 /**
- * Server Actions de candidature (LDG, T10) et de gestion du profil (T13).
+ * Server Actions de candidature (Sales Partner, T10) et de gestion du profil (T13).
  *
  * Contrat C-5 (signatures FIGÉES, voir Lead) :
  * - `applyAsCandidate(input, ip?)` → `{ ok: true } | { ok: false; code:

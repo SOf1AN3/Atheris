@@ -9,6 +9,14 @@ import { isValidLocale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/dictionaries";
 import { getDb } from "@/lib/db";
 import { interviews } from "@/lib/db/schema";
+import { getSlotsForWindow, getSlotsForWindowDates } from "@/lib/slots";
+
+/**
+ * Fuseau d'ANCRAGE de la fenêtre (PLAN §2.1) : les créneaux proposés sont
+ * ceux de l'entreprise, en heure algérienne. Identifiant IANA figé — aucune
+ * string UI n'est dérivée de cette constante.
+ */
+const ANCHOR_TZ = "Africa/Algiers";
 
 /**
  * SEGMENT DYNAMIQUE NON ÉNUMÉRABLE — le root layout pose
@@ -35,6 +43,10 @@ type EntretienPageProps = {
  *   entretien `cancelled` et un entretien `done` rendent EXACTEMENT le même
  *   état 404 générique (`notFoundTitle` / `notFoundMessage`) : jamais de
  *   stack, jamais de détail serveur, jamais de distinction révélée.
+ * - **Fenêtre expirée (PLAN Q2)** : la fenêtre J+1→J+3 est figée à la
+ *   génération du lien (`createdAt`) ; si plus aucun créneau n'est futur en
+ *   `Africa/Algiers`, l'état dédié `expiredTitle` / `expiredMessage` remplace
+ *   le formulaire (jamais une grille entièrement désactivée).
  * - `generateMetadata` : titre i18n du dict projet (bloc `interview`, clé
  *   garantie par le type figé `InterviewContent`) ; locale invalide → métadonnées vides.
  */
@@ -57,7 +69,11 @@ type LinkStateProps = {
   message: string;
 };
 
-/** État 404 générique : une carte, deux chaînes du dict, aucun détail serveur. */
+/**
+ * Carte d'état plein écran : 404 générique OU lien expiré (PLAN Q2) — même
+ * composition (badge + `.h-display` + phrase), deux chaînes du dict, aucun
+ * détail serveur.
+ */
 function InvalidLinkState({
   badge,
   title,
@@ -92,17 +108,28 @@ export default async function EntretienPage({
   const dict = await getDictionary(locale);
   const interview = dict.interview;
 
-  // Lecture minimaliste : une seule colonne, aucun email ni nom renvoyés au
-  // client. Toute erreur inattendue sort du rendu 404 (boundary Next), donc
-  // sans stack ni détail non plus.
+  // Lecture minimaliste : `status` + `createdAt` seuls, aucun email ni nom
+  // renvoyés au client. Toute erreur inattendue sort du rendu 404 (boundary
+  // Next), donc sans stack ni détail non plus.
   const rows = await getDb()
-    .select({ status: interviews.status })
+    .select({ status: interviews.status, createdAt: interviews.createdAt })
     .from(interviews)
     .where(eq(interviews.token, token))
     .limit(1);
 
   const row = rows[0];
-  const linkIsValid = row?.status === "pending";
+  const linkIsValid = row !== undefined && row.status === "pending";
+
+  // Fenêtre J+1→J+3 dérivée du `createdAt` en BASE (PLAN §Sécurité 1) —
+  // jamais recalculée ni lue côté client. `string[]` civil algérien → RSC-safe.
+  const dates = row !== undefined ? getSlotsForWindowDates(row.createdAt) : [];
+
+  // Lien expiré (PLAN Q2) : comparaison dans `Africa/Algiers` — si PLUS AUCUN
+  // créneau de la fenêtre n'est futur, on rend l'état dédié (jamais un
+  // formulaire à grille entièrement désactivée).
+  const isExpired =
+    dates.length > 0 &&
+    getSlotsForWindow(dates, ANCHOR_TZ, new Date()).every((slot) => slot.past);
 
   return (
     <div className="relative min-h-[100svh] overflow-hidden bg-ink">
@@ -122,7 +149,19 @@ export default async function EntretienPage({
       >
         <div className="mx-auto w-full max-w-[1280px]">
           {linkIsValid ? (
-            <InterviewForm token={token} content={interview} />
+            isExpired ? (
+              <InvalidLinkState
+                badge={interview.badge}
+                title={interview.expiredTitle}
+                message={interview.expiredMessage}
+              />
+            ) : (
+              <InterviewForm
+                token={token}
+                dates={dates}
+                content={interview}
+              />
+            )
           ) : (
             <InvalidLinkState
               badge={interview.badge}

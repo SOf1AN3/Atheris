@@ -370,7 +370,7 @@ export const commissions = pgTable(
     quoteId: uuid("quote_id")
       .references((): PgColumn => quotes.id, { onDelete: "cascade" })
       .notNull(),
-    // NULL = « deal sans bénéficiaire » (lead Ads/LDG orphelin) → file CEO avec
+    // NULL = « deal sans bénéficiaire » (lead Ads/Sales Partner orphelin) → file CEO avec
     // bannière. L'index unique ci-dessous traite les NULL comme distincts :
     // deux lignes sans bénéficiaire coexistent, l'idempotence reste garantie
     // dès qu'un bénéficiaire est identifié.
@@ -566,7 +566,7 @@ export const loginAttempts = pgTable(
 );
 
 // ---------------------------------------------------------------------------
-// 14. interviews — lien d'entretien LDG (PLAN §1.1). Table autopportante :
+// 14. interviews — lien d'entretien Sales Partner (PLAN §1.1). Table autopportante :
 //     aucune FK vers `users`/`prospects` (le lien est PUBLIC et ouvert par un
 //     candidat anonyme ; le rattachement éventuel se fait côté applicatif).
 // ---------------------------------------------------------------------------
@@ -611,7 +611,9 @@ export const interviews = pgTable(
     email: text("email").notNull(),
     // Forme normalisée (minuscules) — convention `*_norm` du fichier.
     emailNorm: text("email_norm").notNull(),
-    // Instant absolu du créneau, en UTC (1 h, 9 h → 20 h dans le tz candidat).
+    // Instant absolu du créneau, en UTC. Fenêtre de référence : 9 h → 16 h
+    // HEURE ALGÉRIENNE (7 prises de 1 h, `ANCHOR_TZ` de `lib/slots.ts`),
+    // affichées au candidat dans SON fuseau (`timezone` ci-dessous).
     startsAt: tstz("starts_at").notNull(),
     // Fuseau IANA du candidat au moment de la réservation.
     timezone: text("timezone").notNull(),

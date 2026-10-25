@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 
+import { About } from "@/components/sections/About";
 import { CaseStudies } from "@/components/sections/CaseStudies";
 import { Contact } from "@/components/sections/Contact";
 import { Faq } from "@/components/sections/Faq";
@@ -41,6 +42,7 @@ export default async function HomePage({ params }: HomePageProps) {
         tabsLabel={dict.a11y.stackTabsLabel}
       />
       <Process process={dict.process} />
+      <About about={dict.about} />
       <Testimonials testimonials={dict.testimonials} />
       <Faq faq={dict.faq} />
       <Contact contact={dict.contact} />

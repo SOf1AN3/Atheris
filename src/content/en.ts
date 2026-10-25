@@ -28,6 +28,7 @@ export const en: SiteContent = {
       { label: "Process", href: "#methode" },
     ],
     ctaLabel: "Request a quote",
+    ctaShort: "Quote",
     loginLabel: "Sign in",
   },
 
@@ -92,6 +93,7 @@ export const en: SiteContent = {
     title: "Projects & *Case Studies*",
     description:
       "A selection of digital products shipped to production, from business SaaS to real-time applications.",
+    visitLabel: "Visit the website",
     filters: {
       all: "All",
       web: "Web & SaaS",
@@ -105,6 +107,7 @@ export const en: SiteContent = {
         featured: true,
         mockup: "clinic",
         image: "projects/dental.jpg",
+        url: "https://dental-app-beta1.vercel.app/",
         title: "Dental Clinic Management SaaS",
         description:
           "A complete SaaS platform for dental practice management: online booking, digital patient records and automated billing, deployed multi-tenant on Next.js and PostgreSQL.",
@@ -117,6 +120,7 @@ export const en: SiteContent = {
         featured: false,
         mockup: "papernote",
         image: "projects/papernote.jpg",
+        url: "https://reviewer-ai-delta.vercel.app/fr",
         title: "Papernote",
         description:
           "An AI-powered SaaS tool for accelerated review, comparative analysis and synthesis of complex academic publications and theses.",
@@ -129,6 +133,7 @@ export const en: SiteContent = {
         featured: false,
         mockup: "delyx",
         image: "projects/delyx.jpg",
+        url: "https://delyx-delivery.vercel.app/",
         title: "Delyx Delivery",
         description:
           "A motorbike delivery platform across Algeria: customers describe their errand, pick their courier, follow the route live by geolocation and pay on arrival.",
@@ -141,6 +146,7 @@ export const en: SiteContent = {
         featured: false,
         mockup: "tiberium",
         image: "projects/tiberium.jpg",
+        url: "https://tiberium-next.vercel.app/",
         title: "Tiberium Consulting",
         description:
           "A consulting platform with secure real-time messaging over WebSockets, notifications, persistent history and Redis-backed scaling.",
@@ -343,8 +349,8 @@ export const en: SiteContent = {
         id: "email",
         icon: "mail",
         label: "Business Email",
-        value: "contact@atherislabs.com",
-        href: "mailto:contact@atherislabs.com",
+        value: "contact@sofianeasma.me",
+        href: "mailto:contact@sofianeasma.me",
       },
       {
         id: "whatsapp",
@@ -391,12 +397,42 @@ export const en: SiteContent = {
     },
   },
 
+  about: {
+    eyebrow: "About us",
+    title: "An Algerian *startup*",
+    description:
+      "Atheris Labs is a new startup based in Algeria. We design and build custom digital products end to end, with the standards of a team determined to get everything right.",
+    priorities: [
+      {
+        id: "rapidite",
+        title: "Speed of execution",
+        description:
+          "Short cycles, regular demos and a mastered production release: you watch the product move forward, not just the calendar.",
+      },
+      {
+        id: "securite",
+        title: "Security",
+        description:
+          "Code 100% yours, sound engineering practices and strict confidentiality: your data and your scope are protected at every step.",
+      },
+      {
+        id: "perfectionnisme",
+        title: "Perfectionism",
+        description:
+          "Interface, performance, code and deliverables are combed through before validation. The detail that makes the difference is never left to chance.",
+      },
+    ],
+    guaranteeTitle: "Your plan, built down to the last detail",
+    guaranteeDescription:
+      "We guarantee client satisfaction: the plan discussed and approved with you is delivered exactly as agreed \u2014 down to the last detail, not an approximation.",
+  },
+
   careers: {
     eyebrow: "Careers",
     title: "Join the *team*",
     description:
-      "We are hiring Lead Generators to grow our client portfolio, fully remote.",
-    role: "Lead Generator",
+      "We are hiring Sales Partners to grow our client portfolio, fully remote.",
+    role: "Sales Partner",
     meta: ["Independent contractor", "Commission-based", "100% remote"],
     intro:
       "Identify and qualify prospects for Atheris Labs — a software engineering studio building custom Web, Mobile and Desktop applications — and follow them through the first sales conversation.",
@@ -473,19 +509,26 @@ export const en: SiteContent = {
   },
 
   interview: {
-    badge: "Interview · Atheris Labs",
+    badge: "Interview \u00B7 Atheris Labs",
     title: "Book your *interview*",
     description:
       "Pick the slot that suits you: 1 hour, at your own local time.",
-    hoursNote: "Slots from 9 AM to 8 PM · next 3 days",
-    timezoneHint: "Slots shown in your own time zone",
+    noteReferenceTz:
+      "Our slots are set in Algerian time (9 AM \u2013 4 PM) and are automatically displayed in YOUR local time: you pick an hour that suits you, where you live.",
+    noteNoNightWork:
+      "This time difference does not change your working hours: the only time it matters is for the interview itself.",
+    noteMeetDay:
+      "On the day: join the Google Meet 5 minutes before your chosen time. The interview lasts about 30 minutes. Once confirmed, the slot can no longer be changed.",
+    expiredTitle: "This link has expired",
+    expiredMessage:
+      "The booking window for this interview is over. Please contact your recruiter for a new link.",
     stepProfile: "Your details",
     stepSlot: "Your slot",
     notFoundTitle: "Invalid link",
-    javascriptRequired:
-      "This scheduler requires JavaScript: please enable it in your browser to pick a slot.",
     notFoundMessage:
       "This interview link no longer exists or has been cancelled. Please contact your recruiter.",
+    javascriptRequired:
+      "This scheduler requires JavaScript: please enable it in your browser to pick a slot.",
     form: {
       firstNameLabel: "First name",
       lastNameLabel: "Last name",
@@ -505,9 +548,18 @@ export const en: SiteContent = {
       },
       successTitle: "Interview booked.",
       successMessage:
-        "Your slot is confirmed. A summary has been sent to you by email.",
-      successAction: "Change my slot",
+        "Your slot is confirmed and can no longer be changed. A summary has been sent to you by email.",
+      successAction: "Close",
     },
+  },
+
+  notFound: {
+    code: "404 \u00B7 Not found",
+    title: "This page does not *exist*",
+    description:
+      "The link may have changed or the address contains a typo. Let's get you back on track.",
+    primaryCta: "Back to home",
+    secondaryCta: "View our work",
   },
 
   footer: {

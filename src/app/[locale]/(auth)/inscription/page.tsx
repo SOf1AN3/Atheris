@@ -11,7 +11,7 @@ type InscriptionPageProps = {
 };
 
 /**
- * `/{locale}/inscription` : page PUBlique de candidature (LDG, T10).
+ * `/{locale}/inscription` : page PUBlique de candidature (Sales Partner, T10).
  *
  * - `generateMetadata` vit dans CETTE page (jamais dans le layout `(auth)`,
  *   réservé à FE-2) et s'appuie sur `seo.signup` du dictionnaire plateforme.

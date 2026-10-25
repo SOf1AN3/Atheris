@@ -29,6 +29,7 @@ export const fr: SiteContent = {
       { label: "Méthode", href: "#methode" },
     ],
     ctaLabel: "Demander un devis",
+    ctaShort: "Devis",
     loginLabel: "Connexion",
   },
 
@@ -93,6 +94,7 @@ export const fr: SiteContent = {
     title: "Projets & *Réalisations*",
     description:
       "Une sélection de produits digitaux livrés en production, du SaaS métier aux applications temps réel.",
+    visitLabel: "Visiter le site",
     filters: {
       all: "Tous",
       web: "Web & SaaS",
@@ -106,6 +108,7 @@ export const fr: SiteContent = {
         featured: true,
         mockup: "clinic",
         image: "projects/dental.jpg",
+        url: "https://dental-app-beta1.vercel.app/",
         title: "SaaS de Gestion Clinique",
         description:
           "Plateforme SaaS complète de gestion médicale\u00A0: agendas, dossiers patients, facturation et statistiques cabinet, déclinée en multi-tenant sur Next.js et PostgreSQL.",
@@ -118,6 +121,7 @@ export const fr: SiteContent = {
         featured: false,
         mockup: "papernote",
         image: "projects/papernote.jpg",
+        url: "https://reviewer-ai-delta.vercel.app/fr",
         title: "Papernote",
         description:
           "Plateforme SaaS d'analyse et de synthèse de documents académiques par IA\u00A0: ingestion, indexation vectorielle et restitutions structurées en quelques secondes.",
@@ -130,6 +134,7 @@ export const fr: SiteContent = {
         featured: false,
         mockup: "delyx",
         image: "projects/delyx.jpg",
+        url: "https://delyx-delivery.vercel.app/",
         title: "Delyx Delivery",
         description:
           "Plateforme de livraison à moto à travers l'Algérie\u00A0: le client décrit sa course, choisit son livreur, suit le trajet en direct par géolocalisation et paie à la livraison.",
@@ -142,6 +147,7 @@ export const fr: SiteContent = {
         featured: false,
         mockup: "tiberium",
         image: "projects/tiberium.jpg",
+        url: "https://tiberium-next.vercel.app/",
         title: "Tiberium Consulting",
         description:
           "Plateforme de consulting avec messagerie temps réel sécurisée via WebSockets, notifications, historique persistant et mise à l'échelle Redis.",
@@ -344,8 +350,8 @@ export const fr: SiteContent = {
         id: "email",
         icon: "mail",
         label: "Email professionnel",
-        value: "contact@atherislabs.com",
-        href: "mailto:contact@atherislabs.com",
+        value: "contact@sofianeasma.me",
+        href: "mailto:contact@sofianeasma.me",
       },
       {
         id: "whatsapp",
@@ -392,12 +398,42 @@ export const fr: SiteContent = {
     },
   },
 
+  about: {
+    eyebrow: "\u00C0 propos",
+    title: "Une *startup* alg\u00E9rienne",
+    description:
+      "Atheris Labs est une nouvelle startup bas\u00E9e en Alg\u00E9rie. Nous concevons et d\u00E9veloppons des produits digitaux sur-m\u00E9sure, de A \u00E0 Z, avec l'exigence d'une \u00E9quipe qui veut tout faire juste.",
+    priorities: [
+      {
+        id: "rapidite",
+        title: "Rapidit\u00E9 d'ex\u00E9cution",
+        description:
+          "Des cycles courts, des d\u00E9monstrations r\u00E9guli\u00E8res et une mise en production ma\u00Eetr\u00EEs\u00E9e : vous voyez avancer le produit, pas seulement le calendrier.",
+      },
+      {
+        id: "securite",
+        title: "S\u00E9curit\u00E9",
+        description:
+          "Code 100 % \u00E0 votre propri\u00E9t\u00E9, bonnes pratiques d'ing\u00E9nierie et confidentialit\u00E9 stricte\u00A0: vos donn\u00E9es et votre p\u00E9rim\u00E8tre sont prot\u00E9g\u00E9s \u00E0 chaque \u00E9tape.",
+      },
+      {
+        id: "perfectionnisme",
+        title: "Perfectionnisme",
+        description:
+          "Interface, performance, code et livrables sont repass\u00E9s au peigne fin avant validation. Le d\u00E9tail qui g\u00Ee\u00EEnhe n'est jamais laiss\u00E9 au hasard.",
+      },
+    ],
+    guaranteeTitle: "Votre plan, r\u00E9alis\u00E9 au d\u00E9tail pr\u00E8s",
+    guaranteeDescription:
+      "Nous garantissons la satisfaction du client\u00A0: le plan discut\u00E9 et valid\u00E9 avec vous est livr\u00E9 exactement, au d\u00E9tail pr\u00E8s \u2014 pas une approximation, pas une version approch\u00E9e.",
+  },
+
   careers: {
     eyebrow: "Recrutement",
     title: "Rejoignez *l'équipe*",
     description:
-      "Nous recrutons des Lead Generators pour développer notre portefeuille clients, à distance.",
-    role: "Lead Generator",
+      "Nous recrutons des Sales Partners pour développer notre portefeuille clients, à distance.",
+    role: "Sales Partner",
     meta: ["Collaborateur indépendant", "Rémunération à la commission", "100 % remote"],
     intro:
       "Identifiez et qualifiez des prospects pour Atheris Labs\u00A0— studio d'ingénierie logicielle (applications Web, Mobile et Desktop sur-mesure) — et accompagnez-les jusqu'au premier échange commercial.",
@@ -474,41 +510,57 @@ export const fr: SiteContent = {
   },
 
   interview: {
-    badge: "Entretien · Atheris Labs",
-    title: "Réservez votre *entretien*",
+    badge: "Entretien \u00B7 Atheris Labs",
+    title: "R\u00E9servez votre *entretien*",
     description:
-      "Choisissez le créneau qui vous convient\u00A0: 1 heure, à l'heure locale de votre fuseau.",
-    hoursNote: "Créneaux de 9 h à 20 h · 3 prochains jours",
-    timezoneHint: "Créneaux affichés dans votre fuseau horaire",
+      "Choisissez le cr\u00E9neau qui vous convient\u00A0: 1 heure, \u00E0 l'heure locale de votre fuseau.",
+    noteReferenceTz:
+      "Nos cr\u00E9neaux sont d\u00E9finis en heure alg\u00E9rienne (9 h \u2013 16 h). Ils sont automatiquement affich\u00E9s \u00E0 VOTRE heure locale\u00A0: vous choisissez une heure qui vous convient, chez vous.",
+    noteNoNightWork:
+      "Ce d\u00E9calage ne change rien \u00E0 vos horaires de travail\u00A0: la seule fois o\u00F9 il compte, c'est pour l'entretien lui-m\u00EAme.",
+    noteMeetDay:
+      "Le jour J\u00A0: rejoignez le Google Meet 5 minutes avant l'heure choisie. L'entretien dure en moyenne 30 minutes. Une fois valid\u00E9, le cr\u00E9neau n'est plus modifiable.",
+    expiredTitle: "Ce lien a expir\u00E9",
+    expiredMessage:
+      "La p\u00E9riode de r\u00E9servation de cet entretien est termin\u00E9e. Contactez votre recruteur pour obtenir un nouveau lien.",
     stepProfile: "Vos informations",
-    stepSlot: "Votre créneau",
+    stepSlot: "Votre cr\u00E9neau",
     notFoundTitle: "Lien invalide",
-    javascriptRequired:
-      "Cet agenda nécessite JavaScript\u00A0: activez-le dans votre navigateur pour choisir un créneau.",
     notFoundMessage:
-      "Ce lien d'entretien n'existe plus ou a été annulé. Contactez votre recruteur.",
+      "Ce lien d'entretien n'existe plus ou a \u00E9t\u00E9 annul\u00E9. Contactez votre recruteur.",
+    javascriptRequired:
+      "Cet agenda n\u00E9cessite JavaScript\u00A0: activez-le dans votre navigateur pour choisir un cr\u00E9neau.",
     form: {
-      firstNameLabel: "Prénom",
+      firstNameLabel: "Pr\u00E9nom",
       lastNameLabel: "Nom",
       emailLabel: "Email",
-      slotLabel: "Créneau souhaité",
-      submitLabel: "Confirmer mon créneau",
-      note: "Une confirmation vous sera envoyée par email.",
+      slotLabel: "Cr\u00E9neau souhait\u00E9",
+      submitLabel: "Confirmer mon cr\u00E9neau",
+      note: "Une confirmation vous sera envoy\u00E9e par email.",
       errors: {
-        firstNameRequired: "Merci d'indiquer votre prénom.",
+        firstNameRequired: "Merci d'indiquer votre pr\u00E9nom.",
         lastNameRequired: "Merci d'indiquer votre nom.",
         emailRequired: "Merci d'indiquer votre adresse email.",
         emailInvalid: "Merci de saisir une adresse email valide.",
-        slotRequired: "Merci de sélectionner un créneau.",
-        slotTaken: "Ce créneau vient d'être pris. Choisissez-en un autre.",
-        rateLimited: "Trop de tentatives. Merci de réessayer dans une minute.",
-        generic: "L'envoi a échoué. Merci de réessayer dans un instant.",
+        slotRequired: "Merci de s\u00E9lectionner un cr\u00E9neau.",
+        slotTaken: "Ce cr\u00E9neau vient d'\u00EAtre pris. Choisissez-en un autre.",
+        rateLimited: "Trop de tentatives. Merci de r\u00E9essayer dans une minute.",
+        generic: "L'envoi a \u00E9chou\u00E9. Merci de r\u00E9essayer dans un instant.",
       },
-      successTitle: "Entretien réservé.",
+      successTitle: "Entretien r\u00E9serv\u00E9.",
       successMessage:
-        "Votre créneau est confirmé. Un récapitulatif vous a été envoyé par email.",
-      successAction: "Modifier mon créneau",
+        "Votre cr\u00E9neau est confirm\u00E9 et ne peut plus \u00EAtre modifi\u00E9. Un r\u00E9capitulatif vous a \u00E9t\u00E9 envoy\u00E9 par email.",
+      successAction: "Fermer",
     },
+  },
+
+  notFound: {
+    code: "404 \u00B7 Page introuvable",
+    title: "Cette page n'existe *pas*",
+    description:
+      "Le lien a peut-\u00EAtre chang\u00E9 ou l'adresse comporte une faute. Revenons sur le bon chemin.",
+    primaryCta: "Retour \u00E0 l'accueil",
+    secondaryCta: "Voir les r\u00E9alisations",
   },
 
   footer: {

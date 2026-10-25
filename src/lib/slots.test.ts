@@ -1,6 +1,6 @@
 /**
  * Atheris — tests unitaires du module de créneaux d'entretien
- * (PLAN §4 « Unitaires (vitest) : `slots.ts` sur 3 fuseaux » · §Sécurité 3).
+ * (**Lot 2**, PLAN §2 : « heure algérienne », fenêtre J+1 → J+3).
  *
  * 100 % pur : aucune DB, aucun appel réseau, aucune donnée mockée — uniquement
  * `Intl` et du calcul de dates. Toutes les dates sont **figées** en fixtures
@@ -11,25 +11,42 @@
  * `vitest run` sans configuration de résolution d'alias — même convention que
  * `src/lib/commission.test.ts` et `src/lib/prospect-dedup.test.ts`.
  *
- * Fuseaux couverts (PLAN §4) :
- * - `Africa/Algiers` — UTC+1 **sans** heure d'été ;
- * - `Europe/Paris` — UTC+1 / UTC+2 **avec** passage à l'heure (dernier
- *   dimanche de mars et d'octobre) ;
- * - `America/Los_Angeles` — UTC−8 / UTC−7 : DST **et** décalage sur la nuit
- *   locale (fenêtre du matin déjà avancée côté UTC).
+ * Modèle vérifié (règle métier actée, remplace l'ancienne fenêtre glissante
+ * « à partir d'aujourd'hui côté candidat ») :
+ * - grille **ancrée** en `Africa/Algiers` (7 prises 9 h → 15 h, fenêtre
+ *   9 h – 16 h **heure de l'entreprise**), rendue en fuseau **candidat** ;
+ * - fenêtre **figée** J+1 → J+3 dérivée de la génération du lien ;
+ * - `localDate`/`localHour` = rendu candidat (offset Philippines `+7`,
+ *   recul de jour côté Amériques), `instant` = vérité absolue revalidée.
+ *
+ * Fuseaux couverts :
+ * - `Africa/Algiers` — UTC+1 **sans** DST (ancrage de la grille) ;
+ * - `Europe/Paris` — UTC+1 / UTC+2 **avec** DST (dernier dimanche de mars
+ *   et d'octobre) ;
+ * - `Asia/Manila` — UTC+8 **sans** DST : décalage `+7` sur Alger, testé au
+ *   pixel (09:00 Algérie → **16:00** affiché) ;
+ * - `America/Los_Angeles` — UTC−8 / UTC−7 : DST **et** retour d'heure du
+ *   1ᵉʳ dimanche de novembre (heure murale répétée) ;
+ * - `America/Anchorage` — UTC−9 / UTC−8 : l'offset négatif qui fait
+ *   **reculer d'un jour** l'affichage (09:00 Algérie → 23:00 la veille).
+ *   ⚠ Los Angeles plafonne à UTC−8 : 09:00 Algérie y affiche 00:00 (hiver)
+ *   ou 01:00 (été) le **même** jour civil — le recul de jour est donc prouvé
+ *   sur Anchorage (hiver, UTC−9), jamais sur L.A. (constat ICU vérifié).
  *
  * HORS PÉRIMÈTRE (signalé au LEAD) : la « Zod des 2 actions » et la limite
  * de 5 Mo ne sont **pas** testées ici — `applySchema`, `submitInterviewSchema`
  * et `MAX_CV_BYTES` sont des valeurs runtime internes à des fichiers
  * `"use server"`, qui n'autorisent que l'export de fonctions async : les
- * exposer casserait `next build`. Aucune extraction n'a donc été faite.
+ * exposer casserait `next build`.
  */
 
 import { describe, expect, it } from "vitest";
 
 import {
+  ANCHOR_TZ,
   DAYS,
-  getSlotsForTimezone,
+  getSlotsForWindow,
+  getSlotsForWindowDates,
   HOURS,
   isValidSlot,
   RECRUITER_TZ,
@@ -40,48 +57,57 @@ import {
 } from "./slots";
 
 // ---------------------------------------------------------------------------
-// Fixtures — instants FIGÉS (aucune dépendance à l'horloge système).
+// Fixtures — instants et fenêtres FIGÉS (aucune dépendance à l'horloge).
 // ---------------------------------------------------------------------------
 
-/** Dimanche 15 mars 2026, 13 h 00 à Alger (UTC+1, sans DST). */
-const ALGIERS_NOW = new Date("2026-03-15T12:00:00.000Z");
+/** Dimanche 25 octobre 2026, 13 h 00 à Alger — génération du lien. */
+const CREATED_AT = new Date("2026-10-25T12:00:00.000Z");
 
-/** Mardi 20 janvier 2026, 13 h 00 à Paris (UTC+1, plein hiver). */
-const PARIS_WINTER_NOW = new Date("2026-01-20T12:00:00.000Z");
+/** Fenêtre algérienne dérivée de `CREATED_AT` : lundi 26, mardi 27, mercredi 28 oct. */
+const WINDOW_OCT: readonly string[] = ["2026-10-26", "2026-10-27", "2026-10-28"];
+/** Référence posée **avant** toute heure de la fenêtre : rien n'est `past`. */
+const NOW_OCT = new Date("2026-10-25T12:00:00.000Z");
 
-/** Vendredi 10 juillet 2026, 05 h 00 à Los Angeles (UTC−7, plein été). */
-const LA_SUMMER_NOW = new Date("2026-07-10T12:00:00.000Z");
+/** Fenêtre de janvier — Paris en plein hiver (UTC+1). */
+const WINDOW_JAN: readonly string[] = ["2026-01-19", "2026-01-20", "2026-01-21"];
+const NOW_JAN = new Date("2026-01-15T12:00:00.000Z");
 
-/** Vendredi 10 juin 2026, 14 h 00 à Paris (UTC+2) — référence d'assertions. */
-const PARIS_SUMMER_NOW = new Date("2026-06-10T12:00:00.000Z");
+/** Fenêtre de juillet — Los Angeles en plein été (UTC−7). */
+const WINDOW_JUL: readonly string[] = ["2026-07-13", "2026-07-14", "2026-07-15"];
+const NOW_JUL = new Date("2026-07-10T12:00:00.000Z");
 
-/** Vendredi 27 mars 2026, 13 h 00 à Paris : fenêtre **chevauchant** le
- *  passage à l'heure d'été (dimanche 29 mars 2026, dernier dimanche de mars). */
-const SPRING_NOW = new Date("2026-03-27T12:00:00.000Z");
+/** Fenêtre de juin — Paris en plein été (UTC+2), pour l'anti-falsification. */
+const WINDOW_JUIN: readonly string[] = ["2026-06-10", "2026-06-11", "2026-06-12"];
+const NOW_JUIN = new Date("2026-06-08T12:00:00.000Z");
 
-/** Dimanche 29 mars 2026, 01 h 30 à Paris — matin même du trou DST. */
-const SPRING_DAY_NOW = new Date("2026-03-29T00:30:00.000Z");
+/** Fenêtre chevauchant le passage à l'heure d'été à Paris (dim. 29 mars 2026). */
+const WINDOW_PRINTEMPS: readonly string[] = ["2026-03-27", "2026-03-28", "2026-03-29"];
+const NOW_PRINTEMPS = new Date("2026-03-20T12:00:00.000Z");
 
-/** Vendredi 23 octobre 2026, 14 h 00 à Paris : fenêtre **chevauchant** le
- *  passage à l'heure d'hiver (dimanche 25 octobre 2026, dernier dimanche
- *  d'octobre). */
-const FALL_NOW = new Date("2026-10-23T12:00:00.000Z");
+/** Fenêtre chevauchant le retour à l'heure d'hiver à Paris (dim. 25 oct. 2026). */
+const WINDOW_AUTOMNE: readonly string[] = ["2026-10-23", "2026-10-24", "2026-10-25"];
+const NOW_AUTOMNE = new Date("2026-10-20T12:00:00.000Z");
 
-/** Dimanche 25 octobre 2026, 02 h 30 à Paris — `now` posé **dans** l'heure
- *  locale répétée (02:30 CEST puis 02:30 CET). */
-const FALL_AMBIGUOUS_NOW = new Date("2026-10-25T00:30:00.000Z");
+/** Fenêtre chevauchant le retour d'heure à Los Angeles (dim. 1ᵉʳ nov. 2026, 02:00 PDT → 01:00 PST). */
+const WINDOW_LA: readonly string[] = ["2026-10-30", "2026-10-31", "2026-11-01"];
+const NOW_LA = new Date("2026-10-28T12:00:00.000Z");
 
-/** Samedi 24 octobre 2026, 23 h 00 à Alger — samedi soir. */
-const SATURDAY_NIGHT_NOW = new Date("2026-10-24T22:00:00.000Z");
+/** Fenêtre hivernale à Anchorage (AKST, UTC−9 — retour d'heure passé le 1ᵉʳ nov.). */
+const WINDOW_ANCHORAGE: readonly string[] = ["2026-11-04", "2026-11-05", "2026-11-06"];
+const NOW_ANCHORAGE = new Date("2026-11-02T12:00:00.000Z");
 
-/** Fenêtres de référence : `(fuseau, now)` figés, repris dans plusieurs blocs. */
-const FENETRES: ReadonlyArray<{ tz: string; now: Date }> = [
-  { tz: "Africa/Algiers", now: ALGIERS_NOW },
-  { tz: "Europe/Paris", now: PARIS_WINTER_NOW },
-  { tz: "America/Los_Angeles", now: LA_SUMMER_NOW },
-  // Fenêtres qui chevauchent un changement d'heure (Europe/Paris).
-  { tz: "Europe/Paris", now: SPRING_NOW },
-  { tz: "Europe/Paris", now: FALL_NOW },
+/** Toutes les fenêtres de test — reprises pour l'aller-retour et la revalidation. */
+type Fenetre = { tz: string; dates: readonly string[]; now: Date };
+
+const TOUTES_FENETRES: readonly Fenetre[] = [
+  { tz: "Africa/Algiers", dates: WINDOW_OCT, now: NOW_OCT },
+  { tz: "Europe/Paris", dates: WINDOW_JAN, now: NOW_JAN },
+  { tz: "Asia/Manila", dates: WINDOW_OCT, now: NOW_OCT },
+  { tz: "America/Los_Angeles", dates: WINDOW_JUL, now: NOW_JUL },
+  { tz: "Europe/Paris", dates: WINDOW_PRINTEMPS, now: NOW_PRINTEMPS },
+  { tz: "Europe/Paris", dates: WINDOW_AUTOMNE, now: NOW_AUTOMNE },
+  { tz: "America/Los_Angeles", dates: WINDOW_LA, now: NOW_LA },
+  { tz: "America/Anchorage", dates: WINDOW_ANCHORAGE, now: NOW_ANCHORAGE },
 ];
 
 // ---------------------------------------------------------------------------
@@ -106,7 +132,7 @@ function projectLocal(instant: string, timezone: string): string {
 }
 
 /** Dates locales distinctes, dans l'ordre d'apparition. */
-function datesOf(slots: Slot[]): string[] {
+function datesOf(slots: readonly Slot[]): string[] {
   const dates: string[] = [];
   for (const slot of slots) {
     if (!dates.includes(slot.localDate)) dates.push(slot.localDate);
@@ -114,20 +140,44 @@ function datesOf(slots: Slot[]): string[] {
   return dates;
 }
 
-/** Les 11 heures attendues, formatées comme le module : `"09:00"` → `"19:00"`. */
+/** Heures affichées d'un jour donné, dans l'ordre de publication. */
+function hoursOn(slots: readonly Slot[], date: string): string[] {
+  return slots
+    .filter((slot) => slot.localDate === date)
+    .map((slot) => slot.localHour);
+}
+
+/** Plage d'heures `"HH:00"` croissante, inclusive. */
+function hoursRange(from: number, to: number): string[] {
+  const hours: string[] = [];
+  for (let hour = from; hour <= to; hour += 1) {
+    hours.push(`${String(hour).padStart(2, "0")}:00`);
+  }
+  return hours;
+}
+
+/** Les 7 heures de `HOURS`, formatées comme le module : `"09:00"` → `"15:00"`. */
 function expectedHours(): string[] {
   return HOURS.map((hour) => `${String(hour).padStart(2, "0")}:00`);
 }
 
 /** Instant publié d'un créneau, ou `undefined` (échec d'assertion plus bas). */
-function instantOf(slots: Slot[], localDate: string, localHour: string): string | undefined {
+function instantOf(
+  slots: readonly Slot[],
+  localDate: string,
+  localHour: string,
+): string | undefined {
   return slots.find(
     (slot) => slot.localDate === localDate && slot.localHour === localHour,
   )?.instant;
 }
 
 /** Comme `instantOf`, mais échoue explicitement si le créneau n'est pas publié. */
-function requireInstant(slots: Slot[], localDate: string, localHour: string): string {
+function requireInstant(
+  slots: readonly Slot[],
+  localDate: string,
+  localHour: string,
+): string {
   const instant = instantOf(slots, localDate, localHour);
   if (instant === undefined) throw new Error(`Créneau non publié : ${localDate} ${localHour}`);
   return instant;
@@ -144,416 +194,510 @@ function hourOf(time: string): number {
 }
 
 // ---------------------------------------------------------------------------
-// Constantes de la fenêtre (hypothèses actées du PLAN, §2.1).
+// Constantes de la fenêtre (Lot 2 — hypothèses actées du PLAN, §2 · Q1).
 // ---------------------------------------------------------------------------
 
-describe("constantes de la fenêtre", () => {
-  it("HOURS = 11 créneaux horaires, de 9 h à 19 h inclus", () => {
-    expect(HOURS).toEqual([9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]);
-    expect(HOURS).toHaveLength(11);
+describe("constantes de la fenêtre (Lot 2)", () => {
+  it("HOURS = 7 prises algériennes, de 9 h à 15 h (fenêtre 9 h → 16 h)", () => {
+    expect(HOURS).toEqual([9, 10, 11, 12, 13, 14, 15]);
+    expect(HOURS).toHaveLength(7);
   });
 
-  it("DAYS = 3 · SLOT_DURATION_MINUTES = 60 (fenêtre 9 h → 20 h) · recruteur à Alger", () => {
+  it("DAYS = 3 · SLOT_DURATION_MINUTES = 60 · ancre = recruteur = Africa/Algiers", () => {
     expect(DAYS).toBe(3);
     expect(SLOT_DURATION_MINUTES).toBe(60);
+    expect(ANCHOR_TZ).toBe("Africa/Algiers");
     expect(RECRUITER_TZ).toBe("Africa/Algiers");
   });
 });
 
 // ---------------------------------------------------------------------------
-// getSlotsForTimezone — 3 jours × 11 créneaux sur les 3 fuseaux.
+// getSlotsForWindowDates — fenêtre J+1 → J+3, figée à la génération.
 // ---------------------------------------------------------------------------
 
-describe("getSlotsForTimezone — fenêtre de base (3 fuseaux)", () => {
-  it("Africa/Algiers (UTC+1, sans DST) : 33 créneaux sur 3 jours consécutifs", () => {
-    const slots = getSlotsForTimezone("Africa/Algiers", ALGIERS_NOW);
+describe("getSlotsForWindowDates — fenêtre J+1 → J+3 (figée à la génération)", () => {
+  it("génération le 25 oct. → [26, 27, 28] : le jour de génération n'y figure jamais", () => {
+    const dates = getSlotsForWindowDates(CREATED_AT);
 
-    expect(slots).toHaveLength(DAYS * HOURS.length);
-    expect(datesOf(slots)).toEqual(["2026-03-15", "2026-03-16", "2026-03-17"]);
-    // Contrôle d'offset indépendant : 09:00 local = 08:00 UTC (UTC+1).
-    expect(requireInstant(slots, "2026-03-15", "09:00")).toBe("2026-03-15T08:00:00.000Z");
+    expect(dates).toEqual(["2026-10-26", "2026-10-27", "2026-10-28"]);
+    expect(dates).toHaveLength(DAYS);
+    expect(dates).not.toContain("2026-10-25");
+    // ISO civil = tri chronologique lexicographique.
+    expect(dates[0] < dates[1]).toBe(true);
+    expect(dates[1] < dates[2]).toBe(true);
+    // `Date` et ISO équivalent donnent exactement la même fenêtre.
+    expect(getSlotsForWindowDates("2026-10-25T12:00:00.000Z")).toEqual(dates);
   });
 
-  it("Europe/Paris (avec DST) : 33 créneaux sur 3 jours consécutifs", () => {
-    const slots = getSlotsForTimezone("Europe/Paris", PARIS_WINTER_NOW);
-
-    expect(slots).toHaveLength(DAYS * HOURS.length);
-    expect(datesOf(slots)).toEqual(["2026-01-20", "2026-01-21", "2026-01-22"]);
-    // Contrôle d'offset indépendant : 09:00 local = 08:00 UTC (UTC+1, hiver).
-    expect(requireInstant(slots, "2026-01-20", "09:00")).toBe("2026-01-20T08:00:00.000Z");
+  it("chevauchement de mois (31 jan → 1, 2, 3 fév) et d'année (30 déc → 31 déc, 1, 2 jan)", () => {
+    expect(getSlotsForWindowDates("2026-01-31T12:00:00.000Z")).toEqual([
+      "2026-02-01",
+      "2026-02-02",
+      "2026-02-03",
+    ]);
+    expect(getSlotsForWindowDates("2026-12-30T12:00:00.000Z")).toEqual([
+      "2026-12-31",
+      "2027-01-01",
+      "2027-01-02",
+    ]);
   });
 
-  it("America/Los_Angeles (UTC−7 en été) : 33 créneaux sur 3 jours consécutifs", () => {
-    const slots = getSlotsForTimezone("America/Los_Angeles", LA_SUMMER_NOW);
-
-    expect(slots).toHaveLength(DAYS * HOURS.length);
-    expect(datesOf(slots)).toEqual(["2026-07-10", "2026-07-11", "2026-07-12"]);
-    // Contrôle d'offset indépendant : 09:00 local = 16:00 UTC (UTC−7) — le
-    // décalage nocturne se lit ici, la matinée locale avance sur l'UTC.
-    expect(requireInstant(slots, "2026-07-10", "09:00")).toBe("2026-07-10T16:00:00.000Z");
+  it("le jour de référence est ALGÉRIEN : génération à 23:30Z (00:30 le 26) → [27, 28, 29]", () => {
+    // 22:30Z = 23:30 à Alger (UTC+1) → encore le 25 algérien.
+    expect(getSlotsForWindowDates("2026-10-25T22:30:00.000Z")).toEqual([
+      "2026-10-26",
+      "2026-10-27",
+      "2026-10-28",
+    ]);
+    // 23:30Z = 00:30 le 26 à Alger → le jour algérien a basculé : la fenêtre
+    // entière avance d'un jour. Le décalage +1 est déduit via `Intl`,
+    // jamais écrit en dur.
+    expect(getSlotsForWindowDates("2026-10-25T23:30:00.000Z")).toEqual([
+      "2026-10-27",
+      "2026-10-28",
+      "2026-10-29",
+    ]);
   });
 
-  it("chaque jour publie exactement les 11 heures de HOURS, dans l'ordre", () => {
-    for (const { tz, now } of FENETRES) {
-      const slots = getSlotsForTimezone(tz, now);
-      expect(slots).toHaveLength(DAYS * HOURS.length);
-      for (const date of datesOf(slots)) {
-        expect(
-          slots.filter((slot) => slot.localDate === date).map((slot) => slot.localHour),
-        ).toEqual(expectedHours());
-      }
-    }
+  it("entrée illisible (Date invalide, string, valeur forgée) → [] sans throw", () => {
+    expect(() => getSlotsForWindowDates(new Date("invalid"))).not.toThrow();
+    expect(getSlotsForWindowDates(new Date("invalid"))).toEqual([]);
+    expect(getSlotsForWindowDates("25/10/2026")).toEqual([]);
+    expect(getSlotsForWindowDates("pas-une-date")).toEqual([]);
+    // Entrées forgées : ni `Date`, ni string.
+    expect(getSlotsForWindowDates(42 as unknown as Date)).toEqual([]);
+    expect(getSlotsForWindowDates(null as unknown as Date | string)).toEqual([]);
   });
+});
 
-  it("tri : jours croissants puis heures croissantes, formats conformes, aucun doublon", () => {
-    const slots = getSlotsForTimezone("Africa/Algiers", ALGIERS_NOW);
+// ---------------------------------------------------------------------------
+// getSlotsForWindow — grille ancrée Algérie, rendue en fuseau candidat.
+// ---------------------------------------------------------------------------
 
-    // Regroupement jour-major : 3 blocs successifs de 11 heures identiques.
+describe("getSlotsForWindow — grille ancrée Algérie, rendue côté candidat", () => {
+  it("Africa/Algiers : 21 créneaux, tri jour puis heure, instant exact, entrées ramenées à l'ordre", () => {
+    const slots = getSlotsForWindow(WINDOW_OCT, "Africa/Algiers", NOW_OCT);
+
+    expect(slots).toHaveLength(DAYS * HOURS.length); // 3 × 7 = 21
+    expect(datesOf(slots)).toEqual(WINDOW_OCT);
+    // Regroupement jour-major : 3 blocs successifs de 7 heures identiques.
     expect(slots.map((slot) => slot.localHour)).toEqual([
       ...expectedHours(),
       ...expectedHours(),
       ...expectedHours(),
     ]);
-    // Un couple (date, heure) n'est jamais publié deux fois…
-    expect(new Set(slots.map((slot) => `${slot.localDate} ${slot.localHour}`)).size).toBe(
-      slots.length,
-    );
-    // … et jamais deux fois le même instant absolu.
+    // Contrôle d'offset INDEPENDANT (via `Intl`) : 09:00 Alger = 08:00 UTC.
+    expect(requireInstant(slots, "2026-10-26", "09:00")).toBe("2026-10-26T08:00:00.000Z");
+    // Instants strictement croissants, formats conformes, aucun doublon.
+    for (let index = 1; index < slots.length; index += 1) {
+      expect(Date.parse(slots[index].instant)).toBeGreaterThan(
+        Date.parse(slots[index - 1].instant),
+      );
+    }
     expect(new Set(slots.map((slot) => slot.instant)).size).toBe(slots.length);
-
     for (const slot of slots) {
+      expect(slot.localDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
       expect(slot.localHour).toMatch(/^\d{2}:\d{2}$/);
       expect(slot.localHour.endsWith(":00")).toBe(true);
       // Instant toujours en ISO 8601 UTC millimétrique (vérité `starts_at`).
       expect(slot.instant).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
     }
+    // Désordre + doublon en entrée : même grille, exactement (tri + dédup).
+    const chaos = getSlotsForWindow(
+      ["2026-10-28", "2026-10-26", "2026-10-26", "2026-10-27"],
+      "Africa/Algiers",
+      NOW_OCT,
+    );
+    expect(chaos).toEqual(slots);
   });
 
-  it("aller-retour localDate/localHour → instant → localDate/localHour : identique sur les 3 fuseaux", () => {
-    for (const { tz, now } of FENETRES) {
-      for (const slot of getSlotsForTimezone(tz, now)) {
+  it("chaque jour publie exactement les 7 heures de HOURS, dans l'ordre (4 fuseaux)", () => {
+    const cas: ReadonlyArray<{ tz: string; dates: readonly string[]; now: Date; heures: string[] }> = [
+      { tz: "Africa/Algiers", dates: WINDOW_OCT, now: NOW_OCT, heures: hoursRange(9, 15) },
+      { tz: "Europe/Paris", dates: WINDOW_JAN, now: NOW_JAN, heures: hoursRange(9, 15) },
+      { tz: "Asia/Manila", dates: WINDOW_OCT, now: NOW_OCT, heures: hoursRange(16, 22) },
+      { tz: "America/Los_Angeles", dates: WINDOW_JUL, now: NOW_JUL, heures: hoursRange(1, 7) },
+    ];
+    for (const { tz, dates, now, heures } of cas) {
+      const slots = getSlotsForWindow(dates, tz, now);
+      expect(slots).toHaveLength(DAYS * HOURS.length);
+      // Sur ces 4 fuseaux, chaque date d'ancre se projette sur la même date
+      // locale : les blocs de 7 heures sont donc regroupés à l'identique.
+      expect(datesOf(slots)).toEqual([...dates]);
+      for (const date of datesOf(slots)) {
+        expect(hoursOn(slots, date)).toEqual(heures);
+      }
+    }
+  });
+
+  it("aller-retour instant → localDate/localHour : identique sur les 8 fenêtres", () => {
+    for (const { tz, dates, now } of TOUTES_FENETRES) {
+      for (const slot of getSlotsForWindow(dates, tz, now)) {
         expect(projectLocal(slot.instant, tz)).toBe(`${slot.localDate} ${slot.localHour}`);
       }
     }
   });
 
-  it("fuseau vide ou `now` illisible → [] (défaut sûr, sans throw)", () => {
-    expect(() => getSlotsForTimezone("", ALGIERS_NOW)).not.toThrow();
-    expect(getSlotsForTimezone("", ALGIERS_NOW)).toEqual([]);
-
-    expect(() => getSlotsForTimezone("Europe/Paris", new Date("invalid"))).not.toThrow();
-    expect(getSlotsForTimezone("Europe/Paris", new Date("invalid"))).toEqual([]);
-
-    // Entrée forgée : `now` n'est même pas un `Date`.
-    expect(getSlotsForTimezone("Europe/Paris", null as unknown as Date)).toEqual([]);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Passage à l'heure — Europe/Paris (dernier dimanche de mars / d'octobre).
-// ---------------------------------------------------------------------------
-
-describe("passage à l'heure — Europe/Paris", () => {
-  it("printemps (dim. 29 mars 2026) : 33 créneaux, aucun doublon ni manquant", () => {
-    const slots = getSlotsForTimezone("Europe/Paris", SPRING_NOW);
+  it("Asia/Manila (UTC+8) : 09:00 Algérie affiché 16:00 — décalage +7 h vérifié au pixel", () => {
+    const slots = getSlotsForWindow(WINDOW_OCT, "Asia/Manila", NOW_OCT);
 
     expect(slots).toHaveLength(DAYS * HOURS.length);
-    expect(datesOf(slots)).toEqual(["2026-03-27", "2026-03-28", "2026-03-29"]);
-    // Jour du changement d'heure : les 11 heures 9 h → 19 h sont présentes.
-    expect(
-      slots.filter((slot) => slot.localDate === "2026-03-29").map((slot) => slot.localHour),
-    ).toEqual(expectedHours());
-    // Aucun instant en double (le trou DST ne concerne pas la plage 9-19).
-    expect(new Set(slots.map((slot) => slot.instant)).size).toBe(slots.length);
-    // Aller-retour sur toute la fenêtre : chaque créneau se reprojette
-    // exactement sur le couple affiché (heure locale cohérente).
-    for (const slot of slots) {
-      expect(projectLocal(slot.instant, "Europe/Paris")).toBe(
-        `${slot.localDate} ${slot.localHour}`,
+    // Heures affichées : 09…15 h algériennes + 7 h = 16…22 h manillaises.
+    expect(hoursOn(slots, "2026-10-26")).toEqual(hoursRange(16, 22));
+    expect(hoursOn(slots, "2026-10-27")).toEqual(hoursRange(16, 22));
+    expect(hoursOn(slots, "2026-10-28")).toEqual(hoursRange(16, 22));
+    // Instant exact du premier créneau : 09:00 Alger = 08:00 UTC = 16:00 à Manille.
+    expect(requireInstant(slots, "2026-10-26", "16:00")).toBe("2026-10-26T08:00:00.000Z");
+    // Les 7 instants du jour restent la grille algérienne 08:00Z → 14:00Z.
+    expect(slots.filter((slot) => slot.localDate === "2026-10-26").map((slot) => slot.instant)).toEqual([
+      "2026-10-26T08:00:00.000Z",
+      "2026-10-26T09:00:00.000Z",
+      "2026-10-26T10:00:00.000Z",
+      "2026-10-26T11:00:00.000Z",
+      "2026-10-26T12:00:00.000Z",
+      "2026-10-26T13:00:00.000Z",
+      "2026-10-26T14:00:00.000Z",
+    ]);
+  });
+
+  it("America/Los_Angeles : 09:00 Algérie affichée 01:00 (été) / 00:00 (hiver), même jour civil", () => {
+    // Été (PDT, UTC−7) : décalage mural affiché −8 h, aucun recul de jour.
+    const ete = getSlotsForWindow(WINDOW_JUL, "America/Los_Angeles", NOW_JUL);
+    expect(datesOf(ete)).toEqual(WINDOW_JUL);
+    expect(hoursOn(ete, "2026-07-13")).toEqual(hoursRange(1, 7));
+    expect(requireInstant(ete, "2026-07-13", "01:00")).toBe("2026-07-13T08:00:00.000Z");
+
+    // Hiver (PST, UTC−8) : 09:00 Algérie = 00:00 pile — MINUIT le même jour.
+    // Los Angeles plafonne à UTC−8 : à l'heure algérienne la plus ancienne
+    // (9 h = 08:00Z), le calendrier local n'a JAMAIS reculé — cf. le test
+    // Anchorage pour le vrai recul de jour.
+    const hiver = getSlotsForWindow(WINDOW_JAN, "America/Los_Angeles", NOW_JAN);
+    expect(datesOf(hiver)).toEqual(WINDOW_JAN);
+    expect(hoursOn(hiver, "2026-01-19")).toEqual(hoursRange(0, 6));
+    expect(requireInstant(hiver, "2026-01-19", "00:00")).toBe("2026-01-19T08:00:00.000Z");
+  });
+
+  it("America/Anchorage (UTC−9, hiver) : 09:00 Algérie affichée 23:00 la VEILLE", () => {
+    const slots = getSlotsForWindow(WINDOW_ANCHORAGE, "America/Anchorage", NOW_ANCHORAGE);
+
+    expect(slots).toHaveLength(DAYS * HOURS.length);
+    // Le créneau algérien du matin recule d'un jour civil côté candidat :
+    // 09:00 Algérie = 08:00Z = 23:00 AKST la veille → `localDate` recule.
+    expect(requireInstant(slots, "2026-11-03", "23:00")).toBe("2026-11-04T08:00:00.000Z");
+    // Affichage du 4 novembre : 00:00 → 05:00 (ancre du 4), puis 23:00
+    // (ancre du 5, qui recule à son tour) — l'ordre de publication suit
+    // l'ancre, jamais l'affichage.
+    expect(hoursOn(slots, "2026-11-04")).toEqual([...hoursRange(0, 5), "23:00"]);
+    // 4 dates affichées pour 3 dates algériennes (recul de jour), instants
+    // toujours strictement croissants (l'affichage ne réordonne rien).
+    expect(datesOf(slots)).toEqual(["2026-11-03", "2026-11-04", "2026-11-05", "2026-11-06"]);
+    for (let index = 1; index < slots.length; index += 1) {
+      expect(Date.parse(slots[index].instant)).toBeGreaterThan(
+        Date.parse(slots[index - 1].instant),
       );
     }
   });
 
-  it("printemps : 28 mars 09:00 → 08:00Z puis 29 mars 09:00 → 07:00Z (fenêtre de 23 h)", () => {
-    const slots = getSlotsForTimezone("Europe/Paris", SPRING_NOW);
+  it("past strict (borne = now, comparaison <) + fenêtre figée même des mois plus tard", () => {
+    // Avant la fenêtre : aucun créneau passé.
+    const futur = getSlotsForWindow(WINDOW_OCT, "Africa/Algiers", NOW_OCT);
+    expect(futur.filter((slot) => slot.past)).toHaveLength(0);
+
+    // Now posé à 10:00Z (11 h à Alger) le 26 : seuls les instants strictement
+    // antérieurs sont `past` — 09:00 et 10:00 affichés (08:00Z / 09:00Z) ;
+    // le créneau à 10:00Z (affiché 11:00) ne l'est PAS encore (borne stricte).
+    const miFenetre = getSlotsForWindow(WINDOW_OCT, "Africa/Algiers", new Date("2026-10-26T10:00:00.000Z"));
+    const passes = miFenetre.filter((slot) => slot.past);
+    expect(passes.map((slot) => `${slot.localDate} ${slot.localHour}`)).toEqual([
+      "2026-10-26 09:00",
+      "2026-10-26 10:00",
+    ]);
+    expect(instantOf(miFenetre, "2026-10-26", "11:00")).toBe("2026-10-26T10:00:00.000Z");
+
+    // Now APRÈS la fenêtre (le 29) : la fenêtre ne « glisse » PAS — elle
+    // reste [26, 27, 28] (figée à la génération), tout est `past`.
+    const tard = getSlotsForWindow(WINDOW_OCT, "Africa/Algiers", new Date("2026-10-29T00:00:00.000Z"));
+    expect(tard).toHaveLength(DAYS * HOURS.length);
+    expect(datesOf(tard)).toEqual(WINDOW_OCT);
+    expect(tard.every((slot) => slot.past)).toBe(true);
+  });
+
+  it("tz vide/inconnu, now illisible ou fenêtre illisible → [] sans throw", () => {
+    // Fuseau vide ou inconnu d'ICU.
+    expect(() => getSlotsForWindow(WINDOW_OCT, "", NOW_OCT)).not.toThrow();
+    expect(getSlotsForWindow(WINDOW_OCT, "", NOW_OCT)).toEqual([]);
+    expect(getSlotsForWindow(WINDOW_OCT, "Mars/Olympus_Mons", NOW_OCT)).toEqual([]);
+
+    // `now` illisible (pas même un `Date`).
+    expect(getSlotsForWindow(WINDOW_OCT, "Europe/Paris", new Date("invalid"))).toEqual([]);
+    expect(getSlotsForWindow(WINDOW_OCT, "Europe/Paris", null as unknown as Date)).toEqual([]);
+
+    // Fenêtre vide ou illisible (format, calendrier, non-tableau).
+    expect(getSlotsForWindow([], "Europe/Paris", NOW_OCT)).toEqual([]);
+    expect(getSlotsForWindow(["n'importe-quoi"], "Europe/Paris", NOW_OCT)).toEqual([]);
+    expect(getSlotsForWindow(["2026-02-31"], "Europe/Paris", NOW_OCT)).toEqual([]);
+    expect(getSlotsForWindow([42 as unknown as string], "Europe/Paris", NOW_OCT)).toEqual([]);
+    expect(getSlotsForWindow(null as unknown as string[], "Europe/Paris", NOW_OCT)).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Passage à l'heure côté CANDIDAT — gardes DST conservées (Algérie n'a pas
+// d'heure d'été, le candidat si).
+// ---------------------------------------------------------------------------
+
+describe("passage à l'heure — candidat en DST (garde conservée)", () => {
+  it("printemps Paris (dim. 29 mars) : affichage décalé +1 h, instants toujours espacés de 24 h", () => {
+    const slots = getSlotsForWindow(WINDOW_PRINTEMPS, "Europe/Paris", NOW_PRINTEMPS);
+
+    expect(slots).toHaveLength(DAYS * HOURS.length);
+    // 27 et 28 mars (heure d'hiver, UTC+1) : 9 h → 15 h. Le 29 (après le
+    // passage de 02:00 à 03:00, 01:00Z) : le MÊME créneau algérien s'affiche
+    // une heure plus tard — 10 h → 16 h (UTC+2).
+    expect(hoursOn(slots, "2026-03-27")).toEqual(hoursRange(9, 15));
+    expect(hoursOn(slots, "2026-03-28")).toEqual(hoursRange(9, 15));
+    expect(hoursOn(slots, "2026-03-29")).toEqual(hoursRange(10, 16));
+    // Ancre algérienne sans DST : la distance entre deux 9 h… reste de 24 h
+    // (l'ancien modèle, ancré sur Paris, produisait une fenêtre de 23 h).
     const avant = requireInstant(slots, "2026-03-28", "09:00");
-    const apres = requireInstant(slots, "2026-03-29", "09:00");
-
-    expect(avant).toBe("2026-03-28T08:00:00.000Z"); // UTC+1 — heure d'hiver
-    expect(apres).toBe("2026-03-29T07:00:00.000Z"); // UTC+2 — heure d'été
-    // Une heure murale identique avance d'1 h en absolu : journée de 23 h.
-    expect(Date.parse(apres) - Date.parse(avant)).toBe(23 * 3_600_000);
-  });
-
-  it("automne (dim. 25 octobre 2026) : 33 créneaux, journée de 25 h sans doublon", () => {
-    const slots = getSlotsForTimezone("Europe/Paris", FALL_NOW);
-
-    expect(slots).toHaveLength(DAYS * HOURS.length);
-    expect(datesOf(slots)).toEqual(["2026-10-23", "2026-10-24", "2026-10-25"]);
-    expect(
-      slots.filter((slot) => slot.localDate === "2026-10-25").map((slot) => slot.localHour),
-    ).toEqual(expectedHours());
-    // Journée longue (heure répétée) : 11 heures murales → 11 instants distincts.
+    const apres = requireInstant(slots, "2026-03-29", "10:00");
+    expect(avant).toBe("2026-03-28T08:00:00.000Z");
+    expect(apres).toBe("2026-03-29T08:00:00.000Z");
+    expect(Date.parse(apres) - Date.parse(avant)).toBe(24 * 3_600_000);
+    // Aller-retour et unicité sur toute la fenêtre.
     expect(new Set(slots.map((slot) => slot.instant)).size).toBe(slots.length);
     for (const slot of slots) {
-      expect(projectLocal(slot.instant, "Europe/Paris")).toBe(
-        `${slot.localDate} ${slot.localHour}`,
-      );
+      expect(projectLocal(slot.instant, "Europe/Paris")).toBe(`${slot.localDate} ${slot.localHour}`);
     }
   });
 
-  it("automne : 24 oct 09:00 → 07:00Z puis 25 oct 09:00 → 08:00Z (25 h entre eux)", () => {
-    const slots = getSlotsForTimezone("Europe/Paris", FALL_NOW);
-    const avant = requireInstant(slots, "2026-10-24", "09:00");
+  it("automne Paris (dim. 25 oct.) : affichage décalé −1 h, aucune heure publiée en double", () => {
+    const slots = getSlotsForWindow(WINDOW_AUTOMNE, "Europe/Paris", NOW_AUTOMNE);
+
+    expect(slots).toHaveLength(DAYS * HOURS.length);
+    // 23 et 24 oct. (UTC+2) : 10 h → 16 h ; le 25 (retour à 02:00, 01:00Z) :
+    // de retour en UTC+1, le même créneau algérien s'affiche 9 h → 15 h.
+    expect(hoursOn(slots, "2026-10-23")).toEqual(hoursRange(10, 16));
+    expect(hoursOn(slots, "2026-10-24")).toEqual(hoursRange(10, 16));
+    expect(hoursOn(slots, "2026-10-25")).toEqual(hoursRange(9, 15));
+    const avant = requireInstant(slots, "2026-10-24", "10:00");
     const apres = requireInstant(slots, "2026-10-25", "09:00");
-
-    expect(avant).toBe("2026-10-24T07:00:00.000Z"); // UTC+2 — heure d'été
-    expect(apres).toBe("2026-10-25T08:00:00.000Z"); // UTC+1 — heure d'hiver
-    // Retour à l'heure d'hiver : la même heure murale recule d'1 h en absolu.
-    expect(Date.parse(apres) - Date.parse(avant)).toBe(25 * 3_600_000);
-  });
-
-  it("heure inexistante (02:30 le 29 mars, trou 02:00 → 03:00) rejetée par isValidSlot", () => {
-    // Preuve du trou : à 01:30Z, Paris affiche déjà 03:30 — 02:30 n'existe
-    // à aucun instant de la journée.
-    expect(projectLocal("2026-03-29T01:30:00.000Z", "Europe/Paris")).toBe(
-      "2026-03-29 03:30",
-    );
-
-    // `now` placé le matin même : la DATE est dans la fenêtre (29, 30, 31).
-    const slots = getSlotsForTimezone("Europe/Paris", SPRING_DAY_NOW);
-    expect(datesOf(slots)).toEqual(["2026-03-29", "2026-03-30", "2026-03-31"]);
-
-    const forged: SlotRef = {
-      timezone: "Europe/Paris",
-      localDate: "2026-03-29",
-      localHour: "02:30",
-      instant: "2026-03-29T01:30:00.000Z",
-    };
-    expect(() => isValidSlot(forged, SPRING_DAY_NOW)).not.toThrow();
-    expect(isValidSlot(forged, SPRING_DAY_NOW)).toBe(false);
-
-    // Le même jour, un créneau réellement publié reste accepté : le refus
-    // ci-dessus vient du trou DST / de la plage HOURS, pas de la date.
-    const reel: SlotRef = {
-      timezone: "Europe/Paris",
-      localDate: "2026-03-29",
-      localHour: "09:00",
-      instant: requireInstant(slots, "2026-03-29", "09:00"),
-    };
-    expect(isValidSlot(reel, SPRING_DAY_NOW)).toBe(true);
-  });
-
-  it("heure ambiguë (now posé dans l'heure répétée du 25 oct) : sans crash, créneaux uniques", () => {
-    const premiere = "2026-10-25T00:30:00.000Z"; // 02:30 CEST (1ʳᵉ occurrence)
-    const seconde = "2026-10-25T01:30:00.000Z"; // 02:30 CET (2ᵉ occurrence)
-    // Deux instants distincts projettent la MÊME heure murale → heure ambiguë.
-    expect(projectLocal(premiere, "Europe/Paris")).toBe("2026-10-25 02:30");
-    expect(projectLocal(seconde, "Europe/Paris")).toBe("2026-10-25 02:30");
-
-    expect(() => getSlotsForTimezone("Europe/Paris", FALL_AMBIGUOUS_NOW)).not.toThrow();
-    const slots = getSlotsForTimezone("Europe/Paris", FALL_AMBIGUOUS_NOW);
-    expect(slots).toHaveLength(DAYS * HOURS.length);
-    expect(datesOf(slots)).toEqual(["2026-10-25", "2026-10-26", "2026-10-27"]);
-    // Jamais deux fois le même instant (aucune heure ambigüe publiée en double).
+    expect(avant).toBe("2026-10-24T08:00:00.000Z");
+    expect(apres).toBe("2026-10-25T08:00:00.000Z");
+    expect(Date.parse(apres) - Date.parse(avant)).toBe(24 * 3_600_000);
+    // Journée longue côté candidat (heure murale répétée à 01:00X) : les 21
+    // instants restent distincts — l'ancrage algérien ne publie JAMAIS deux
+    // fois le même instant, et n'est jamais ambigu (heures entières UTC).
     expect(new Set(slots.map((slot) => slot.instant)).size).toBe(slots.length);
     for (const slot of slots) {
-      expect(projectLocal(slot.instant, "Europe/Paris")).toBe(
-        `${slot.localDate} ${slot.localHour}`,
-      );
+      expect(projectLocal(slot.instant, "Europe/Paris")).toBe(`${slot.localDate} ${slot.localHour}`);
     }
+  });
 
-    // 02 h hors plage HOURS (9-19) : aucune des deux occurrences n'est
-    // publiée → les deux instants sont rejetés, sans exception levée.
-    for (const instant of [premiere, seconde]) {
-      const ref: SlotRef = {
-        timezone: "Europe/Paris",
-        localDate: "2026-10-25",
-        localHour: "02:30",
-        instant,
-      };
-      expect(() => isValidSlot(ref, FALL_AMBIGUOUS_NOW)).not.toThrow();
-      expect(isValidSlot(ref, FALL_AMBIGUOUS_NOW)).toBe(false);
+  it("retour d'heure Los Angeles (1ᵉʳ nov.) : deux créneaux affichent 01:00 — instants distincts, tous deux valides", () => {
+    const slots = getSlotsForWindow(WINDOW_LA, "America/Los_Angeles", NOW_LA);
+
+    expect(slots).toHaveLength(DAYS * HOURS.length);
+    expect(new Set(slots.map((slot) => slot.instant)).size).toBe(slots.length);
+    // 30 oct. (plein PDT) : affichage 01:00 → 07:00.
+    expect(hoursOn(slots, "2026-10-30")).toEqual(hoursRange(1, 7));
+    // 1ᵉʳ nov. : le retour d'heure tombe pile entre deux créneaux algériens —
+    // 08:00Z affiche 01:00 PDT et 09:00Z affiche 01:00 PST : MÊME libellé,
+    // deux instants. Les deux restent publiés (le libellé n'est qu'un rendu).
+    expect(hoursOn(slots, "2026-11-01")).toEqual([
+      "01:00",
+      "01:00",
+      "02:00",
+      "03:00",
+      "04:00",
+      "05:00",
+      "06:00",
+    ]);
+    const collisions = slots.filter(
+      (slot) => slot.localDate === "2026-11-01" && slot.localHour === "01:00",
+    );
+    expect(collisions.map((slot) => slot.instant)).toEqual([
+      "2026-11-01T08:00:00.000Z",
+      "2026-11-01T09:00:00.000Z",
+    ]);
+    for (const slot of collisions) {
+      expect(projectLocal(slot.instant, "America/Los_Angeles")).toBe("2026-11-01 01:00");
+      // Revalidation par le triplet complet : CHACUN des deux est accepté.
+      expect(
+        isValidSlot(
+          {
+            timezone: "America/Los_Angeles",
+            localDate: slot.localDate,
+            localHour: slot.localHour,
+            instant: slot.instant,
+          },
+          WINDOW_LA,
+          NOW_LA,
+        ),
+      ).toBe(true);
     }
   });
 });
 
 // ---------------------------------------------------------------------------
-// isValidSlot — revalidation serveur anti-falsification (PLAN §Sécurité 3).
+// isValidSlot — revalidation serveur anti-falsification (PLAN §Sécurité 1 & 3).
 // ---------------------------------------------------------------------------
 
-describe("isValidSlot — anti-falsification", () => {
-  it("tous les créneaux publiés (3 fuseaux + 2 fenêtres DST) → true", () => {
-    for (const { tz, now } of FENETRES) {
-      for (const slot of getSlotsForTimezone(tz, now)) {
+describe("isValidSlot — revalidation serveur anti-falsification", () => {
+  it("tous les créneaux publiés (8 fenêtres × fuseaux + DST) → true", () => {
+    for (const { tz, dates, now } of TOUTES_FENETRES) {
+      for (const slot of getSlotsForWindow(dates, tz, now)) {
         const ref: SlotRef = {
           timezone: tz,
           localDate: slot.localDate,
           localHour: slot.localHour,
           instant: slot.instant,
         };
-        expect(isValidSlot(ref, now)).toBe(true);
+        expect(isValidSlot(ref, dates, now)).toBe(true);
       }
     }
   });
 
-  it("instant décalé de +1 h ou de −1 h par rapport au créneau attendu → false", () => {
-    const now = PARIS_SUMMER_NOW;
-    const slots = getSlotsForTimezone("Europe/Paris", now);
-    const instant = requireInstant(slots, "2026-06-10", "14:00");
+  it("instant décalé de +1 h, −1 h ou d'1 seule seconde → false", () => {
     const base: SlotRef = {
-      timezone: "Europe/Paris",
+      timezone: "Africa/Algiers",
       localDate: "2026-06-10",
-      localHour: "14:00",
-      instant,
+      localHour: "09:00",
+      instant: "2026-06-10T08:00:00.000Z",
     };
-    expect(isValidSlot(base, now)).toBe(true); // référence saine
+    expect(isValidSlot(base, WINDOW_JUIN, NOW_JUIN)).toBe(true); // référence saine
 
-    const ms = Date.parse(instant);
-    expect(isValidSlot({ ...base, instant: new Date(ms + 3_600_000).toISOString() }, now)).toBe(
-      false,
-    );
-    expect(isValidSlot({ ...base, instant: new Date(ms - 3_600_000).toISOString() }, now)).toBe(
-      false,
-    );
+    const ms = Date.parse(base.instant);
+    // +1 h : ce MÊME instant existe en grille, mais il s'affiche 10:00 — le
+    // triplet revendiqué (09:00 + 09:00Z) n'est publié nulle part.
+    expect(isValidSlot({ ...base, instant: new Date(ms + 3_600_000).toISOString() }, WINDOW_JUIN, NOW_JUIN)).toBe(false);
+    expect(isValidSlot({ ...base, instant: new Date(ms - 3_600_000).toISOString() }, WINDOW_JUIN, NOW_JUIN)).toBe(false);
+    expect(isValidSlot({ ...base, instant: new Date(ms + 1_000).toISOString() }, WINDOW_JUIN, NOW_JUIN)).toBe(false);
+    expect(isValidSlot({ ...base, instant: new Date(ms - 1_000).toISOString() }, WINDOW_JUIN, NOW_JUIN)).toBe(false);
   });
 
-  it("instant décalé de 1 seule seconde → false", () => {
-    const now = PARIS_SUMMER_NOW;
-    const slots = getSlotsForTimezone("Europe/Paris", now);
-    const instant = requireInstant(slots, "2026-06-10", "14:00");
+  it("heure ou date hors grille → false (et 16:00 affiché reste VALIDE côté Manila)", () => {
     const base: SlotRef = {
-      timezone: "Europe/Paris",
+      timezone: "Africa/Algiers",
       localDate: "2026-06-10",
-      localHour: "14:00",
-      instant,
+      localHour: "09:00",
+      instant: "2026-06-10T08:00:00.000Z",
     };
+    expect(isValidSlot(base, WINDOW_JUIN, NOW_JUIN)).toBe(true); // référence saine
 
-    const ms = Date.parse(instant);
-    expect(isValidSlot({ ...base, instant: new Date(ms + 1_000).toISOString() }, now)).toBe(
-      false,
-    );
-    expect(isValidSlot({ ...base, instant: new Date(ms - 1_000).toISOString() }, now)).toBe(
-      false,
-    );
-  });
+    // Avant la 1ʳᵉ prise (9 h) et après la dernière (15 h) : jamais publiés.
+    expect(isValidSlot({ ...base, localHour: "08:00" }, WINDOW_JUIN, NOW_JUIN)).toBe(false);
+    expect(isValidSlot({ ...base, localHour: "16:00" }, WINDOW_JUIN, NOW_JUIN)).toBe(false);
+    // Hors fenêtre : avant J+1 (le 9 juin = jour de génération de cette
+    // fenêtre), après J+3 (le 13), et une date sans rapport avec la fenêtre.
+    expect(isValidSlot({ ...base, localDate: "2026-06-09" }, WINDOW_JUIN, NOW_JUIN)).toBe(false);
+    expect(isValidSlot({ ...base, localDate: "2026-06-13" }, WINDOW_JUIN, NOW_JUIN)).toBe(false);
+    expect(isValidSlot({ ...base, localDate: "2026-10-25" }, WINDOW_JUIN, NOW_JUIN)).toBe(false);
 
-  it("heure hors HOURS, date hors fenêtre ou fuseau substitué → false", () => {
-    const now = PARIS_SUMMER_NOW;
-    const paris = getSlotsForTimezone("Europe/Paris", now);
-    const algiers = getSlotsForTimezone("Africa/Algiers", now);
-    const instantParis = requireInstant(paris, "2026-06-10", "14:00");
-    const base: SlotRef = {
-      timezone: "Europe/Paris",
-      localDate: "2026-06-10",
-      localHour: "14:00",
-      instant: instantParis,
-    };
-    expect(isValidSlot(base, now)).toBe(true); // référence saine
-
-    // Avant 9 h / après 19 h : jamais publiés.
-    expect(isValidSlot({ ...base, localHour: "08:00" }, now)).toBe(false);
-    expect(isValidSlot({ ...base, localHour: "20:00" }, now)).toBe(false);
-    // Hors fenêtre 3 jours (la fenêtre s'arrête au 12 juin).
-    expect(isValidSlot({ ...base, localDate: "2026-06-13" }, now)).toBe(false);
-
-    // Substitution de fuseau : le couple (date, heure) existe aussi à Alger,
-    // mais à un autre instant absolu → l'identité complète est exigée.
-    expect(instantParis).not.toBe(requireInstant(algiers, "2026-06-10", "14:00"));
+    // Découplage ancre/affichage : le MÊME instant, affiché 16:00 à Manille
+    // (09:00 Algérie + 7 h), est parfaitement valide — 16:00 n'est refusé
+    // ci-dessus QUE parce qu'Alger est l'ancre, pas une heure absolue.
     expect(
-      isValidSlot({ ...base, timezone: "Africa/Algiers" }, now),
+      isValidSlot(
+        {
+          timezone: "Asia/Manila",
+          localDate: "2026-06-10",
+          localHour: "16:00",
+          instant: "2026-06-10T08:00:00.000Z",
+        },
+        WINDOW_JUIN,
+        NOW_JUIN,
+      ),
+    ).toBe(true);
+  });
+
+  it("substitution de fuseau → false (le bon fuseau, lui, accepte)", () => {
+    // 08:00Z s'affiche 09:00 à Alger et 10:00 à Paris (UTC+2 en juin).
+    const instant = "2026-06-10T08:00:00.000Z";
+    const bon: SlotRef = {
+      timezone: "Europe/Paris",
+      localDate: "2026-06-10",
+      localHour: "10:00",
+      instant,
+    };
+    expect(isValidSlot(bon, WINDOW_JUIN, NOW_JUIN)).toBe(true);
+
+    // Même affichage parisien revendiqué « à Alger » : l'identité complète
+    // (fuseau + affichage + instant) est exigée → refus.
+    expect(isValidSlot({ ...bon, timezone: "Africa/Algiers" }, WINDOW_JUIN, NOW_JUIN)).toBe(false);
+    // Et l'inverse : l'affichage algérien du même instant, sous Paris → refus.
+    expect(
+      isValidSlot({ ...bon, timezone: "Europe/Paris", localHour: "09:00" }, WINDOW_JUIN, NOW_JUIN),
     ).toBe(false);
   });
 
   it("fuseau inconnu (« Mars/Olympus_Mons ») → [] / false, sans throw", () => {
-    const now = PARIS_SUMMER_NOW;
-
-    expect(() => getSlotsForTimezone("Mars/Olympus_Mons", now)).not.toThrow();
-    expect(getSlotsForTimezone("Mars/Olympus_Mons", now)).toEqual([]);
+    expect(() => getSlotsForWindow(WINDOW_JUIN, "Mars/Olympus_Mons", NOW_JUIN)).not.toThrow();
+    expect(getSlotsForWindow(WINDOW_JUIN, "Mars/Olympus_Mons", NOW_JUIN)).toEqual([]);
 
     const ref: SlotRef = {
       timezone: "Mars/Olympus_Mons",
       localDate: "2026-06-10",
-      localHour: "14:00",
-      instant: "2026-06-10T12:00:00.000Z",
+      localHour: "09:00",
+      instant: "2026-06-10T08:00:00.000Z",
     };
-    expect(() => isValidSlot(ref, now)).not.toThrow();
-    expect(isValidSlot(ref, now)).toBe(false);
+    expect(() => isValidSlot(ref, WINDOW_JUIN, NOW_JUIN)).not.toThrow();
+    expect(isValidSlot(ref, WINDOW_JUIN, NOW_JUIN)).toBe(false);
   });
 
-  it("champs malformés (date, heure, instant, timezone, now) → false", () => {
-    const now = PARIS_SUMMER_NOW;
-    const slots = getSlotsForTimezone("Europe/Paris", now);
+  it("champs malformés ou fenêtre illisible → false", () => {
     const base: SlotRef = {
-      timezone: "Europe/Paris",
+      timezone: "Africa/Algiers",
       localDate: "2026-06-10",
-      localHour: "14:00",
-      instant: requireInstant(slots, "2026-06-10", "14:00"),
+      localHour: "09:00",
+      instant: "2026-06-10T08:00:00.000Z",
     };
-    expect(isValidSlot(base, now)).toBe(true); // référence saine
+    expect(isValidSlot(base, WINDOW_JUIN, NOW_JUIN)).toBe(true); // référence saine
 
-    expect(isValidSlot({ ...base, localDate: "10/06/2026" }, now)).toBe(false); // format
-    expect(isValidSlot({ ...base, localHour: "9:00" }, now)).toBe(false); // padding requis
-    expect(isValidSlot({ ...base, localHour: "14:30" }, now)).toBe(false); // hors alignement
-    expect(isValidSlot({ ...base, instant: "pas-un-instant" }, now)).toBe(false);
-    expect(isValidSlot({ ...base, instant: "" }, now)).toBe(false);
-    expect(isValidSlot({ ...base, timezone: "" }, now)).toBe(false);
-    expect(isValidSlot({ ...base, timezone: 42 as unknown as string }, now)).toBe(false);
-    expect(isValidSlot(base, new Date("invalid"))).toBe(false);
-  });
-});
+    expect(isValidSlot(null as unknown as SlotRef, WINDOW_JUIN, NOW_JUIN)).toBe(false);
+    expect(isValidSlot({ ...base, localDate: "10/06/2026" }, WINDOW_JUIN, NOW_JUIN)).toBe(false); // format
+    expect(isValidSlot({ ...base, localHour: "9:00" }, WINDOW_JUIN, NOW_JUIN)).toBe(false); // padding requis
+    expect(isValidSlot({ ...base, localHour: "14:30" }, WINDOW_JUIN, NOW_JUIN)).toBe(false); // pas publié (aligné :00)
+    expect(isValidSlot({ ...base, instant: "pas-un-instant" }, WINDOW_JUIN, NOW_JUIN)).toBe(false);
+    expect(isValidSlot({ ...base, instant: "" }, WINDOW_JUIN, NOW_JUIN)).toBe(false);
+    expect(isValidSlot({ ...base, timezone: "" }, WINDOW_JUIN, NOW_JUIN)).toBe(false);
+    expect(isValidSlot({ ...base, timezone: 42 as unknown as string }, WINDOW_JUIN, NOW_JUIN)).toBe(false);
+    // Horloge serveur illisible → refus net (jamais d'acceptation aveugle).
+    expect(isValidSlot(base, WINDOW_JUIN, new Date("invalid"))).toBe(false);
 
-// ---------------------------------------------------------------------------
-// Fenêtre « à partir d'aujourd'hui » — samedi soir (J0 passé mais valide).
-//
-// DÉCISION DOCUMENTÉE (en-tête de `slots.ts`) : les heures déjà passées
-// restent publiées avec `past: true` (le client les désactive) ; le serveur
-// revalide l'*identité* du créneau, jamais le fait qu'il soit passé — rejeter
-// le passé créerait une course à la frontière de l'heure.
-// ---------------------------------------------------------------------------
-
-describe("fenêtre — samedi soir", () => {
-  it("samedi 24 oct. 2026, 23 h à Alger → fenêtre locale 24, 25, 26 octobre", () => {
-    const slots = getSlotsForTimezone("Africa/Algiers", SATURDAY_NIGHT_NOW);
-
-    expect(slots).toHaveLength(DAYS * HOURS.length);
-    // J0 = aujourd'hui (samedi), puis dimanche et lundi : fenêtre « à partir
-    // d'aujourd'hui », jamais « demain ».
-    expect(datesOf(slots)).toEqual(["2026-10-24", "2026-10-25", "2026-10-26"]);
+    // Fenêtre illisible : date civile impossible, liste vide, non-tableau.
+    expect(isValidSlot(base, ["2026-06-31"], NOW_JUIN)).toBe(false);
+    expect(isValidSlot(base, [], NOW_JUIN)).toBe(false);
+    expect(isValidSlot(base, null as unknown as string[], NOW_JUIN)).toBe(false);
   });
 
-  it("créneaux de J0 → past : true ; créneaux de J1 et J2 → past : false", () => {
-    const slots = getSlotsForTimezone("Africa/Algiers", SATURDAY_NIGHT_NOW);
-    const jour0 = slots.filter((slot) => slot.localDate === "2026-10-24");
-    const suivants = slots.filter((slot) => slot.localDate !== "2026-10-24");
-
-    expect(jour0).toHaveLength(HOURS.length);
-    expect(jour0.every((slot) => slot.past)).toBe(true); // 19 h max = 18 h 00Z < 22 h 00Z
-    expect(suivants).toHaveLength((DAYS - 1) * HOURS.length);
-    expect(suivants.every((slot) => slot.past)).toBe(false);
-  });
-
-  it("un créneau passé de J0 reste ACCEPTÉ par isValidSlot (revalidation d'identité)", () => {
-    const slots = getSlotsForTimezone("Africa/Algiers", SATURDAY_NIGHT_NOW);
-    const passe = slots.find(
-      (slot) => slot.localDate === "2026-10-24" && slot.localHour === "09:00",
-    );
-    expect(passe).toBeDefined();
-    if (passe === undefined) return;
+  it("un créneau passé reste ACCEPTÉ (revalidation d'identité, pas d'horloge)", () => {
+    const now = new Date("2026-10-29T00:00:00.000Z"); // fenêtre entièrement passée
+    const slots = getSlotsForWindow(WINDOW_OCT, "Africa/Algiers", now);
+    const passe = slots[0];
 
     expect(passe.past).toBe(true);
-    const ref: SlotRef = {
-      timezone: "Africa/Algiers",
-      localDate: passe.localDate,
-      localHour: passe.localHour,
-      instant: passe.instant,
-    };
-    expect(isValidSlot(ref, SATURDAY_NIGHT_NOW)).toBe(true);
+    expect(slots.every((slot) => slot.past)).toBe(true);
+    // Le serveur revalide le CRENEAU (dates de la ligne + affichage +
+    // instant), jamais le fait qu'il soit passé : rejeter ici créerait une
+    // course client/serveur à la frontière de l'heure.
+    expect(
+      isValidSlot(
+        {
+          timezone: "Africa/Algiers",
+          localDate: passe.localDate,
+          localHour: passe.localHour,
+          instant: passe.instant,
+        },
+        WINDOW_OCT,
+        now,
+      ),
+    ).toBe(true);
   });
 });
 
 // ---------------------------------------------------------------------------
-// toRecruiterTime — heure du candidat + équivalent Africa/Algiers.
+// toRecruiterTime — heure du candidat + équivalent Africa/Algiers (inchangé).
 // ---------------------------------------------------------------------------
 
 describe("toRecruiterTime — équivalent recruteur", () => {

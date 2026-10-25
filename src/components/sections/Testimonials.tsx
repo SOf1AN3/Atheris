@@ -53,7 +53,7 @@ export function Testimonials({ testimonials }: TestimonialsProps): ReactNode {
     >
       <div className="mx-auto max-w-[1200px] px-[clamp(1.25rem,5vw,2.5rem)]">
         <SectionHeading
-          index="05"
+          index="06"
           headingId="testimonials-title"
           eyebrow={testimonials.eyebrow}
           title={testimonials.title}
