@@ -80,11 +80,9 @@ export function AppShell({
           </main>
         </div>
       </div>
-      {/* DESIGN §2.4 — grain plein écran : `position: fixed`,
-          `pointer-events: none`, opacité .05 → n'interfère ni avec le
-          `sticky` de la topbar (z-40) ni avec le `Sheet`/les menus (z-50),
-          ni avec le focus. */}
-      <div className="grain" aria-hidden="true" />
+      {/* Le grain (DESIGN §2.4) est désormais rendu UNE fois au root
+          (`[locale]/layout.tsx`) pour tout le site : pas de second nœud ici,
+          sinon l'overlay serait cumulé (opacité double) sur la plateforme. */}
       <Toaster theme="dark" />
     </>
   );
