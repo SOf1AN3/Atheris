@@ -15,6 +15,13 @@
       "when": 1792908837033,
       "tag": "0001_faithful_captain_flint",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793020865104,
+      "tag": "0002_icy_rattler",
+      "breakpoints": true
     }
   ]
 }

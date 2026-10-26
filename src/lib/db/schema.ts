@@ -1,5 +1,6 @@
 /**
- * Atheris — schéma Drizzle (PostgreSQL / Neon) : 13 tables (T02 · PLAN.md §1.2).
+ * Atheris — schéma Drizzle (PostgreSQL / Neon) : 16 tables (T02 · PLAN.md §1.2 ;
+ * enrichi Lot recrutement : `job_applications` + `recruitment_templates`).
  *
  * Conventions retenues (à confirmer par le Reviewer) :
  *
@@ -174,6 +175,13 @@ export const interviewStatus = pgEnum("interview_status", [
   "pending",
   "cancelled",
   "done",
+]);
+
+/** Statut d'une candidature à un poste (recrutement CEO). */
+export const applicationStatusEnum = pgEnum("application_status", [
+  "nouveau",
+  "invite",
+  "refuse",
 ]);
 
 // ---------------------------------------------------------------------------
@@ -630,5 +638,73 @@ export const interviews = pgTable(
       .on(t.startsAt)
       .where(sql`status = 'pending' AND email_norm <> ''`),
     index("interviews_created_at_idx").on(t.createdAt),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// 15. job_applications — candidature à un poste (recrutement CEO).
+//     CV stocké en bytea ≤ 5 Mo (validation Zod applicative, motif `documents`).
+// ---------------------------------------------------------------------------
+
+export const jobApplications = pgTable(
+  "job_applications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    firstName: text("first_name").notNull(),
+    lastName: text("last_name").notNull(),
+    email: text("email").notNull(),
+    // Forme normalisée (minuscules) — convention `*_norm` du fichier.
+    emailNorm: text("email_norm").notNull(),
+    // Langue de la page de dépôt : détermine la langue des emails envoyés au
+    // candidat (modèles `recruitment_templates` ci-dessous).
+    locale: text("locale").notNull().default("fr"),
+    // Motivation optionnelle saisie au dépôt.
+    message: text("message"),
+    status: applicationStatusEnum("status").notNull().default("nouveau"),
+    // CV stocké en bytea ≤ 5 Mo (validation Zod applicative, motif
+    // `documents`) : métadonnées en colonnes, flux brut en `cvBytes`.
+    cvFilename: text("cv_filename").notNull(),
+    cvMimeType: text("cv_mime_type").notNull(),
+    cvByteSize: integer("cv_byte_size").notNull(),
+    cvBytes: bytea("cv_bytes").notNull(),
+    // `interview_id` nullable = lien d'entretien créé à l'invitation.
+    // `no action` (défaut, comme les colonnes « auteur ») : supprimer un
+    // entretien ne détruit pas la candidature.
+    interviewId: uuid("interview_id").references((): PgColumn => interviews.id),
+    invitedAt: tstz("invited_at"),
+    rejectedAt: tstz("rejected_at"),
+    createdAt: tstz("created_at").defaultNow().notNull(),
+    updatedAt: tstz("updated_at").defaultNow().$onUpdate(() => new Date()),
+  },
+  (t) => [
+    index("job_applications_status_idx").on(t.status),
+    index("job_applications_created_at_idx").on(t.createdAt),
+    index("job_applications_email_norm_idx").on(t.emailNorm),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// 16. recruitment_templates — modèles d'e-mails de recrutement (invitation /
+//     refus) mémorisés par le CEO — upsert sur (kind, locale).
+// ---------------------------------------------------------------------------
+
+export const recruitmentTemplates = pgTable(
+  "recruitment_templates",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    // Texte brut (pas d'enum) : valeurs 'invite' | 'reject' vérifiées en Zod
+    // (motif `client_projects.status` : text + Zod plutôt qu'enum pour éviter
+    // une migration à chaque évolution).
+    kind: text("kind").notNull(),
+    // Variante linguistique 'fr' | 'en' (Zod).
+    locale: text("locale").notNull(),
+    subject: text("subject").notNull(),
+    body: text("body").notNull(),
+    updatedBy: uuid("updated_by").references((): PgColumn => users.id),
+    createdAt: tstz("created_at").defaultNow().notNull(),
+    updatedAt: tstz("updated_at").defaultNow().$onUpdate(() => new Date()),
+  },
+  (t) => [
+    uniqueIndex("recruitment_templates_kind_locale_idx").on(t.kind, t.locale),
   ],
 );
