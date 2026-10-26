@@ -33,7 +33,6 @@ export const en: SiteContent = {
   },
 
   hero: {
-    badge: "✦ Software Engineering & Web Design Studio",
     title: "We design and build *custom digital products*.",
     subtitle:
       "Web, Mobile & Desktop applications with high added value. Scalable architectures, excellent code, and premium interface design.",
@@ -112,7 +111,6 @@ export const en: SiteContent = {
         description:
           "A complete SaaS platform for dental practice management: online booking, digital patient records and automated billing, deployed multi-tenant on Next.js and PostgreSQL.",
         tags: ["Next.js", "PostgreSQL", "Multi-tenant", "Stripe"],
-        metric: { value: "+100h", label: "saved per year, per practice" },
       },
       {
         id: "papernote",
@@ -125,7 +123,6 @@ export const en: SiteContent = {
         description:
           "An AI-powered SaaS tool for accelerated review, comparative analysis and synthesis of complex academic publications and theses.",
         tags: ["Next.js", "OpenAI", "Vector DB", "PostgreSQL"],
-        metric: { value: "8\u00A0s", label: "to summarize a document" },
       },
       {
         id: "delyx",
@@ -138,7 +135,6 @@ export const en: SiteContent = {
         description:
           "A motorbike delivery platform across Algeria: customers describe their errand, pick their courier, follow the route live by geolocation and pay on arrival.",
         tags: ["Next.js", "PostgreSQL", "TypeScript", "Tailwind CSS"],
-        metric: { value: "Live", label: "route geolocation tracking" },
       },
       {
         id: "tiberium",
@@ -151,7 +147,6 @@ export const en: SiteContent = {
         description:
           "A consulting platform with secure real-time messaging over WebSockets, notifications, persistent history and Redis-backed scaling.",
         tags: ["MongoDB", "Express", "React", "Node.js", "Socket.io"],
-        metric: { value: "<\u00A0100\u00A0ms", label: "delivery latency" },
       },
       {
         id: "myks-radio",
@@ -162,7 +157,6 @@ export const en: SiteContent = {
         description:
           "A web and mobile infrastructure for real-time audio streaming, with a custom management dashboard and iOS and Android apps broadcasting HLS feeds.",
         tags: ["React Native", "WebSockets", "Node.js", "HLS"],
-        metric: { value: "3 platforms", label: "web, iOS and Android" },
       },
     ],
   },

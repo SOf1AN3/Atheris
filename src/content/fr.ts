@@ -34,7 +34,6 @@ export const fr: SiteContent = {
   },
 
   hero: {
-    badge: "✦ Studio d’Ingénierie Logicielle & Design Web",
     title: "Nous concevons et développons des produits digitaux *sur-mesure*.",
     subtitle:
       "Applications Web, Mobile & Desktop à forte valeur ajoutée. Architectures scalables, code d’excellence et design d’interface haut de gamme.",
@@ -113,7 +112,6 @@ export const fr: SiteContent = {
         description:
           "Plateforme SaaS complète de gestion médicale\u00A0: agendas, dossiers patients, facturation et statistiques cabinet, déclinée en multi-tenant sur Next.js et PostgreSQL.",
         tags: ["Next.js", "PostgreSQL", "Multi-tenant", "Stripe"],
-        metric: { value: "+100h", label: "économisées/an par cabinet" },
       },
       {
         id: "papernote",
@@ -126,7 +124,6 @@ export const fr: SiteContent = {
         description:
           "Plateforme SaaS d'analyse et de synthèse de documents académiques par IA\u00A0: ingestion, indexation vectorielle et restitutions structurées en quelques secondes.",
         tags: ["Next.js", "OpenAI", "Vector DB", "PostgreSQL"],
-        metric: { value: "8\u00A0s", label: "de synthèse par document" },
       },
       {
         id: "delyx",
@@ -139,7 +136,6 @@ export const fr: SiteContent = {
         description:
           "Plateforme de livraison à moto à travers l'Algérie\u00A0: le client décrit sa course, choisit son livreur, suit le trajet en direct par géolocalisation et paie à la livraison.",
         tags: ["Next.js", "PostgreSQL", "TypeScript", "Tailwind CSS"],
-        metric: { value: "Direct", label: "suivi géolocalisé du trajet" },
       },
       {
         id: "tiberium",
@@ -152,7 +148,6 @@ export const fr: SiteContent = {
         description:
           "Plateforme de consulting avec messagerie temps réel sécurisée via WebSockets, notifications, historique persistant et mise à l'échelle Redis.",
         tags: ["MongoDB", "Express", "React", "Node.js", "Socket.io"],
-        metric: { value: "<\u00A0100\u00A0ms", label: "de latence de livraison" },
       },
       {
         id: "myks-radio",
@@ -163,7 +158,6 @@ export const fr: SiteContent = {
         description:
           "Infrastructure web et mobile de streaming audio temps réel, avec dashboard de gestion personnalisé et applications iOS et Android diffusant les flux en HLS.",
         tags: ["React Native", "WebSockets", "Node.js", "HLS"],
-        metric: { value: "3 plateformes", label: "web, iOS et Android" },
       },
     ],
   },

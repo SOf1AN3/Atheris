@@ -5,7 +5,6 @@ import { useEffect, useRef } from "react";
 import type { CSSProperties, MouseEvent, ReactNode } from "react";
 
 import { Reveal } from "@/components/motion/Reveal";
-import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import type { HeroContent } from "@/content/types";
 import { cn } from "@/lib/utils";
@@ -134,15 +133,12 @@ export function Hero({ hero }: HeroProps): ReactNode {
       {/* Composition ASYMÉTRIQUE 6/6 — densité aérée (DESIGN §2.3). */}
       <div className="relative flex flex-1 items-center py-[clamp(96px,14vh,176px)]">
         <div className="mx-auto grid w-full max-w-[1200px] grid-cols-1 items-center gap-12 px-[clamp(1.25rem,5vw,2.5rem)] lg:grid-cols-2 lg:gap-16">
-          {/* Colonne gauche — badge, H1 (seul h1 de la page), lead, CTA. */}
+          {/* Colonne gauche — H1 (seul h1 de la page), lead, CTA.
+              Le badge d'identité a été retiré sur demande client. */}
           <Reveal className="flex flex-col items-start">
-            <Badge variant="pill">
-              {hero.badge}
-            </Badge>
-
             <h1
               id="hero-title"
-              className="h-display mt-7 max-w-[17ch] text-[clamp(2.5rem,5.6vw,4.6rem)] text-fg"
+              className="h-display max-w-[17ch] text-[clamp(2.5rem,5.6vw,4.6rem)] text-fg"
             >
               {splitVoix(hero.title)}
             </h1>

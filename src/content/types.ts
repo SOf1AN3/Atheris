@@ -74,7 +74,6 @@ export interface TrustStat {
 
 /** Contenu de la section héros (hero). */
 export interface HeroContent {
-  badge: string;
   /** H1. */
   title: string;
   /** Sous-titre H2 visuel. */
@@ -118,7 +117,6 @@ export interface CaseStudy {
   /** URL publique du projet. Absente -> aucun bouton « visiter ». */
   url?: string;
   /** Absent si aucun chiffre fiable n'est a afficher. */
-  metric?: { value: string; label: string };
   title: string;
   description: string;
   /** 2-4 tags. */

@@ -121,31 +121,16 @@ export function CaseStudyCard({
           {study.description}
         </p>
 
-        {/* Ligne séparée : tags à gauche, métrique volt à droite.
-            `metric` est OPTIONNEL : sans lui, les tags occupent toute la
-            largeur (`w-full`) et aucun bloc vide n'est réservé. */}
+        {/* Ligne de tags — la métrique business a été retirée sur demande
+            client (elle restait le SEUL volt de la carte). */}
         <div className="mt-auto flex flex-wrap items-end justify-between gap-4 border-t border-line pt-5">
-          <div
-            className={cn(
-              "flex flex-wrap gap-2",
-              study.metric === undefined && "w-full",
-            )}
-          >
+          <div className="flex flex-wrap gap-2">
             {study.tags.map((tag) => (
               <Badge key={tag} variant="tech">
                 {tag}
               </Badge>
             ))}
           </div>
-
-          {study.metric !== undefined ? (
-            <div className="flex shrink-0 flex-col items-end gap-1.5">
-              <span className="font-mono text-[24px] leading-none text-accent">
-                {study.metric.value}
-              </span>
-              <span className="micro text-faint">{study.metric.label}</span>
-            </div>
-          ) : null}
         </div>
 
         {/* PLAN §4.1 — bouton « Visiter le site » : uniquement si `study.url`
