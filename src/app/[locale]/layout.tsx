@@ -68,6 +68,12 @@ export default async function RootLayout({
             Framer Motion respecte `prefers-reduced-motion` après hydratation.
             Il reste au root pour englober Header (marketing) et pages. */}
         <MotionConfig reducedMotion="user">{children}</MotionConfig>
+        {/* DESIGN §2.4 — GRAIN PAGE ENTIÈRE (marketing, plateforme, auth).
+            `position: fixed` + `pointer-events: none` + `mix-blend-mode:
+            overlay` à .05 : il casse le « noir numérique plat » et supprime
+            le banding des grands dégradés du hero. Un seul nœud pour tout le
+            site (sinon il serait doublé sur la plateforme). */}
+        <div className="grain" aria-hidden="true" />
       </body>
     </html>
   );

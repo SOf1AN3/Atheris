@@ -43,6 +43,8 @@ next-env.d.ts
 # Artefacts de test & captures E2E
 /.playwright-mcp/
 /atheris-*.png
+/hero*.png
+/nappe-*.png
 /page_fr.html
 
 # Asset de travail prï¿½existant (maquette landing)
@@ -57,6 +59,6 @@ BUSINESS.md
 DESIGN.md
 preview.html
 
-# video (pipeline Remotion — voir VIDEO.md)
+# video (pipeline Remotion ï¿½ voir VIDEO.md)
 /VIDEO.md
 /public/audio/
