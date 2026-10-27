@@ -426,7 +426,7 @@ export const fr: SiteContent = {
     eyebrow: "Recrutement",
     title: "Rejoignez *l'équipe*",
     description:
-      "Nous recrutons des Sales Development Representatives pour développer notre portefeuille clients, à distance.",
+      "Nous recrutons des Sales Development Representatives pour développer notre portefeuille clients — aucune expérience préalable exigée, à distance.",
     role: "Sales Development Representative",
     meta: ["Collaborateur indépendant", "Rémunération à la commission", "100 % remote"],
     intro:
@@ -449,7 +449,7 @@ export const fr: SiteContent = {
         heading: "Profil recherché",
         bullets: [
           "Expérience en Sales Development, en prospection B2B ou en génération de leads appréciée\u00A0; les candidats motivés sans expérience sont également les bienvenus \u2014 une solide aisance relationnelle et une réelle envie d'apprendre suffisent.",
-          "Aisance avec les outils d'outbound (LinkedIn Sales Navigator, séquenceurs, CRM).",
+          "Volonté d'apprendre les outils d'outbound (LinkedIn Sales Navigator, séquenceurs, CRM).",
           "Bonne compréhension des enjeux digitaux des PME.",
           "Rigueur, autonomie, sens du suivi et fiabilité dans vos engagements.",
           "Français écrit soigné\u00A0; anglais ou arabe appréciés.",
@@ -483,7 +483,7 @@ export const fr: SiteContent = {
       lastNameLabel: "Nom",
       emailLabel: "Email",
       messageLabel: "Message (optionnel)",
-      messagePlaceholder: "Quelques mots sur votre expérience…",
+      messagePlaceholder: "Quelques mots sur vous…",
       fileLabel: "CV (PDF, DOC ou DOCX)",
       fileHint: "5 Mo maximum.",
       submitLabel: "Envoyer ma candidature",

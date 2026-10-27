@@ -425,7 +425,7 @@ export const en: SiteContent = {
     eyebrow: "Careers",
     title: "Join the *team*",
     description:
-      "We are hiring Sales Development Representatives to grow our client portfolio, fully remote.",
+      "We are hiring Sales Development Representatives to grow our client portfolio — no prior experience required, fully remote.",
     role: "Sales Development Representative",
     meta: ["Independent contractor", "Commission-based", "100% remote"],
     intro:
@@ -448,7 +448,7 @@ export const en: SiteContent = {
         heading: "Profile",
         bullets: [
           "Experience in sales development, B2B prospecting or lead generation is appreciated; motivated candidates without experience are equally welcome — strong interpersonal skills and a genuine desire to learn are enough.",
-          "Comfortable with outbound tools (LinkedIn Sales Navigator, sequencers, CRM).",
+          "Willingness to learn outbound tools (LinkedIn Sales Navigator, sequencers, CRM).",
           "Solid understanding of SME digital challenges.",
           "Rigour, autonomy, follow-through and reliability in your commitments.",
           "Excellent written French; English or Arabic is a plus.",
@@ -482,7 +482,7 @@ export const en: SiteContent = {
       lastNameLabel: "Last name",
       emailLabel: "Email",
       messageLabel: "Message (optional)",
-      messagePlaceholder: "A few words about your experience…",
+      messagePlaceholder: "Tell us a bit about yourself…",
       fileLabel: "CV (PDF, DOC or DOCX)",
       fileHint: "5 MB max.",
       submitLabel: "Send my application",
