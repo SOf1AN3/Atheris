@@ -83,6 +83,9 @@ export const ROUTE_ACCESS: ReadonlyArray<{ prefix: string; roles: readonly Role[
   // cette entrée, le préfixe "/" (ALL_ROLES) gagne et le middleware laisse
   // passer tous les rôles actifs : la sécurité reposerait sur un seul filet.
   { prefix: "/entretien", roles: ["ceo"] },
+  // Recrutement (candidatures CEO) : réservé CEO — miroir de la garde de la
+  // page /espace/recrutement et des actions de src/actions/recrutement.ts.
+  { prefix: "/recrutement", roles: ["ceo"] },
 ];
 
 /** Retire la locale éventuelle et isole le suffixe sous `/espace`. */

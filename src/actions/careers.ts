@@ -11,14 +11,16 @@
  * ```
  *
  * Traitement : rate-limit 1/60 s/IP (motif `src/actions/contact.ts`) → Zod
- * (prénom, nom, email, message optionnel) → fichier `cv` (**PDF / DOC /
- * DOCX / RTF**, **≤ 5 Mo**, aligné sur `documents.bytes`) → e-mail vers le
- * destinataire constant avec le CV **en pièce jointe**.
+ * (prénom, nom, email, message optionnel, locale) → fichier `cv` (**PDF /
+ * DOC / DOCX / RTF**, **≤ 5 Mo**, aligné sur `documents.bytes`) → **INSERT en
+ * base** (`jobApplications`, source de vérité pour l'espace CEO
+ * `/espace/recrutement`) → e-mail vers le destinataire constant avec le CV
+ * **en pièce jointe** (notification admin : **non fatal** — la candidature
+ * est déjà conservée en base).
  *
  * SÉCURITÉ / EDGE CASES (PLAN §Sécurité 5–6) :
  * - **aucune écriture disque** : le fichier est lu dans un `Buffer` mémoire
- *   et encodé base64 par `sendMail` (aucun chemin, aucun `fs`, aucune table
- *   DB) ;
+ *   et encodé base64 par `sendMail` (aucun chemin, aucun `fs`) ;
  * - contrôle **extension + MIME** (`type` vide = on se fie à l'extension,
  *   cas des navigateurs qui ne renseignent pas `content-type`) ;
  * - nom de fichier sanitisé : basename (séparateurs `/` et `\` retirés →
@@ -26,18 +28,25 @@
  *   longueur bornée ;
  * - destinataire **constant** `admin@sofianeasma.me` imposé par l'appelant
  *   (jamais issu du formulaire) ;
- * - rate-limit : seule une tentative **envoyée** (succès ou échec Resend)
- *   consomme le quota — un fichier refusé reste retentable immédiatement
- *   (bouton « réessayer » du formulaire, scénario `too_large` → correction).
+ * - **INSERT avant l'e-mail admin** : jamais de notification orpheline (un
+ *   INSERT en échec retourne `failed` sans envoyer de mail) ;
+ * - rate-limit : seule une tentative **envoyée** (INSERT tenté — succès ou
+ *   échec) consomme le quota — un fichier refusé reste retentable
+ *   immédiatement (bouton « réessayer » du formulaire, scénario `too_large`
+ *   → correction).
  *
- * DB-PENDING : aucun import de `@/lib/db` — cette action n'écrit jamais en
- * base, `next build` n'a donc rien à lire.
+ * DB-PENDING : `getDb()` n'est appelé qu'à l'intérieur de l'action (lazy,
+ * après tous les contrôles) → `next build` ne lit **jamais** `DATABASE_URL`
+ * malgré l'INSERT en base ci-dessous.
  */
 
 import { headers } from "next/headers";
 import { z } from "zod";
 
+import { getDb } from "@/lib/db";
+import { jobApplications } from "@/lib/db/schema";
 import { sendMail } from "@/lib/mail";
+import { normalizeEmail } from "@/lib/prospect-dedup";
 
 // ---------------------------------------------------------------------------
 // Types publics (contrat) — uniquement des `export type` (effacés à la
@@ -66,6 +75,10 @@ const applySchema = z.object({
   // Optionnel : borne haute anti-payload (jamais de limite basse — un
   // candidat peut postuler sans mot de passe).
   message: z.string().trim().max(5000).optional(),
+  // Locale de la page de dépôt (champ caché `ApplyForm`) — détermine la
+  // langue des e-mails envoyés au candidat (invitations / refus). Repli
+  // `fr` si absent (ancien formulaire en cache, appel forgé).
+  locale: z.enum(["fr", "en"]).optional(),
 });
 
 // ---------------------------------------------------------------------------
@@ -78,6 +91,7 @@ const FIELD_LAST_NAME = "lastName";
 const FIELD_EMAIL = "email";
 const FIELD_MESSAGE = "message";
 const FIELD_CV = "cv";
+const FIELD_LOCALE = "locale";
 
 /** Destinataire **constant** imposé par l'appelant (jamais issu du form). */
 const RECRUITER_EMAIL = "admin@sofianeasma.me";
@@ -277,11 +291,13 @@ async function processApplication(formData: FormData): Promise<ApplyToJobResult>
   }
 
   // 2. Validation Zod des champs texte — avant toute lecture de fichier.
+  //    `locale` : valeur du champ caché (repli `fr` si absente).
   const parsed = applySchema.safeParse({
     firstName: textOf(formData, FIELD_FIRST_NAME),
     lastName: textOf(formData, FIELD_LAST_NAME),
     email: textOf(formData, FIELD_EMAIL),
     message: messageEntry === null ? undefined : messageEntry,
+    locale: textOf(formData, FIELD_LOCALE) ?? undefined,
   });
   if (!parsed.success) return { ok: false, code: "invalid" };
 
@@ -315,8 +331,36 @@ async function processApplication(formData: FormData): Promise<ApplyToJobResult>
   const filename = sanitizeFilename(file.name, extension);
   const mimeType = CV_MIME_TYPES.has(providedMime) ? providedMime : declaredMime;
 
-  // 5. Envoi — sans aucun intermédiaire disque.
-  const { firstName, lastName, email, message } = parsed.data;
+  // 5. Persistance — INSERT dans `jobApplications` (source de vérité pour
+  //    l'espace CEO). L'INSERT est placé AVANT l'e-mail admin : une
+  //    candidature non stockée ne doit pas déclencher de notification
+  //    orpheline. Le rate-limit n'est consommé qu'après ce point.
+  const { firstName, lastName, email, message, locale } = parsed.data;
+  const db = getDb();
+  try {
+    await db.insert(jobApplications).values({
+      firstName,
+      lastName,
+      email,
+      emailNorm: normalizeEmail(email),
+      locale: locale ?? "fr",
+      message: message !== undefined && message.length > 0 ? message : null,
+      status: "nouveau",
+      cvFilename: filename,
+      cvMimeType: mimeType,
+      cvByteSize: bytes.length,
+      cvBytes: bytes,
+    });
+  } catch (error) {
+    // Échec DB : aucun e-mail admin envoyé, code `failed` — le candidat
+    // peut réessayer immédiatement (pas de consommation de quota).
+    console.error("[careers] candidature non enregistrée en base", error);
+    return { ok: false, code: "failed" };
+  }
+
+  // 6. E-mail admin — BEST EFFORT (PLAN-RECRUTEMENT-CEO, D8) : la
+  //    candidature est en base, c'est la source de vérité. Un échec
+  //    Resend est journalisé mais ne fait PAS échouer la candidature.
   const mail = await sendMail({
     to: RECRUITER_EMAIL,
     subject: `Candidature Sales Partner — ${firstName} ${lastName}`,
@@ -333,10 +377,12 @@ async function processApplication(formData: FormData): Promise<ApplyToJobResult>
   });
 
   if (!mail.ok) {
-    // Sans DB ni stockage, un échec d'envoi EST un échec de candidature :
-    // code `failed`, détails journalisés côté serveur uniquement.
-    console.error("[careers] candidature non envoyée", mail.error);
-    return { ok: false, code: "failed" };
+    // Échec Resend — NON FATAL (voir §6) : la candidature est déjà en base.
+    // Journalisé côté serveur uniquement, réponse `ok: true`.
+    console.error(
+      "[careers] candidature enregistrée mais e-mail admin non envoyé",
+      mail.error,
+    );
   }
 
   return { ok: true };
@@ -345,13 +391,18 @@ async function processApplication(formData: FormData): Promise<ApplyToJobResult>
 /**
  * Dépose une candidature publique (page `/{locale}/recrutement`).
  *
- * @param formData Champs `firstName`, `lastName`, `email`, `message?` et le
- *   fichier sous la clé `cv` (PDF/DOC/DOCX/RTF, ≤ 5 Mo).
- * @returns `{ ok: true }` si l'e-mail (avec le CV en pièce jointe) a été
- *   accepté par le provider ; sinon `invalid` (champs ou fichier absente /
+ * Traitement : rate-limit → Zod (prénom, nom, email, message?, locale?) →
+ * fichier `cv` (PDF/DOC/DOCX/RTF, ≤ 5 Mo) → **INSERT dans `jobApplications`**
+ * (source de vérité pour l'espace CEO) → e-mail admin (best effort : un échec
+ * Resend ne fait jamais échouer la candidature déjà stockée).
+ *
+ * @param formData Champs `firstName`, `lastName`, `email`, `message?`,
+ *   `locale?` et le fichier sous la clé `cv` (PDF/DOC/DOCX/RTF, ≤ 5 Mo).
+ * @returns `{ ok: true }` si la candidature est **en base** (l'e-mail admin
+ *   est best effort) ; sinon `invalid` (champs ou fichier absente /
  *   malformée), `too_large` (> 5 Mo), `bad_type` (extension ou MIME hors
  *   liste blanche), `rate_limited` (1 tentative envoyée / 60 s / IP) ou
- *   `failed` (lecture impossible / envoi refusé). Codes bruts uniquement.
+ *   `failed` (lecture impossible / INSERT refusé). Codes bruts uniquement.
  */
 export async function applyToJob(formData: FormData): Promise<ApplyToJobResult> {
   // 0. Garde d'entrée : un appel forgé peut transmettre n'importe quoi à la
