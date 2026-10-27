@@ -1,7 +1,7 @@
 "use server";
 
 /**
- * Atheris — Server Actions **recrutement** (candidatures Sales Partner,
+ * Atheris — Server Actions **recrutement** (candidatures Sales Development Representative,
  * espace CEO) — miroir du gabarit `src/actions/interviews.ts`.
  *
  * CONTRAT PUBLIC (codes BRUTS uniquement — le client traduit, aucun message

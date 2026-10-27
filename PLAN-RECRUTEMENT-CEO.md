@@ -46,7 +46,7 @@ Le CEO veut piloter les recrutements **depuis l'espace connecté** :
 | D3 | Email invitation | **Éditable + template mémorisé** en base |
 | D4 | Email refus | **Éditable, sans motif** (pas de champ raison) |
 | D5 | Parcours | **Nouveau → Invité → Refusé** (3 statuts) |
-| D6 | Offre | **Une seule** (Sales Partner) — pas de champ « poste » |
+| D6 | Offre | **Une seule** (Sales Development Representative) — pas de champ « poste » |
 | D7 | Langue email | **Selon la locale de candidature** (mémorisée au dépôt) |
 | D8 | Notification admin | **Conservée** (l'e-mail actuel de `applyToJob` reste) |
 
@@ -355,7 +355,7 @@ Backend via le contrat figé ci-dessus (compilation finale).
 ```
 Bonjour {{prenom}},
 
-Merci pour votre candidature au poste de Sales Partner chez Atheris Labs.
+Merci pour votre candidature au poste de Sales Development Representative chez Atheris Labs.
 Nous avons étudié votre dossier avec attention et souhaitons échanger avec
 vous lors d'un entretien en visioconférence (Google Meet, environ 30 minutes).
 

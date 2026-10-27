@@ -236,7 +236,7 @@ export async function generateCommissionsForQuote(
 
     // Bénéficiaire de la part manager : compte `role = 'manager'` le PLUS
     // ANCIEN (`createdAt ASC`) — recherché dès qu'une part manager existe
-    // (donc sur tout deal encaissé, y compris les deals Sales Partner/commercial).
+    // (donc sur tout deal encaissé, y compris les deals Sales Development Representative/commercial).
     const wantsManagerShare = shares.some((share) => share.kind === "manager");
     let managerId: string | null = null;
     if (wantsManagerShare) {

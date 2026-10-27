@@ -426,20 +426,21 @@ export const fr: SiteContent = {
     eyebrow: "Recrutement",
     title: "Rejoignez *l'équipe*",
     description:
-      "Nous recrutons des Sales Partners pour développer notre portefeuille clients, à distance.",
-    role: "Sales Partner",
+      "Nous recrutons des Sales Development Representatives pour développer notre portefeuille clients, à distance.",
+    role: "Sales Development Representative",
     meta: ["Collaborateur indépendant", "Rémunération à la commission", "100 % remote"],
     intro:
-      "Identifiez et qualifiez des prospects pour Atheris Labs\u00A0— studio d'ingénierie logicielle (applications Web, Mobile et Desktop sur-mesure) — et accompagnez-les jusqu'au premier échange commercial.",
+      "Identifiez, qualifiez et priorisez des prospects pour Atheris Labs\u00A0— studio d'ingénierie logicielle (applications Web, Mobile et Desktop sur-mesure) — et préparez chaque opportunité jusqu'au rendez-vous commercial.",
     sections: [
       {
         id: "missions",
         heading: "Vos responsabilités",
         bullets: [
-          "Prospecter activement par les canaux autorisés\u00A0: réseaux, prospection ciblée, bouche-à-oreille et canaux digitaux encadrés.",
-          "Qualifier le besoin\u00A0: type de produit, budget, délai et décideur.",
+          "Rechercher et cibler des prospects PME qualifiés via LinkedIn, l'email et les canaux digitaux encadrés.",
+          "Mener la prospection sortante (outbound)\u00A0: séquences de prise de contact, relances systématiques et personnalisation.",
+          "Qualifier chaque opportunité\u00A0: type de produit, budget, délai et décideur.",
           "Inscrire le prospect sur la plateforme avec une fiche complète et à jour.",
-          "Assurer le suivi jusqu'au rendez-vous ou à l'envoi du devis.",
+          "Réserver et assurer le suivi des rendez-vous commerciaux jusqu'à l'envoi du devis.",
           "Remonter les signaux marché\u00A0: objections, prix concurrents, attentes récurrentes.",
         ],
       },
@@ -447,7 +448,8 @@ export const fr: SiteContent = {
         id: "profil",
         heading: "Profil recherché",
         bullets: [
-          "Expérience en prospection B2B ou en génération de leads (appréciée).",
+          "Expérience en Sales Development, en prospection B2B ou en génération de leads (appréciée).",
+          "Aisance avec les outils d'outbound (LinkedIn Sales Navigator, séquenceurs, CRM).",
           "Bonne compréhension des enjeux digitaux des PME.",
           "Rigueur, autonomie, sens du suivi et fiabilité dans vos engagements.",
           "Français écrit soigné\u00A0; anglais ou arabe appréciés.",

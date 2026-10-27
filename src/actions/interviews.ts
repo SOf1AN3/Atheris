@@ -1,7 +1,7 @@
 "use server";
 
 /**
- * Atheris — Server Actions **entretien Sales Partner** (PLAN §2.3 · §Contrats).
+ * Atheris — Server Actions **entretien Sales Development Representative** (PLAN §2.3 · §Contrats).
  *
  * CONTRAT PUBLIC (codes BRUTS uniquement — le client traduit, jamais de
  * message serveur, voir `SiteContent.interview.errors.*`) :

@@ -72,7 +72,7 @@ describe("getTier — barème vendeur par cumul de clients payés", () => {
 // ---------------------------------------------------------------------------
 
 describe("computeDealShares — répartition d'un deal", () => {
-  it("deal d'un Sales Partner (10 %) → parts [seller 10 %, manager 5 %] = 15 %, CEO 85 %", () => {
+  it("deal d'un Sales Development Representative (10 %) → parts [seller 10 %, manager 5 %] = 15 %, CEO 85 %", () => {
     const result = computeDealShares({ dealCents: 100_000, sellerRateTenths: getTier(4) });
 
     expect(result.shares).toEqual([
@@ -83,7 +83,7 @@ describe("computeDealShares — répartition d'un deal", () => {
     expect(result.ceoShareCents).toBe(85_000);
   });
 
-  it("deal d'un Sales Partner au palier 12,5 % → 17,5 % cumul, CEO 82,5 %", () => {
+  it("deal d'un Sales Development Representative au palier 12,5 % → 17,5 % cumul, CEO 82,5 %", () => {
     const result = computeDealShares({ dealCents: 80_000, sellerRateTenths: getTier(5) });
 
     expect(result.shares).toEqual([
@@ -155,7 +155,7 @@ describe("computeDealShares — répartition d'un deal", () => {
   });
 
   it("la part manager est émise sur TOUS les deals, quel que soit le rôle du vendeur", () => {
-    // Sales Partner/commercial (`sellerIsManager` absent ou false) ET Rayan (true) :
+    // Sales Development Representative/commercial (`sellerIsManager` absent ou false) ET Rayan (true) :
     // la part manager 5 % est toujours présente, sur tous les paliers.
     for (const sellerIsManager of [false, true]) {
       for (const sellerRateTenths of [100, 125, 150, 200]) {

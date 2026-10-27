@@ -31,11 +31,11 @@
  *    traite les `NULL` comme distincts : l'idempotence de ce cas est portée
  *    par le SELECT préalable de l'action, pas par la contrainte.
  * 6. MANAGER — **part de 5 % fixe sur CHAQUE deal converti, TOUS CANAUX**
- *    (Sales Partner, commercial, ads…, et Rayan lui-même) : le bénéficiaire est le
+ *    (Sales Development Representative, commercial, ads…, et Rayan lui-même) : le bénéficiaire est le
  *    compte `role = 'manager'` le **plus ancien** (`createdAt ASC`, en
  *    pratique Rayan) ; compte absent → la part est omise et son montant
  *    revient au CEO. Exemple canonique (structure.md §3.3) : *Rayan clôture un
- *    prospect d'un Sales Partner → la part vendeur reste au Sales Partner, **Rayan touche alors
+ *    prospect d'un Sales Development Representative → la part vendeur reste au Sales Development Representative, **Rayan touche alors
  *    uniquement ses 5 % de manager***.
  *    La double part (seller **+** manager) ne se produit que si le vendeur
  *    EST le manager (Rayan génère lui-même le prospect) : il reçoit alors son
@@ -135,7 +135,7 @@ export type GeneratedCommission = {
  * Répartit un deal entre vendeur, manager et CEO.
  *
  * **La part manager (5 %) est émise sur CHAQUE deal, tous canaux** — un deal
- * Sales Partner produit `[seller (palier), manager 5 %]`, un deal de Rayan lui-même
+ * Sales Development Representative produit `[seller (palier), manager 5 %]`, un deal de Rayan lui-même
  * produit `[seller (palier), manager 5 %]` sur le même compte (2 parts, kinds
  * distincts, jamais de manager en double).
  *

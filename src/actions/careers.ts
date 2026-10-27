@@ -363,7 +363,7 @@ async function processApplication(formData: FormData): Promise<ApplyToJobResult>
   //    Resend est journalisé mais ne fait PAS échouer la candidature.
   const mail = await sendMail({
     to: RECRUITER_EMAIL,
-    subject: `Candidature Sales Partner — ${firstName} ${lastName}`,
+    subject: `Candidature Sales Development Representative — ${firstName} ${lastName}`,
     text: buildApplicationText({
       firstName,
       lastName,

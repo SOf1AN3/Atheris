@@ -41,7 +41,7 @@ export const DEFAULT_EMAIL_TEMPLATES: Record<
       subject: "Invitation à un entretien — Atheris Labs",
       body: `Bonjour {{prenom}},
 
-Merci pour votre candidature au poste de Sales Partner chez Atheris Labs.
+Merci pour votre candidature au poste de Sales Development Representative chez Atheris Labs.
 Nous avons étudié votre dossier avec attention et souhaitons échanger avec
 vous lors d'un entretien en visioconférence (Google Meet, environ 30 minutes).
 
@@ -58,7 +58,7 @@ Sofiane — Atheris Labs`,
       subject: "Interview invitation — Atheris Labs",
       body: `Bonjour {{prenom}},
 
-Thank you for your application for the Sales Partner position at Atheris
+Thank you for your application for the Sales Development Representative position at Atheris
 Labs. We have reviewed your profile with care and would like to meet you
 during an online interview (Google Meet, about 30 minutes).
 

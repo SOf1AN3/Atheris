@@ -127,7 +127,7 @@ export async function GET(
         break;
       // Vendeur : scoping de DONNÉES — uniquement SES prospects
       // (`prospects.sourceUserId = moi`, PLAN.md §Sécurité). Un prospect
-      // sans bénéficiaire (lead Ads/Sales Partner) n'est visible par aucun vendeur.
+      // sans bénéficiaire (lead Ads/Sales Development Representative) n'est visible par aucun vendeur.
       case "vendeur": {
         const owners = await db
           .select({ sourceUserId: prospects.sourceUserId })

@@ -425,20 +425,21 @@ export const en: SiteContent = {
     eyebrow: "Careers",
     title: "Join the *team*",
     description:
-      "We are hiring Sales Partners to grow our client portfolio, fully remote.",
-    role: "Sales Partner",
+      "We are hiring Sales Development Representatives to grow our client portfolio, fully remote.",
+    role: "Sales Development Representative",
     meta: ["Independent contractor", "Commission-based", "100% remote"],
     intro:
-      "Identify and qualify prospects for Atheris Labs — a software engineering studio building custom Web, Mobile and Desktop applications — and follow them through the first sales conversation.",
+      "Identify, qualify and prioritize prospects for Atheris Labs — a software engineering studio building custom Web, Mobile and Desktop applications — and prepare each opportunity for the first sales conversation.",
     sections: [
       {
         id: "missions",
         heading: "Your responsibilities",
         bullets: [
-          "Actively prospect through approved channels: networks, targeted outreach, word of mouth and controlled digital channels.",
-          "Qualify the need: product type, budget, timeline and decision maker.",
+          "Research and target qualified SME prospects through LinkedIn, email and controlled digital channels.",
+          "Run outbound prospecting: outreach sequences, systematic follow-ups and personalization.",
+          "Qualify every opportunity: product type, budget, timeline and decision maker.",
           "Register the prospect on the platform with a complete, up-to-date profile.",
-          "Follow up until the meeting or the quote is sent.",
+          "Book and follow up on sales meetings through to the quote.",
           "Report market feedback: objections, competitor pricing, recurring expectations.",
         ],
       },
@@ -446,7 +447,8 @@ export const en: SiteContent = {
         id: "profil",
         heading: "Profile",
         bullets: [
-          "Experience in B2B prospecting or lead generation (preferred).",
+          "Experience in sales development, B2B prospecting or lead generation (preferred).",
+          "Comfortable with outbound tools (LinkedIn Sales Navigator, sequencers, CRM).",
           "Solid understanding of SME digital challenges.",
           "Rigour, autonomy, follow-through and reliability in your commitments.",
           "Excellent written French; English or Arabic is a plus.",

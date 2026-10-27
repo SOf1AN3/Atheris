@@ -378,7 +378,7 @@ export const commissions = pgTable(
     quoteId: uuid("quote_id")
       .references((): PgColumn => quotes.id, { onDelete: "cascade" })
       .notNull(),
-    // NULL = « deal sans bénéficiaire » (lead Ads/Sales Partner orphelin) → file CEO avec
+    // NULL = « deal sans bénéficiaire » (lead Ads/Sales Development Representative orphelin) → file CEO avec
     // bannière. L'index unique ci-dessous traite les NULL comme distincts :
     // deux lignes sans bénéficiaire coexistent, l'idempotence reste garantie
     // dès qu'un bénéficiaire est identifié.
@@ -574,7 +574,7 @@ export const loginAttempts = pgTable(
 );
 
 // ---------------------------------------------------------------------------
-// 14. interviews — lien d'entretien Sales Partner (PLAN §1.1). Table autopportante :
+// 14. interviews — lien d'entretien Sales Development Representative (PLAN §1.1). Table autopportante :
 //     aucune FK vers `users`/`prospects` (le lien est PUBLIC et ouvert par un
 //     candidat anonyme ; le rattachement éventuel se fait côté applicatif).
 // ---------------------------------------------------------------------------
