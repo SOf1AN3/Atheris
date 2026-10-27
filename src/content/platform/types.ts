@@ -625,6 +625,82 @@ export interface InterviewsContent {
 }
 
 // ---------------------------------------------------------------------------
+// Recrutement (candidatures /recrutement — espace CEO).
+// ---------------------------------------------------------------------------
+
+/**
+ * Codes d'échec des actions de recrutement (traduits côté client, jamais
+ * servis en message par le serveur — miroir de `inviteToInterview` /
+ * `rejectApplication` dans `src/actions/recrutement.ts`).
+ */
+export interface RecruitmentErrors {
+  /** Session absente, compte non `active` ou rôle non `ceo`. */
+  forbidden: string;
+  /** Saisie refusée par la validation serveur (objet / message vides…). */
+  invalid: string;
+  /** Identifiant de candidature inconnu. */
+  notFound: string;
+  /** La candidature a déjà été invitée ou refusée (transition figée). */
+  conflict: string;
+  /** Envoi e-mail échoué — aucune modification n'a été appliquée. */
+  mailFailed: string;
+  /** Repli : échec d'infra (base indisponible). */
+  failed: string;
+}
+
+/** Statuts d'une candidature, dérivés de l'enum `job_application_status`. */
+export type JobApplicationStatus = "nouveau" | "invite" | "refuse";
+
+/** Contenu de la page « Recrutement » (/espace/recrutement, CEO seul). */
+export interface RecruitmentContent {
+  title: string;
+  intro: string;
+  listTitle: string;
+  empty: string;
+  emptyHint: string;
+  columns: {
+    candidate: string;
+    status: string;
+    appliedAt: string;
+    slot: string;
+    actions: string;
+  };
+  status: Record<JobApplicationStatus, string>;
+  filterLabel: string;
+  filterAll: string;
+  timezoneNote: string;
+  booked: string;
+  notBooked: string;
+  openDetail: string;
+  closeDetail: string;
+  detailTitle: string;
+  messageLabel: string;
+  noMessage: string;
+  emailLabel: string;
+  cvDownload: string;
+  invitedAtLabel: string;
+  rejectedAtLabel: string;
+  inviteAction: string;
+  rejectAction: string;
+  unavailable: string;
+  modal: {
+    inviteTitle: string;
+    rejectTitle: string;
+    subjectLabel: string;
+    bodyLabel: string;
+    bodyHint: string;
+    saveTemplateLabel: string;
+    send: string;
+    sending: string;
+    cancel: string;
+    successInvite: string;
+    successReject: string;
+    loadError: string;
+    errors: RecruitmentErrors;
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Portail client.
 // ---------------------------------------------------------------------------
 
@@ -792,6 +868,8 @@ export interface PlatformContent {
   dashboard: DashboardContent;
   commissions: CommissionsContent;
   interviews: InterviewsContent;
+  /** Page « Recrutement » (candidatures /recrutement, CEO seul). */
+  recruitment: RecruitmentContent;
   client: ClientContent;
   applications: ApplicationsContent;
   activities: ActivitiesContent;

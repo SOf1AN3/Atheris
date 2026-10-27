@@ -277,6 +277,9 @@ export function ApplyForm({
       formData.set("lastName", values.lastName);
       formData.set("email", values.email);
       formData.set("message", values.message ?? "");
+      // Locale de la page de dépôt : mémorisée en base, elle détermine la
+      // langue des e-mails envoyés au candidat (PLAN-RECRUTEMENT-CEO, D7).
+      formData.set("locale", locale);
       if (file !== null) {
         formData.set("cv", file);
       }
