@@ -447,7 +447,7 @@ export const en: SiteContent = {
         id: "profil",
         heading: "Profile",
         bullets: [
-          "Experience in sales development, B2B prospecting or lead generation (preferred).",
+          "Experience in sales development, B2B prospecting or lead generation is appreciated; motivated candidates without experience are equally welcome — strong interpersonal skills and a genuine desire to learn are enough.",
           "Comfortable with outbound tools (LinkedIn Sales Navigator, sequencers, CRM).",
           "Solid understanding of SME digital challenges.",
           "Rigour, autonomy, follow-through and reliability in your commitments.",

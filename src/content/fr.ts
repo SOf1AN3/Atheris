@@ -448,7 +448,7 @@ export const fr: SiteContent = {
         id: "profil",
         heading: "Profil recherché",
         bullets: [
-          "Expérience en Sales Development, en prospection B2B ou en génération de leads (appréciée).",
+          "Expérience en Sales Development, en prospection B2B ou en génération de leads appréciée\u00A0; les candidats motivés sans expérience sont également les bienvenus \u2014 une solide aisance relationnelle et une réelle envie d'apprendre suffisent.",
           "Aisance avec les outils d'outbound (LinkedIn Sales Navigator, séquenceurs, CRM).",
           "Bonne compréhension des enjeux digitaux des PME.",
           "Rigueur, autonomie, sens du suivi et fiabilité dans vos engagements.",
