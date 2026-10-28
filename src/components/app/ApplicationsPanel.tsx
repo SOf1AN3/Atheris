@@ -21,10 +21,22 @@
  * « Inviter » / « Refuser » ouvrent `ApplicationEmailModal` ; après un envoi
  * réussi, `router.refresh()` revalide la page serveur (la liste est re-fetchée
  * avec les nouveaux statuts) et un `aria-live` annonce le toast de succès.
+ * « Recruter » appelle `recruitCandidate({ applicationId, locale }, actor)`
+ * (locale lue via `useParams()`, motif `InterviewLinks`) : succès → toast
+ * `role="status"` + `router.refresh()` (statut `recrute`, bouton masqué) ;
+ * échec → `role="alert"` (`mail_failed` = texte dédié, sinon `recruitError`).
+ * Le bouton n'apparaît que si la candidature n'est ni `refuse` ni `recrute`.
+ *
+ * ─── RESPONSIVE ────────────────────────────────────────────────────────────
+ * ≥ md : tableau inchangé (`hidden md:block`). < md : chaque candidature
+ * devient une carte empilée (libellé `.micro` + valeur : candidat, statut,
+ * date, créneau, actions) — les actions et le détail sont partagés avec le
+ * tableau via `renderRowActions` / `renderDetailBody` (aucun double moteur).
  *
  * ─── A11Y ──────────────────────────────────────────────────────────────────
  * Filtre de statut en `<fieldset>` + `<legend>` (sr-only) avec `aria-pressed` ;
- * tableau sémantique (`<table>`, `<thead>`, `th scope="col"`) ; badge statut
+ * tableau sémantique (`<table>`, `<thead>`, `th scope="col"`) + liste de
+ * cartes sémantique (`<ul>`/`<li>`, `<dl>`) sous `md` ; badge statut
  * = couleur **ET** texte (jamais la couleur seule) ; boutons ≥ 44 px
  * (`Button size="sm"` = `h-11`) ; une seule ligne dépliée à la fois.
  *
@@ -34,11 +46,12 @@
  */
 
 import { Inbox } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Fragment, useState } from "react";
 
 import {
   getJobApplication,
+  recruitCandidate,
   type JobApplicationDetail,
 } from "@/actions/recrutement";
 import { ApplicationEmailModal } from "@/components/app/ApplicationEmailModal";
@@ -48,6 +61,8 @@ import type {
   JobApplicationStatus,
   RecruitmentContent,
 } from "@/content/platform/types";
+import { isValidLocale, type Locale } from "@/i18n/config";
+import type { Role } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 
 /** Filtre actif — `"all"` = tous les statuts. */
@@ -82,6 +97,14 @@ export type ApplicationsPanelLabels = {
   rejectedAtLabel: string;
   inviteAction: string;
   rejectAction: string;
+  /** CTA « Recruter » — `dict.recruitment.recruitAction`. */
+  recruitAction: string;
+  /** Libellé du bouton pendant l'appel `recruitCandidate` (`recruiting`). */
+  recruiting: string;
+  /** Toast de succès (`role="status"`) — `dict.recruitment.recruitSuccess`. */
+  recruitSuccess: string;
+  /** Erreur (`role="alert"`) — `dict.recruitment.recruitError`. */
+  recruitError: string;
   unavailable: string;
   modal: RecruitmentContent["modal"];
 };
@@ -89,7 +112,13 @@ export type ApplicationsPanelLabels = {
 export type ApplicationsPanelProps = {
   rows: ApplicationRow[];
   labels: ApplicationsPanelLabels;
-  locale: "fr" | "en";
+  locale: Locale;
+  /**
+   * Acteur CEO projeté depuis la session serveur (page `/espace/recrutement`)
+   * et revalidé côté serveur par `recruitCandidate` (Zod + garde rôle `ceo`,
+   * motif `invitations.ts`) : aucun rôle n'est inventé côté client.
+   */
+  actor: { id: string; role: Role };
 };
 
 /**
@@ -104,6 +133,8 @@ const STATUS_TONE_CLASSES: Record<JobApplicationStatus, string> = {
     "border-[rgba(143,166,200,0.30)] bg-[rgba(143,166,200,0.14)] text-[#B8C7DF]",
   refuse:
     "border-[rgba(255,107,90,0.25)] bg-[rgba(255,107,90,0.12)] text-danger",
+  recrute:
+    "border-[rgba(52,211,153,0.30)] bg-[rgba(52,211,153,0.10)] text-success",
 };
 
 /** Nombre de colonnes du tableau — `<td colSpan>` de la ligne de détail. */
@@ -123,14 +154,25 @@ export function ApplicationsPanel({
   rows,
   labels,
   locale,
+  actor,
 }: ApplicationsPanelProps): React.JSX.Element {
   const router = useRouter();
+  const params = useParams();
+  // Locale de l'URL lue côté client (motif `InterviewLinks`) : jamais de code
+  // langue en dur ; repli sur la prop serveur si l'URL est illisible.
+  const rawLocale = params["locale"];
+  const urlLocale: Locale | undefined =
+    typeof rawLocale === "string" && isValidLocale(rawLocale) ? rawLocale : undefined;
 
   const [filter, setFilter] = useState<StatusFilter>("all");
   const [detail, setDetail] = useState<DetailState | null>(null);
   const [modalKind, setModalKind] = useState<"invite" | "reject" | null>(null);
   const [modalRow, setModalRow] = useState<ApplicationRow | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  /** Id de la candidature en cours de recrutement (`null` = aucun appel vol). */
+  const [recruitingId, setRecruitingId] = useState<string | null>(null);
+  /** Dernière erreur de recrutement (`role="alert"`, aucun détail technique). */
+  const [recruitError, setRecruitError] = useState<string | null>(null);
 
   const visibleRows =
     filter === "all" ? rows : rows.filter((row) => row.status === filter);
@@ -181,14 +223,49 @@ export function ApplicationsPanel({
     router.refresh();
   }
 
+  /**
+   * « Recruter » : envoie le lien de création de compte au candidat, puis
+   * revalide la page serveur (statut `recrute` → le bouton disparaît au
+   * retour de la liste). Un seul appel en vol à la fois.
+   */
+  async function handleRecruit(row: ApplicationRow): Promise<void> {
+    if (recruitingId !== null) return;
+    setRecruitingId(row.id);
+    setRecruitError(null);
+    try {
+      const result = await recruitCandidate(
+        { applicationId: row.id, locale: urlLocale ?? locale },
+        actor,
+      );
+      if (result.ok) {
+        setNotice(labels.recruitSuccess);
+        router.refresh();
+      } else if (result.code === "mail_failed") {
+        // Le lien n'a pas pu être envoyé (le statut n'a pas bougé côté serveur).
+        setRecruitError(labels.modal.errors.mailFailed);
+      } else {
+        // Codes non traduits un par un ici : repli sur le message générique.
+        setRecruitError(labels.recruitError);
+      }
+    } catch {
+      // Erreur d'infra propagée par l'action : aucun détail technique en UI.
+      setRecruitError(labels.recruitError);
+    } finally {
+      setRecruitingId(null);
+    }
+  }
+
   /** Texte de la colonne « Créneau ». */
   function slotText(row: ApplicationRow): string {
     if (row.slotLabel !== null) return row.slotLabel;
     return row.bookable ? labels.notBooked : labels.unavailable;
   }
 
-  /** Rendu de la ligne dépliée (détail d'une candidature). */
-  function renderDetailRow(item: ApplicationRow): React.JSX.Element | null {
+  /**
+   * Contenu du dossier d'une candidature — partagé par la ligne de tableau
+   * (`renderDetailRow`) et la carte mobile (`< md`).
+   */
+  function renderDetailBody(item: ApplicationRow): React.JSX.Element | null {
     const state = detail;
     if (state === null || state.id !== item.id) return null;
 
@@ -289,12 +366,88 @@ export function ApplicationsPanel({
       );
     }
 
+    return body;
+  }
+
+  /** Rendu de la ligne dépliée (détail d'une candidature, tableau ≥ md). */
+  function renderDetailRow(item: ApplicationRow): React.JSX.Element | null {
+    const body = renderDetailBody(item);
+    if (body === null) return null;
+
     return (
       <tr className="border-t border-line bg-white/[0.02]">
         <td colSpan={COLUMN_COUNT} className="px-5 py-5 md:px-6">
           {body}
         </td>
       </tr>
+    );
+  }
+
+  /**
+   * Cellule « actions » — partagée par le tableau et la carte mobile.
+   * « Recruter » n'apparaît que si la candidature n'est ni `refuse` ni
+   * `recrute` (bouton désactivé + libellé `recruiting` pendant l'appel).
+   */
+  function renderRowActions(
+    row: ApplicationRow,
+    className?: string,
+  ): React.JSX.Element {
+    const isDetailOpen = detail !== null && detail.id === row.id;
+    const isRecruiting = recruitingId === row.id;
+    const canRecruit = row.status !== "refuse" && row.status !== "recrute";
+
+    return (
+      <span className={cn("flex flex-wrap items-center gap-2", className)}>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          aria-expanded={isDetailOpen}
+          onClick={() => {
+            void handleToggleDetail(row);
+          }}
+        >
+          {isDetailOpen ? labels.closeDetail : labels.openDetail}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          disabled={!row.inviteAllowed}
+          aria-disabled={!row.inviteAllowed}
+          onClick={() => {
+            handleOpenModal(row, "invite");
+          }}
+        >
+          {labels.inviteAction}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          disabled={!row.rejectAllowed}
+          aria-disabled={!row.rejectAllowed}
+          onClick={() => {
+            handleOpenModal(row, "reject");
+          }}
+        >
+          {labels.rejectAction}
+        </Button>
+        {canRecruit ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={isRecruiting}
+            aria-disabled={isRecruiting}
+            onClick={() => {
+              void handleRecruit(row);
+            }}
+          >
+            {isRecruiting ? labels.recruiting : labels.recruitAction}
+          </Button>
+        ) : null}
+      </span>
     );
   }
 
@@ -340,6 +493,13 @@ export function ApplicationsPanel({
         {notice}
       </p>
 
+      {/* Alerte « Recruter » (aucun détail technique, motif `LoginForm`). */}
+      {recruitError !== null ? (
+        <p role="alert" className="text-sm text-danger">
+          {recruitError}
+        </p>
+      ) : null}
+
       <section aria-labelledby="recruitment-list-title" className="flex flex-col gap-4">
         <h2
           id="recruitment-list-title"
@@ -349,41 +509,97 @@ export function ApplicationsPanel({
         </h2>
 
         {visibleRows.length > 0 ? (
-          <div className="overflow-x-auto rounded-[20px] border border-line bg-surface">
-            <table className="w-full min-w-[760px] border-collapse text-left">
-              <thead>
-                <tr className="border-b border-line">
-                  <th scope="col" className="px-5 py-4 micro text-faint md:px-6">
-                    {labels.columns.candidate}
-                  </th>
-                  <th scope="col" className="px-5 py-4 micro text-faint md:px-6">
-                    {labels.columns.status}
-                  </th>
-                  <th scope="col" className="px-5 py-4 micro text-faint md:px-6">
-                    {labels.columns.appliedAt}
-                  </th>
-                  <th scope="col" className="px-5 py-4 micro text-faint md:px-6">
-                    {labels.columns.slot}
-                  </th>
-                  <th scope="col" className="px-5 py-4 micro text-faint md:px-6">
-                    {labels.columns.actions}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {visibleRows.map((row) => {
-                  const isDetailOpen = detail !== null && detail.id === row.id;
+          <>
+            {/* ≥ md : tableau sémantique (inchangé). */}
+            <div className="hidden overflow-x-auto rounded-[20px] border border-line bg-surface md:block">
+              <table className="w-full min-w-[760px] border-collapse text-left">
+                <thead>
+                  <tr className="border-b border-line">
+                    <th scope="col" className="px-5 py-4 micro text-faint md:px-6">
+                      {labels.columns.candidate}
+                    </th>
+                    <th scope="col" className="px-5 py-4 micro text-faint md:px-6">
+                      {labels.columns.status}
+                    </th>
+                    <th scope="col" className="px-5 py-4 micro text-faint md:px-6">
+                      {labels.columns.appliedAt}
+                    </th>
+                    <th scope="col" className="px-5 py-4 micro text-faint md:px-6">
+                      {labels.columns.slot}
+                    </th>
+                    <th scope="col" className="px-5 py-4 micro text-faint md:px-6">
+                      {labels.columns.actions}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleRows.map((row) => {
+                    const isDetailOpen = detail !== null && detail.id === row.id;
 
-                  return (
-                    <Fragment key={row.id}>
-                      <tr className="border-b border-line last:border-b-0">
-                        <td className="px-5 py-4 align-top md:px-6">
-                          <span className="flex flex-col gap-0.5">
-                            <span className="text-[15px] text-fg">{row.candidateName}</span>
-                            <span className="text-sm text-muted">{row.email}</span>
+                    return (
+                      <Fragment key={row.id}>
+                        <tr className="border-b border-line last:border-b-0">
+                          <td className="px-5 py-4 align-top md:px-6">
+                            <span className="flex flex-col gap-0.5">
+                              <span className="text-[15px] text-fg">{row.candidateName}</span>
+                              <span className="text-sm text-muted">{row.email}</span>
+                            </span>
+                          </td>
+                          <td className="px-5 py-4 align-top md:px-6">
+                            <span
+                              className={cn(
+                                "inline-flex items-center whitespace-nowrap rounded-full border px-3 py-1.5 micro",
+                                STATUS_TONE_CLASSES[row.status],
+                              )}
+                            >
+                              {row.statusLabel}
+                            </span>
+                          </td>
+                          <td className="px-5 py-4 align-top text-[14px] tabular-nums text-muted md:px-6">
+                            {row.appliedLabel}
+                          </td>
+                          <td className="px-5 py-4 align-top text-[14px] text-muted md:px-6">
+                            {slotText(row)}
+                          </td>
+                          <td className="px-5 py-4 align-top md:px-6">
+                            {renderRowActions(row)}
+                          </td>
+                        </tr>
+                        {isDetailOpen ? renderDetailRow(row) : null}
+                      </Fragment>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* < md : cartes empilées — libellé `.micro` + valeur, cibles ≥ 44 px. */}
+            <ul className="flex flex-col gap-3 md:hidden">
+              {visibleRows.map((row) => {
+                const isDetailOpen = detail !== null && detail.id === row.id;
+
+                return (
+                  <li
+                    key={row.id}
+                    className="flex flex-col gap-5 rounded-[20px] border border-line bg-surface p-5"
+                  >
+                    <dl className="flex flex-col gap-4">
+                      <div className="flex flex-col gap-1.5">
+                        <dt className="micro text-faint">
+                          {labels.columns.candidate}
+                        </dt>
+                        <dd className="flex flex-col gap-0.5">
+                          <span className="text-[15px] text-fg">
+                            {row.candidateName}
                           </span>
-                        </td>
-                        <td className="px-5 py-4 align-top md:px-6">
+                          <span className="text-sm text-muted">{row.email}</span>
+                        </dd>
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <dt className="micro text-faint">
+                          {labels.columns.status}
+                        </dt>
+                        <dd>
                           <span
                             className={cn(
                               "inline-flex items-center whitespace-nowrap rounded-full border px-3 py-1.5 micro",
@@ -392,60 +608,37 @@ export function ApplicationsPanel({
                           >
                             {row.statusLabel}
                           </span>
-                        </td>
-                        <td className="px-5 py-4 align-top text-[14px] tabular-nums text-muted md:px-6">
+                        </dd>
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <dt className="micro text-faint">
+                          {labels.columns.appliedAt}
+                        </dt>
+                        <dd className="text-sm tabular-nums text-muted">
                           {row.appliedLabel}
-                        </td>
-                        <td className="px-5 py-4 align-top text-[14px] text-muted md:px-6">
-                          {slotText(row)}
-                        </td>
-                        <td className="px-5 py-4 align-top md:px-6">
-                          <span className="flex flex-wrap items-center gap-2">
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              size="sm"
-                              aria-expanded={isDetailOpen}
-                              onClick={() => {
-                                void handleToggleDetail(row);
-                              }}
-                            >
-                              {isDetailOpen ? labels.closeDetail : labels.openDetail}
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              disabled={!row.inviteAllowed}
-                              aria-disabled={!row.inviteAllowed}
-                              onClick={() => {
-                                handleOpenModal(row, "invite");
-                              }}
-                            >
-                              {labels.inviteAction}
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              disabled={!row.rejectAllowed}
-                              aria-disabled={!row.rejectAllowed}
-                              onClick={() => {
-                                handleOpenModal(row, "reject");
-                              }}
-                            >
-                              {labels.rejectAction}
-                            </Button>
-                          </span>
-                        </td>
-                      </tr>
-                      {isDetailOpen ? renderDetailRow(row) : null}
-                    </Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                        </dd>
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <dt className="micro text-faint">{labels.columns.slot}</dt>
+                        <dd className="text-sm text-muted">{slotText(row)}</dd>
+                      </div>
+                    </dl>
+                    <div className="flex flex-col gap-3 border-t border-line pt-4">
+                      <span className="micro text-faint">
+                        {labels.columns.actions}
+                      </span>
+                      {renderRowActions(row, "w-full flex-col items-stretch")}
+                    </div>
+                    {isDetailOpen ? (
+                      <div className="border-t border-line pt-4">
+                        {renderDetailBody(row)}
+                      </div>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+          </>
         ) : (
           /* ---------------------------------------------- État vide ----- */
           <div className="flex flex-col items-center gap-4 rounded-[20px] border border-line bg-surface px-6 py-14 text-center">

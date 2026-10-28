@@ -485,16 +485,3 @@ export async function activateAccount(
     throw error;
   }
 }
-
-/**
- * TEMPoraire : simple délégation vers `activateAccount` — l'ancien nom est
- * encore appelé par `src/components/app/client/ActivateForm.tsx` (migration
- * portée par la vague Frontend B).
- * TEMPoraire : supprimé par la vague Frontend B.
- */
-export async function activateClientAccount(
-  input: ActivateAccountInput,
-  ip?: string,
-): Promise<ActivateAccountResult> {
-  return activateAccount(input, ip);
-}

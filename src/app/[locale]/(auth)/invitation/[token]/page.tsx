@@ -10,12 +10,14 @@ type InvitationPageProps = {
 };
 
 /**
- * `/{locale}/invitation/{token}` : page PUBlique d'activation du compte
- * client (FE-9 · T26).
+ * `/{locale}/invitation/{token}` : page PUBlique d'activation d'un compte
+ * (création de compte par lien d'invitation — FE-9 · T26).
  *
  * - Jeton d'invitation (64 car. hex) lu dans l'URL et transmis au formulaire ;
- *   la page ne le valide pas (le Zod de `activateClientAccount` tranche :
+ *   la page ne le valide pas (le Zod de `activateAccount` tranche :
  *   jeton inconnu/expiré/déjà utilisé → code i18nalisé côté client).
+ * - Aucun champ e-mail : le jeton porte l'adresse, jamais modifiable à
+ *   l'activation (anti-takeover, motif `invitations.ts`).
  * - `generateMetadata` vit dans CETTE page (le layout `(auth)` fournit un
  *   titre par défaut fusionné ici) : `seo.invitation.{title,description}` ;
  *   aucun email n'est exposé (le token le porte mais il n'est pas lisible

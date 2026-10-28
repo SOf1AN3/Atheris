@@ -43,7 +43,13 @@ export type LoginFormLabels = {
   submit: string;
   submitLoading: string;
   forgotNote: string;
-  signupLink: string;
+  /**
+   * @deprecated L'inscription libre (`/{locale}/inscription`) a été supprimée
+   * (Lot 3 : comptes sur invitation uniquement) — le CTA n'est plus rendu ;
+   * champ conservé (optionnel) le temps que la page `/connexion` cesse de le
+   * transmettre.
+   */
+  signupLink?: string;
 };
 
 /** Messages i18n du formulaire (copie sérialisable, résolue côté serveur). */
@@ -252,14 +258,8 @@ export function LoginForm({ locale, labels, messages }: LoginFormProps) {
         {labels.forgotNote}
       </p>
 
-      <Button
-        variant="ghost"
-        size="sm"
-        href={`/${locale}/inscription`}
-        className="self-center text-muted underline decoration-line-2 underline-offset-4 hover:text-fg"
-      >
-        {labels.signupLink}
-      </Button>
+      {/* Pas de CTA d'inscription : les comptes naissent uniquement d'un lien
+          d'invitation (`/{locale}/invitation/{token}`) — Lot 3. */}
     </form>
   );
 }

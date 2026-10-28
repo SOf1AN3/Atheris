@@ -246,6 +246,10 @@ export default async function RecrutementPage({
       invitedAtLabel: recruitment.invitedAtLabel,
       rejectedAtLabel: recruitment.rejectedAtLabel,
       inviteAction: recruitment.inviteAction,
+      recruitAction: recruitment.recruitAction,
+      recruiting: recruitment.recruiting,
+      recruitSuccess: recruitment.recruitSuccess,
+      recruitError: recruitment.recruitError,
       rejectAction: recruitment.rejectAction,
       unavailable: recruitment.unavailable,
       modal: recruitment.modal,
@@ -255,7 +259,16 @@ export default async function RecrutementPage({
       toRow(item, locale, recruitment.status, recruitment.unavailable),
     );
 
-    content = <ApplicationsPanel rows={rows} labels={labels} locale={locale} />;
+    // `actor` : acteur revalidé côté serveur (la page est CEO-only ci-dessus),
+    // transmis sérialisable au panel pour `recruitCandidate` (contrat §2.3).
+    content = (
+      <ApplicationsPanel
+        rows={rows}
+        labels={labels}
+        locale={locale}
+        actor={{ id: session.user.id, role: session.user.role }}
+      />
+    );
   }
 
   return (

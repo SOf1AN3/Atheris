@@ -5,7 +5,7 @@ import { useState, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
-import { activateClientAccount } from "@/actions/invitations";
+import { activateAccount } from "@/actions/invitations";
 import { Button } from "@/components/ui/Button";
 import {
   Form,
@@ -120,7 +120,7 @@ export function ActivateForm({
     setGenericError(null);
 
     try {
-      const result = await activateClientAccount({
+      const result = await activateAccount({
         token,
         name: values.name,
         password: values.password,
