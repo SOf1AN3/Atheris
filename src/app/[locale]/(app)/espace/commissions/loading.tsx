@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
  * Composant **pur** (aucun dictionnaire, aucune session) : affiché par
  * Next.js pendant le rendu de la page server (`loading.tsx`). Purement
  * décoratif (`aria-busy` porte l'annonce, aucun texte en dur — la vue est
- * triple vendeur/CEO/manager, un squelette unique couvre les trois).
+ * triple sdr/CEO/manager, un squelette unique couvre les trois).
  */
 export default function CommissionsLoading(): React.JSX.Element {
   return (
@@ -14,7 +14,7 @@ export default function CommissionsLoading(): React.JSX.Element {
       {/* En-tête : titre de page. */}
       <Skeleton className="h-8 w-56 max-w-full" />
 
-      {/* Jauge de palier (vendeur) ou carte de total (CEO/manager). */}
+      {/* Jauge de palier (sdr) ou carte de total (CEO/manager). */}
       <div className="rounded-xl border border-line bg-surface p-6">
         <div className="flex flex-col gap-3">
           <Skeleton className="h-4 w-40 max-w-full" />
@@ -22,7 +22,7 @@ export default function CommissionsLoading(): React.JSX.Element {
         </div>
       </div>
 
-      {/* File (CEO) / registre (vendeur) : cartes empilées. */}
+      {/* File (CEO) / registre (sdr) : cartes empilées. */}
       <div className="flex flex-col gap-3">
         {Array.from({ length: 3 }, (_, index) => (
           <div

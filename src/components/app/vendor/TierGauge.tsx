@@ -1,5 +1,5 @@
 /**
- * Atheris — jauge de palier vendeur (FE-7 · T20 · DESIGN.md §2.3).
+ * Atheris — jauge de palier sdr (FE-7 · T20 · DESIGN.md §2.3).
  *
  * Composant **pur** (aucun `"use client"`, aucun hook, zéro import DB/i18n) :
  * toutes les props sont sérialisables et les libellés sont résolus côté

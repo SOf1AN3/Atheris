@@ -121,7 +121,7 @@ export const en = {
         "This personal link lets you create your Atheris account. Valid for 48 hours.",
       submit: "Activate my account",
       successTitle: "Account activated",
-      successBody: "Your client portal is ready. Sign in to follow your project.",
+      successBody: "Your account is ready. Sign in to access it.",
       expired: "This invitation link has expired. Request a new one.",
       used: "This invitation link has already been used.",
       invalid: "This invitation link is invalid.",
@@ -276,6 +276,16 @@ export const en = {
     previous: "Previous",
     backToProspect: "Back to prospect",
     saving: "Saving…",
+    clientAccess: {
+      title: "Client portal access",
+      description:
+        "Email the client a personal account-creation link (valid for 48 hours): they create their account themselves, with no manual approval.",
+      send: "Send the portal access link",
+      sending: "Sending…",
+      success: "Access link emailed to the client.",
+      mailFallback:
+        "The email could not be sent. Copy the link below and share it yourself.",
+    },
     steps: {
       context: {
         label: "Context",

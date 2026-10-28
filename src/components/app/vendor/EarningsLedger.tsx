@@ -1,5 +1,5 @@
 /**
- * Atheris — grand livre des gains vendeur (FE-7 · T20 · DESIGN.md §12.2 §12.3).
+ * Atheris — grand livre des gains sdr (FE-7 · T20 · DESIGN.md §12.2 §12.3).
  *
  * Composant **pur** (aucun `"use client"`, aucun hook, zéro import DB/i18n) :
  * props 100 % sérialisables — montants en **cents** (entiers) et libellés

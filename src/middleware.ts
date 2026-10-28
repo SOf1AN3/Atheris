@@ -231,11 +231,12 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     return NextResponse.next();
   }
 
-  // 2) Pages d'authentification : un compte déjà connecté (JWT vérifié +
+  // 2) Page de connexion : un compte déjà connecté (JWT vérifié +
   //    rôle valide + statut actif) ne doit jamais revoir la page de connexion
   //    (boucle connecté-sur-login). Un jeton non vérifiable ou un compte non
   //    actif laisse la page s'afficher (le message dédié vient de `login()`).
-  if (pathname === `/${locale}/connexion` || pathname === `/${locale}/inscription`) {
+  //    (`/inscription` a été retiré : création de compte sur lien unique 48 h.)
+  if (pathname === `/${locale}/connexion`) {
     if (claims !== null) {
       const { role, status } = claims;
       if (isRole(role) && status === "active") {

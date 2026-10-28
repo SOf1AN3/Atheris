@@ -7,7 +7,7 @@
  * libellés y sont résolus (100 % dict).
  *
  * STRUCTURE :
- * 1. **Classement des vendeurs** — tableau desktop (`hidden md:block`) +
+ * 1. **Classement des SDR** — tableau desktop (`hidden md:block`) +
  *    cartes mobiles (`md:hidden`, zéro scroll horizontal, DESIGN §12.3) :
  *    rang, nom, ajoutés, deals, conversion, palier (`tierRateTenths / 10`),
  *    commissions dues / versées ;
@@ -31,7 +31,7 @@ export type ManagerRankingItem = {
   name: string;
   /** Prospects ajoutés (`funnel.added`). */
   added: number;
-  /** Deals ayant déclenché une commission vendeur (`paidDealCount`). */
+  /** Deals ayant déclenché une commission sdr (`paidDealCount`). */
   dealCount: number;
   /** Taux de conversion, formaté server (« 33,3 % » ou « — »). */
   conversionLabel: string;
@@ -108,7 +108,7 @@ export function ManagerDashboard({
 }: ManagerDashboardProps): React.JSX.Element {
   return (
     <div className="flex flex-col gap-6">
-      {/* ------------------------- 1. Classement vendeurs ----------------- */}
+      {/* ------------------------- 1. Classement SDR ----------------- */}
       <section aria-labelledby="manager-ranking-title" className="flex flex-col gap-4">
         <h2 id="manager-ranking-title" className={SECTION_TITLE_CLASS}>
           {labels.title}

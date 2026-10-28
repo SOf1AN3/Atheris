@@ -1,171 +1,250 @@
-# PLAN.md — Lot 2 : créneaux « heure algérienne » + email + finitions
+# PLAN.md — Lot 3 : comptes sur invitation · purge · SDR · responsive CRM
 
 > **Statut : 🟡 EN ATTENTE DE VALIDATION EXPLICITE** — aucun code avant feu vert.
-> Version 1.0 — 25/10/2026 · Référents : `DESIGN.md`, plan précédent (exécuté ✅).
-> ⚠ Vous travaillez en parallèle sur `src/remotion/` + `VIDEO.md` + `package.json` :
-> **ces fichiers sont HORS périmètre et ne seront ni lus, ni modifiés, ni committés.**
+> Version 1.0 — 28/10/2026 · Le plan « Lot 2 » est exécuté et committé (`492adb1`) → `PLAN.md` réutilisé.
+> ⚠ Vous travaillez en parallèle sur `src/remotion/`, `scripts/*.mjs` (vidéo), `package.json` scripts `video:*`, `logo/`, `public/fonts/` : **hors périmètre, ni lus ni modifiés.**
 
 ---
 
-## Contexte
+## Contexte & besoin métier
 
-6 demandes : email unique sur toute la plateforme · **changement radical des
-créneaux d'entretien** (heure de référence = Algérie, affichage = fuseau
-candidat, fenêtre J+1→J+3, consignes Meet) · header masqué sur `/recrutement` ·
-bouton « visiter le site » au survol des projets · page 404 sur-mesure.
+7 demandes, dont **une refonte du cycle de vie des comptes** :
+
+1. **Bouton « Supprimer » sur chaque lien d'entretien** généré (page `/espace/entretien`, CEO).
+2. **Purge des données de test** en base : seuls survivent le compte **admin** (`admin@sofianeasma.me`), la **candidature de Meriam Sghaier**, et le profil **Saad Fares Racim** (rôle requalifié **SDR**). *Décision utilisateur : les liens d'entretien ne sont **pas** purgés en DB — il les supprimera lui-même avec le nouveau bouton.*
+3. **MYKS Radio retiré de la landing** (mise en commentaire, réversible).
+4. **Rôles** : plus aucun « vendeur » — le rôle devient **SDR** (vrai renommage). Rôles finaux : `ceo`, `manager`, `commercial`, `sdr`, `client` (client conservé : indispensable au portail client).
+5. **Refonte de la création de comptes** (décisions utilisateur) :
+   - **Personne ne peut s'inscrire librement** : `/inscription` disparaît.
+   - Un **SDR postule** via `/recrutement` (offre SDR) → entretien → le CEO clique **« Recruter »** → un **e-mail avec lien unique (48 h)** part au candidat → il crée son compte **lui-même, directement actif, sans validation manuelle**, avec le rôle **sdr** assigné **par le lien**.
+   - **Client** : à l'accord commercial, le CEO déclenche depuis **la fiche prospect** l'envoi d'un **e-mail avec lien unique (48 h)** → le client crée son compte **client** (rôle assigné par le lien).
+   - Aucun autre chemin de création de compte (le compte CEO existe via `bootstrap-admin`).
+6. **Responsive CRM** : le CRM n'est pas utilisable au téléphone → **cartes en mobile** (< md) sur toutes les pages d'espace.
+7. **Landing mobile** : sur chaque carte projet, le bouton **« Visiter le site » doit être toujours apparent** (pas de hover au doigt).
 
 ---
 
-## Questions / décisions en attente
+## Questions / décisions tranchées (avec l'utilisateur)
 
-| # | Question | Proposition |
+| # | Sujet | Décision |
 |---|---|---|
-| **Q1** 🔴 | **Combien de créneaux par jour ?** « 9h à 16h (heure algérienne) » avec des créneaux d'1 h → dernière prise de **15h** (fenêtre 9h–16h = **7 créneaux**) ou prise à **16h** inclusive (**8 créneaux**, fin 17h) ? | **7 créneaux (9h → 15h)** — la journée s'arrête bien à 16h. |
-| **Q2** 🟠 | **Fenêtre déjà dépassée** : la fenêtre est fixée à la **génération du lien** (J+1→J+3). Si le candidat ouvre le lien après J+3, plus aucun créneau n'est valide. | Afficher un état **« ce lien a expiré »** dédié (nouvelle clé `interview.expired*`), plutôt qu'une grille entièrement grisée. |
-| **Q3** 🟡 | Après validation, « Modifier mon créneau » disparaît (votre demande). Par quoi le remplace-t-on ? | Message de confirmation **sans action de modification** + lien « Fermer » (retour hors page). |
+| D1 | Rôle `client` | **Conservé** (portail client) — les rôles assignables par lien = `sdr` + `client`. |
+| D2 | `vendeur` → `sdr` | **Vrai renommage** : enum PG + ~50 refs code. Saad devient `sdr` par la migration. |
+| D3 | Compte « Sofiane ASMA » | **Supprimé** (purge). |
+| D4 | Liens d'entretien | **Non purgés** — suppression manuelle via le nouveau bouton. Modèle d'e-mail de recrutement (`recruitment_templates`) **conservé**. Script `db:seed` **neutralisé** (garde `ALLOW_DEMO_SEED`). |
+| D5 | Responsive | **Cartes en mobile** (pas de scroll horizontal). |
+| D6 | Lien client | Déclenché **sur la fiche prospect** (statut `client_actif`/`en_livraison` + projet signé, invariant de l'action existante). |
 
-**Décisions que je prends sans vous déranger** : le **footer reste** sur
-`/recrutement` (vous n'avez demandé que le header) · **MYKS Radio** (non en
-ligne) n'affiche **pas** de bouton « visiter » · le lien du dossier/email reste
-uniquement remplacé là où c'est un **email** (le `SITE_URL` des sitemaps/robots,
-lui, reste `atherislabs.com` tant que le domaine n'est pas arbitré).
-
----
-
-## 1. Contenu & contrats — **LEAD** (sérialise les autres pistes)
-
-| # | Tâche | Fichiers | Fait = |
-|---|---|---|---|
-| 1.1 | **Email** `contact@atherislabs.com` → **`contact@sofianeasma.me`** (valeur + `mailto:`) | `content/fr.ts`, `content/en.ts`, `(marketing)/layout.tsx` (JSON-LD), `components/layout/Footer.tsx` | 0 occurrence d'`atherislabs.com` **en email** (le `SITE_URL` des sitemaps/robots est conservé) |
-| 1.2 | **Clés `interview` réécrites** : `hoursNote`/`timezoneHint` remplacés par **2 paragraphes explicatifs** (voir §5) + clé `meetNote` (Google Meet, **5 min avant**, durée **~30 min**) + clés d'expiration `expiredTitle`/`expiredMessage` + `successAction` de confirmation sans modification · FR et EN strictement symétriques | `content/types.ts`, `fr.ts`, `en.ts` | aucun champ manquant (le type rend l'omission non compilable) |
-| 1.3 | **URL des projets** : `CaseStudy.url?: string` + `url` sur Dental (`dental-app-beta1.vercel.app`), Papernote (`reviewer-ai-delta.vercel.app/fr`), Delyx (`delyx-delivery.vercel.app`), Tiberium (`tiberium-next.vercel.app`), **absente pour MYKS** | `content/types.ts`, `fr.ts`, `en.ts` | 4 URLs, `?` optionnel |
-| 1.4 | Actifs : rien de nouveau | — | — |
-
-## 2. Logique créneaux — sous-agent **Backend**
-
-Fichiers : **`src/lib/slots.ts`** (modifier), **`src/lib/slots.test.ts`** (réécrire),
-**`src/actions/interviews.ts`** (adaptation de l'appel).
-
-**Nouveau modèle** — l'heure de référence est celle de **l'entreprise** :
-
-```
-HOURS    = [9 … 15]        // 7 prises, fenêtre 9h–16h Africa/Algiers   (Q1)
-DAYS     = 3               // J+1, J+2, J+3 APRÈS la génération du lien
-ANCHOR_TZ = "Africa/Algiers"
-```
-
-- `getSlotsForWindow(dates, timezone, now)` :
-  1. pour chaque date civile **algérienne** (fournie par la page, dérivée du
-     `createdAt` du lien) × `HOURS` → instant UTC via `Africa/Algiers`
-     (UTC+1 toute l'année, pas de DST — mais calculé via `Intl`, jamais en dur) ;
-  2. conversion dans le **fuseau du candidat** → `localDate`/`localHour` affichés
-     (ex. Philippines `+7` : 09:00 Algérie → **16:00**) ;
-  3. `past` si l'instant est déjà passé.
-  → `[]` si tz inconnue ou fenêtre illisible (défaut sûr, conservé).
-- `isValidSlot(ref, dates, now)` : la signature gagne `dates` (la fenêtre vient
-  de la **ligne en base**, jamais du client) — anti-falsification conservée.
-- `getSlotsForWindowDates(createdAt)` : dérive les 3 dates civiles algériennes
-  depuis `createdAt` du lien (utilisable côté page ET côté action).
-- `toRecruiterTime` **inchangé** (déjà `Africa/Algiers` en second).
-- **Tests** : les 28 tests existants sont **réécrits** pour les nouvelles
-  règles — 7 × 3 = 21 créneaux, fenêtre J+1→J+3, offset Philippines `+7`
-  vérifié au pixel, décalage Amériques (date qui recule d'un jour), et les
-  gardes DST/forge conservées.
-
-**Fait =** `npm run test` vert (les 64 tests doivent repasser) · `tsc` 0.
-
-## 3. Entretien (UI) — sous-agent **F1**
-
-Fichiers : **`src/app/[locale]/entretien/[token]/page.tsx`**,
-**`src/components/recrutement/InterviewForm.tsx`**.
-
-1. La **page** lit `createdAt` du lien et lui transmet les 3 dates algériennes
-   (`getSlotsForWindowDates`) + `expired` (fenêtre entièrement passée → état
-   `expiredTitle/Expired`, **avant** le formulaire).
-2. Le **formulaire** calcule l'agenda à partir de ces dates (plus de « aujourd'hui
-   côté candidat ») : 3 onglets jours × 7 créneaux, heures déjà passées
-   désactivées, fuseau du candidat affiché.
-3. **`cursor-pointer`** sur les boutons de créneau actifs (bug signalé) — garder
-   `cursor-not-allowed` sur les désactivés.
-4. Succès : **suppression de « Modifier mon créneau »** → confirmation seule
-   (+ lien « Fermer » si Q3 validé).
-5. Nouveaux paragraphes explicatifs en `.micro`/`text-[13px]` (clés 1.2), avec
-   le rappel **Google Meet 5 min avant · ~30 min**.
-6. Aucune string en dur · a11y `radiogroup` conservée · courbe unique.
-
-## 4. Finitions — sous-agent **F3**
-
-Fichiers : **`src/components/sections/CaseStudyCard.tsx`**,
-**`src/components/sections/CaseStudies.tsx`** · **`src/components/layout/Header.tsx`**
-· **`src/app/not-found.tsx`** (créer).
-
-1. **Bouton « Visiter le site »** au survol d'une carte projet :
-   ancré en bas de la carte, révélé par `group-hover` **ET** `group-focus-within`
-   (jamais accessible au clavier seulement au survol), `rel="noopener noreferrer"`
-   + `target="_blank"`, style fantôme + flèche, **masqué si `study.url` absent**
-   (MYKS). Le révélé ne doit pas faire sauter la métrique (zone réservée).
-2. **Header masqué sur `/recrutement`** : dans `Header` (client, `usePathname`),
-   retour `null` quand le chemin se termine par `/recrutement`. Zéro impact sur
-   la landing (offset `-mt-16` du Hero) et le skip-link reste fourni par le layout.
-3. **Page 404** `src/app/not-found.tsx` : rendue **dans le layout locale**
-   (vérifié : `<html>` présent sur `/fr/page-inexistante`) → polices + tokens.
-   Composition : `micro` « 404 · PAGE INTROUVABLE », titre `.h-display` avec voix
-   serif, phrase courte, CTA volt « Retour à l'accueil » + lien fantôme
-   « Voir les réalisations », ambiance `.hero-bg` voilée, densité `100svh`.
-   Clés : **à ajouter par le LEAD** (1.2) → `a11y`/`notFound` FR+EN.
-
-## 5. Textes des 2 nouveaux paragraphes (§1.2 — à valider)
-
-> **Fuseau de référence.** Les créneaux proposés sont ceux de l'entreprise,
-> en heure algérienne (9h–16h). Ils sont **automatiquement affichés à votre
-> heure locale** : vous choisissez une heure qui vous convient, chez vous.
->
-> **Pas de travail de nuit.** Ce décalage ne change rien à vos horaires de
-> travail : la seule fois où il compte, c'est pour l'entretien lui-même.
->
-> **Le jour J.** Rejoignez le Google Meet **5 minutes avant** l'heure choisie.
-> L'entretien dure **en moyenne 30 minutes**. Une fois validé, le créneau n'est
-> **plus modifiable**.
-
-(EN symétrique.)
+**Décisions prises sans déranger** : statut de candidature `recrute` ajouté (le bouton « Recruter » disparaît après usage) · l'e-mail échoue → le lien reste copiable manuellement dans l'UI (repli v1) · le bouton « Recruter » est proposé dès qu'une candidature n'est ni `refuse` ni `recrute` · jeton d'invitation = `randomBytes(32)` hex, **e-mail jamais modifiable** à l'activation (anti-takeover, motif `invitations.ts`).
 
 ---
 
-## Partition des fichiers
+## 1. Base de données — **sous-agent Database** (bloquant, exécuté en premier)
+
+### 1.1 Purge des données de test — `scripts/purge-test-data.ts` (créé, exécuté, conservé)
+Script `tsx` idempotent, lit `.env.local`, imprime un récapitulatif. **À conserver** (rejouable).
+
+**À CONSERVER (UUID figés)** :
+- `users` : `dfeaf925-…3881` (Administrateur Atheris, ceo) · `18ae2e5d-…6d4b` (Saad Fares racim)
+- `job_applications` : `9447aa7f-…5010` (Meriam Sghaier, nouveau)
+- `recruitment_templates` : **toutes les lignes conservées** (1 actuellement)
+
+**À SUPPRIMER (tout le reste)** : 9 `users` (6 démo seed + E2E Candidat Final + Design Review + Sofiane ASMA), 2 `job_applications` (TestE2E, English Candidate), 18 `interviews`, 11 `prospects` (+ cascade `prospect_briefs`), 4 `quotes` (+ cascade `payments`, `commissions`), 1 `client_projects` (+ cascade `milestones`), 3 `messages`, 26 `activities`, 5 `login_attempts`, `invitations`/`documents` (déjà vides).
+
+**Ordre FK imposé** (colonnes `no action`) :
+1. `UPDATE users SET default_project_id = NULL` (FK → `client_projects`, sinon blocage à l'étape 5)
+2. `DELETE activities` (actor_id `no action`)
+3. `DELETE invitations` · `DELETE messages` (sender_id `no action`)
+4. `DELETE client_projects` (quote_id `no action` côté projet ; cascade → `milestones`)
+5. `DELETE quotes` (cascade → `payments`, `commissions`)
+6. `DELETE prospects` (cascade → `prospect_briefs` ; `source_user_id` = `set null`)
+7. `DELETE job_applications WHERE id NOT IN ('9447aa7f-…')`
+8. `DELETE interviews` (toutes — 18 lignes de test ; la candidature Meriam n'en référence aucune)
+9. `DELETE users WHERE id NOT IN ('dfeaf925-…', '18ae2e5d-…')`
+10. `DELETE login_attempts`
+
+**Fait =** script exécuté, `SELECT` de contrôle : 2 users, 1 job_application, 0 prospect/quote/project/interview/activity.
+
+### 1.2 Migration schéma — `src/lib/db/schema.ts` + `drizzle/0003_*.sql`
+| Changement | Détail |
+|---|---|
+| `roleEnum` | `["ceo","manager","commercial","vendeur","client"]` → `["ceo","manager","commercial","sdr","client"]` |
+| `applicationStatusEnum` | + `"recrute"` |
+| `jobApplications` | + `recruitedAt: tstz("recruited_at")` (null) |
+| `invitations` | + `role: roleEnum("role").notNull()` · `projectId` devient **nullable** · + `applicationId: uuid("application_id").references(() => jobApplications.id)` (null pour client) · index `(email, role)` partiel `used_at IS NULL` pour la réutilisation |
+
+⚠ **Renommage d'enum** : drizzle-kit ne produit pas fiablement `ALTER TYPE … RENAME VALUE`. Le SQL de `drizzle/0003_*.sql` est produit par `db:generate` puis **ajusté à la main** si besoin, avec la séquence transactionnelle sûre :
+```sql
+ALTER TYPE "role" RENAME TO "role_old";
+CREATE TYPE "role" AS ENUM ('ceo','manager','commercial','sdr','client');
+ALTER TABLE "users" ALTER COLUMN "role" TYPE "role"
+  USING (CASE "role_old"::text WHEN 'vendeur' THEN 'sdr' ELSE "role_old"::text END)::"role";
+ALTER TABLE "users" ALTER COLUMN "role" SET DEFAULT 'ceo';
+DROP TYPE "role_old";
+```
+Puis les changements simples (`application_status` + `recrute` par `ALTER TYPE … ADD VALUE`, colonne `recruited_at`, colonnes `invitations`). **Exécuter `npm run db:migrate` sur la vraie chaîne Neon** (env réel en place).
+
+**Fait =** migration appliquée ; `SELECT enum_range(NULL::role)` = `ceo,manager,commercial,sdr,client` ; Saad = `sdr`.
+
+### 1.3 Neutralisation du seed — `src/lib/db/seed.ts`
+Garde en tête de `main()` : `if (process.env.ALLOW_DEMO_SEED !== "1") { console.warn(…); process.exit(0); }`. `src/lib/db/seed-data.ts` : `SeedRole` aligné sur le nouvel enum (`sdr`).
+
+**Fait =** `npm run db:seed` refuse poliment sans toucher la DB.
+
+---
+
+## 2. API / Server Actions — **sous-agent Backend**
+
+### 2.1 Renommage global `vendeur` → `sdr` (sauf `src/content/**`, voir piste Frontend-A)
+Fichiers : `src/lib/permissions.ts` (`HOME_BY_ROLE`, `ALL_ROLES`, `INTERNAL_ROLES`, `canChangeStatus`, `canViewAllProspects`) · `src/actions/prospects.ts` · `src/actions/dashboard.ts` (`EMPLOYEE_ROLES`, `SALES_REP_TRANSITIONS`…) · `src/actions/project.ts` · `src/actions/status.ts` · `src/actions/messages.ts` · `src/actions/profile.ts` (insert `role: "sdr"` — fonction retirée au §2.4, ne pas double-travailler) · `src/actions/vendor.ts` · `src/actions/commissions.ts` (commentaires) · `src/lib/commission.ts` · `src/auth.ts` (si référence) · tests `*.test.ts` (grep `vendeur`).
+
+**Fait =** `grep -r "vendeur" src/ scripts/ *.ts` → **zéro occurrence** (hors migrations SQL historiques) · `npx tsc --noEmit` OK · `npm test` OK.
+
+### 2.2 Suppression d'un lien d'entretien — `src/actions/interviews.ts`
+```ts
+export type DeleteInterviewLinkResult =
+  | { ok: true }
+  | { ok: false; code: "forbidden" | "not_found" | "failed" };
+export async function deleteInterviewLink(id: string): Promise<DeleteInterviewLinkResult>
+```
+- Zod uuid → sinon `invalid`/`not_found` ; **CEO seul** (miroir `createInterviewLink`).
+- Si `job_applications.interview_id` référence la ligne → d'abord `UPDATE job_applications SET interview_id = NULL WHERE interview_id = $id` (le driver `neon-http` n'a **pas** de `db.transaction()` : deux statements séquentiels), puis `DELETE interviews WHERE id = $id`.
+- Audit `interview.deleted` non fatal, jamais le token.
+
+**Fait =** action présente, `tsc` OK, appel refusé pour tout rôle non-CEO.
+
+### 2.3 Recrutement d'un candidat — `src/actions/recrutement.ts`
+```ts
+export type RecruitCandidateResult =
+  | { ok: true }
+  | { ok: false; code: "forbidden" | "not_found" | "invalid" | "mail_failed" | "failed" };
+export async function recruitCandidate(
+  input: { applicationId: string; locale: Locale },
+  actor: { id: string; role: Role },
+): Promise<RecruitCandidateResult>
+```
+Séquence (motif `inviteToInterview`) : Zod → **CEO seul** → candidature existe, `status ∈ {nouveau, invite}` sinon `invalid` → invitation **réutilisée** si ligne `(email, role='sdr', used_at IS NULL)` sinon insert (`randomBytes(32)`, `expiresAt = +48 h`, `applicationId`, `projectId: NULL`) → `sendMail` (FR/EN via dict, lien absolu `${SITE_URL}/{locale}/invitation/{token}` — suivre l'usage existant de `SITE_URL` dans `recrutement.ts`) → échec mail = **`mail_failed` SANS UPDATE de statut** (le CEO peut réessayer) → `UPDATE job_applications SET status='recrute', recruited_at=now()` + audit non fatal.
+
+**Fait =** recruter une candidature `invite` crée une invitation `sdr` + bascule `recrute` ; e-mail journalisé en dev.
+
+### 2.4 Activation généralisée + invitations client par e-mail — `src/actions/invitations.ts`
+- `createClientInvitation(input, actor)` : `input` gagne **`locale: Locale`** ; succès devient `{ ok: true; token: string; expiresAt: number; mailSent: boolean }` (insert/réutilisation **inchangés** + `role: "client"` + `sendMail` FR/EN ; échec mail → `mailSent: false`, jeton retourné pour copie manuelle).
+- `activateClientAccount` → **`activateAccount`** (contrat inchangé : `{ ok: true } | { ok: false; code: "invalid" | "expired" | "used" | "duplicate" }`) : le **rôle vient de la ligne d'invitation** ; `role='client'` → exige `projectId` non nul (`defaultProjectId`), `role='sdr'` → sans projet ; `status: "active"` direct. Zod d'entrée : restreindre `role ∈ {sdr, client}` à la lecture (une ligne `ceo` ne doit jamais pouvoir être activée).
+
+**Fait =** un jeton `sdr` crée un compte SDR actif ; un jeton `client` crée un compte client rattaché à son projet ; un jeton expiré → `expired`.
+
+### 2.5 Suppression de l'inscription libre — `src/actions/profile.ts`
+Retirer `applyAsCandidate` (+ types `ApplyCandidateInput/Result` associés). Laisser `updateProfile` intact.
+
+**Fait =** plus aucune fonction d'inscription publique ; `tsc` OK.
+
+---
+
+## 3. UI — **sous-agents Frontend** (4 pistes, fichiers disjoints)
+
+### FE-A — Dictionnaires & types (contenu uniquement)
+Fichiers : `src/content/platform/fr.ts`, `src/content/platform/en.ts`, `src/content/platform/types.ts`.
+- `statuses.role` : `vendeur` → `sdr` (libellé « SDR » FR/EN).
+- Section des recrutements (celle portant `inviteAction`) : + `recruitAction`, `recruiting`, `recruitSuccess`, `recruitError`, + libellé de statut `recrute` (FR « Recruté » / EN « Hired »).
+- `interviews` : + `delete`, `deleting`, `deleteConfirm` (FR/EN symétriques).
+- `auth.invitation` : + `email: { sdr: { subject, body }, client: { subject, body } }` (placeholders `{{name}}`, `{{link}}` ; corps FR/EN rédigés, ton factuel) ; revoir `title` pour qu'il vaille « créer votre compte » (plus spécifique « client »).
+- `types.ts` : types de ces clés ajoutés (le type rend toute omission non compilable).
+
+**Fait =** `tsc --noEmit` OK (un dict incomplet casse la compilation).
+
+### FE-B — Recrutement, activation, désinscription
+Fichiers : `src/components/app/ApplicationsPanel.tsx`, `src/components/app/client/ActivateForm.tsx`, `src/app/[locale]/(auth)/invitation/[token]/page.tsx`, `src/app/[locale]/(auth)/inscription/` ( **dossier supprimé** ), `src/components/app/LoginForm.tsx`.
+- **ApplicationsPanel** : bouton **« Recruter »** par ligne (`recruitAction`), désactivé pendant l'appel, retour `role="status"`/`role="alert"` (`recruitSuccess`/`recruitError`), `router.refresh()` ; masqué si `status ∈ {refuse, recrute}` ; **passe responsive carte < md** (liste actuelle en `<table>` : cards label/valeur sous `md`, tableau conservé ≥ md).
+- **ActivateForm** : appel `activateAccount` (plus `activateClientAccount`), libellés génériques (dict `auth.invitation`), e-mail du destinataire **pré-affiché en lecture seule** si exposable — sinon conservé tel quel (le jeton porte l'e-mail, aucune saisie d'e-mail).
+- **`/inscription` supprimé** + lien `LoginForm` → **retiré** (le CTA de connexion pointe vers `/connexion` seul ; vérifier les autres références : aucune connue hors `LoginForm`).
+
+**Fait =** flow complet recruter→e-mail→activation SDR jouable ; `/fr/inscription` → 404.
+
+### FE-C — Landing (MYKS + bouton mobile)
+Fichiers : `src/content/fr.ts`, `src/content/en.ts`, `src/content/types.ts`, `src/components/sections/CaseStudyCard.tsx`.
+- Item `myks-radio` **mis en commentaire** (FR + EN) ; JSDoc `types.ts` « 5 items » → « 4 items ».
+- Bouton « Visiter le site » : classes passent à `opacity-100 translate-y-0 md:opacity-0 md:translate-y-2 md:group-hover:opacity-100 md:group-hover:translate-y-0 md:group-focus-within:opacity-100 md:group-focus-within:translate-y-0` → **toujours visible < md**, révélé au survol/focus ≥ md (place déjà réservée, aucun saut).
+
+**Fait =** 4 cartes en FR et EN ; à 375 px le bouton est visible sans interaction.
+
+### FE-D — Responsive CRM : pipeline & prospects
+Fichiers : `src/components/app/PipelineTable.tsx`, `src/components/app/FilterBar.tsx`, `src/app/[locale]/(app)/espace/prospects/page.tsx`, `…/prospects/nouveau/page.tsx`, `…/prospects/[id]/page.tsx`, `…/prospects/[id]/fiche/page.tsx` (+ éventuels composants enfants de `src/components/app/vendor/` et `src/components/app/prospect/` rencontrés).
+- **Règle responsive unique** : `< md` → chaque ligne devient une **carte** (libellé `.micro` + valeur, empilée, `min-h` confortable, cibles ≥ 44 px) ; `≥ md` → tableau actuel **inchangé** (`hidden md:table` + `md:hidden` pour les cards).
+- **Fiche prospect** : + carte **« Envoyer le lien d'accès client »** (visible si statut `client_actif`/`en_livraison`) : bouton d'envoi, état `sending`, retour `recruitSuccess`-like (`mailSent: false` → afficher le lien copiable, repli v1), appelle `createClientInvitation` avec `locale`.
+- `FilterBar` : chips scrollables/étiquetées, champs pleine largeur en mobile.
+- Formulaires (nouveau prospect, fiche) : `grid-cols-1` en mobile, boutons pleine largeur.
+
+**Fait =** à 375 px, aucune coupure horizontale, pipeline lisible en cartes.
+
+### FE-E — Responsive CRM : dashboard, équipe, commissions, portail, shell
+Fichiers : `src/app/[locale]/(app)/espace/tableau-de-bord/page.tsx`, `…/espace/equipe/page.tsx`, `…/espace/commissions/page.tsx`, `…/espace/projet/page.tsx`, `…/espace/profil/page.tsx`, `src/components/app/commission/CommissionQueue.tsx`, `src/components/app/ProfileForms.tsx`, `src/components/app/AppShell.tsx`, `src/components/app/Topbar.tsx` (vérification seule).
+- Même règle `< md` cartes / `≥ md` tableau pour les 4 tableaux restants (dashboard, équipe, commissions queue, classements).
+- `AppShell` : `main` → `p-4 sm:p-6 lg:p-8` ; grilles `gap-4 sm:gap-6`.
+- Topbar : déjà un `Sheet` mobile — **vérifier** uniquement (libellés, cibles).
+
+**Fait =** toutes les pages `/espace/*` visitables à 375 px sans scroll horizontal.
+
+---
+
+## 4. Tests — **sous-agent Tester** (fin de module)
+
+1. Purge vérifiée (2 users, 1 candidature, tables vides) · seed neutralisé.
+2. `/fr/inscription` → 404 ; aucun lien vers elle.
+3. E2E recrutement : candidature SDR → entretien → « Recruter » → e-mail (dev log) → `/invitation/{token}` → compte `sdr` actif → connexion.
+4. E2E client : fiche prospect éligible → envoi → activation → compte `client` rattaché au projet.
+5. Lien d'entretien : bouton supprimer + confirmation → ligne disparue ; un lien référencé par une candidature est détaché puis supprimé.
+6. Landing : 4 cartes, MYKS absent, bouton « Visiter » visible à 375 px.
+7. Responsive : passes mobile 375 px sur `/espace/*` (tableau-de-bord, prospects, équipe, commissions, entretien, recrutement, profil, projet).
+8. Rôles : `statuses.role` affiche « SDR » ; aucun « vendeur » en UI.
+> ⚠ Identifiants admin à fournir par l'utilisateur au moment du test ; à défaut, tests publics + rapports.
+
+---
+
+## Partition des fichiers (aucun fichier sur deux pistes)
 
 | Fichier | Piste |
 |---|---|
-| `content/{types,fr,en}.ts` · `(marketing)/layout.tsx` · `components/layout/Footer.tsx` | **LEAD** (§1) |
-| `lib/slots.ts` · `lib/slots.test.ts` · `actions/interviews.ts` | **Backend** (§2) |
-| `app/[locale]/entretien/[token]/page.tsx` · `components/recrutement/InterviewForm.tsx` | **F1** (§3) |
-| `sections/CaseStudyCard.tsx` · `sections/CaseStudies.tsx` · `layout/Header.tsx` · `app/not-found.tsx` | **F3** (§4) |
-| `src/content/platform/*` · `src/remotion/**` · `VIDEO.md` · `package.json` · `scripts/` · `public/audio/` | **INTOUCHÉS** |
+| `scripts/purge-test-data.ts` (créé), `src/lib/db/schema.ts`, `drizzle/0003_*.sql`, `src/lib/db/seed.ts`, `src/lib/db/seed-data.ts` | **DB** |
+| `src/actions/interviews.ts`, `src/actions/recrutement.ts`, `src/actions/invitations.ts`, `src/actions/profile.ts`, `src/lib/permissions.ts`, `src/actions/{prospects,dashboard,project,status,messages,vendor,commissions}.ts`, `src/lib/commission.ts`, `src/auth.ts`, tests `*.test.ts` | **Backend** |
+| `src/content/platform/{fr,en,types}.ts` | **FE-A** |
+| `src/components/app/ApplicationsPanel.tsx`, `src/components/app/client/ActivateForm.tsx`, `src/app/[locale]/(auth)/invitation/[token]/page.tsx`, `src/app/[locale]/(auth)/inscription/**` (suppr.), `src/components/app/LoginForm.tsx` | **FE-B** |
+| `src/content/{fr,en}.ts`, `src/content/types.ts`, `src/components/sections/CaseStudyCard.tsx` | **FE-C** |
+| `PipelineTable.tsx`, `FilterBar.tsx`, `espace/prospects/**`, composants vendor/prospect rencontrés | **FE-D** |
+| `espace/{tableau-de-bord,equipe,commissions,projet,profil}/**`, `commission/CommissionQueue.tsx`, `ProfileForms.tsx`, `AppShell.tsx` (+ lecture `Topbar.tsx`) | **FE-E** |
 
-**Aucun fichier partagé.** LEAD écrit le contenu **avant** le lancement, puis il fige.
+> Hors périmètre absolu : `src/remotion/**`, `scripts/*.mjs` (vidéo), `public/fonts/**`, `logo/**`, `package.json` (sauf si `db:seed` exige un flag — non retenu).
+
+## Contrats inter-pistes (figés — les agents ne les modifient pas)
+
+- **C1** `deleteInterviewLink(id)` → `{ ok: true } | { ok: false; code: "forbidden" | "not_found" | "failed" | "invalid" }` (§2.2).
+- **C2** Schéma : `invitations.{role, projectId?, applicationId?}`, `job_applications.recruited_at`, enum `role = ceo|manager|commercial|sdr|client`, `application_status + recrute` (§1.2).
+- **C3** `recruitCandidate({ applicationId, locale }, actor)` → `{ ok: true } | { ok: false; code: "forbidden" | "not_found" | "invalid" | "mail_failed" | "failed" }` (§2.3).
+- **C4** `activateAccount({ token, name, password }, ip?)` → `{ ok: true } | { ok: false; code: "invalid" | "expired" | "used" | "duplicate" }` (§2.4).
+- **C5** `createClientInvitation({ prospectId, email, name, locale }, actor)` → `{ ok: true; token; expiresAt; mailSent } | { ok: false; code: "forbidden" | "not_found" | "invalid" }` (§2.4).
+- **C6** Clés dict (FR/EN symétriques) : `interviews.{delete,deleting,deleteConfirm}`, recrutement `{recruitAction,recruiting,recruitSuccess,recruitError,status.recrute}`, `statuses.role.sdr`, `auth.invitation.email.{sdr,client}.{subject,body}` (§FE-A).
+- **C7** `Role` reste dérivé de l'enum (`src/lib/permissions.ts`) : toute trace `vendeur` restante casse la compilation.
 
 ## Sécurité & edge cases
 
-1. Fenêtre figée à la génération → **jamais** de fenêtre lue côté client.
-2. Lien expiré → état dédié, jamais une grille toute désactivée.
-3. Offset négatif (Amériques) : la date locale du candidat peut être le **jour
-   précédent** → l'onglet doit l'afficher correctement (testé en unitaire).
-4. Email : destinataire inchangé (`admin@sofianeasma.me`), seul l'affichage
-   public change.
-5. `target="_blank"` → `rel="noopener noreferrer"` partout.
-6. a11y : bouton 404 et bouton « visiter » ≥ 44 px, focus volt, `group-focus-within`.
+- **Anti-takeover** : l'activation lit l'e-mail **uniquement** dans la ligne d'invitation ; jamais de saisie d'e-mail ; email déjà pourvu → `duplicate`.
+- **Jeton** : 256 bits, 48 h, usage unique (`used_at` + garde `IS NULL` à l'update), jamais journalisé.
+- **RBAC** : `recruitCandidate` / `createClientInvitation` / `deleteInterviewLink` = **CEO seul**, acteur revalidé par Zod (motif `invitations.ts`). `ROUTE_ACCESS` inchangée.
+- **Purge** : script idempotent, UUID de conservation **hardcodés**, ordre FK explicite (§1.1), `default_project_id` nullé avant suppression des projets.
+- **Migration enum** : séquence `RENAME TYPE` + `CREATE` + `USING CASE` (§1.2) — jamais de simple `RENAME VALUE` (bloquant hors transaction chez Drizzle).
+- **Sessions JWT** : un ancien JWT portant `vendeur` devient invalide (`isRole`) → reconnexion forcée (attendu, 2 comptes survivants).
+- **Échec e-mail** : jamais bloquant pour l'utilisateur final — repli « copier le lien » côté CEO (`mailSent` / `mail_failed`).
+- **`neon-http`** : aucun `db.transaction()` — écritures dépendantes en `db.batch` ou séquentielles (motif existant).
+- **i18n** : FR/EN strictement symétriques ; aucun message serveur en clair (codes bruts uniquement).
+- **Mobile** : cibles ≥ 44 px, aucun `overflow-x`, `prefers-reduced-motion` déjà global.
 
 ## Ordre d'exécution
 
-```
-1) LEAD (§1) — contenu figé
-2) Backend ∥ F1 ∥ F3            [contrat : dates = string[] YYYY-MM-DD algériennes]
-3) LEAD : tsc · npm test · npm run build
-4) E2E maison : créneaux PH/+7, fenêtre J+1→J+3, expiration, cursor, header masqué,
-   bouton visite, 404, email
-```
+1. **DB** (bloquant, sérialisé) : purge → migration → seed guard → vérifications SQL.
+2. **En parallèle, dès que DB rend la main** : **Backend** ∥ **FE-A** ∥ **FE-C** (fichiers disjoints).
+3. **Dès que Backend + FE-A ont rendu main** : **FE-B** ∥ **FE-D** ∥ **FE-E**.
+4. Revue croisée Lead : `grep -r "vendeur" src` = 0 · `npm run lint` · `npx tsc --noEmit` · `npm test` · `npm run build`.
+5. **Tester** (E2E Playwright, identifiants admin à fournir).
 
-## Validation finale
+## Validation finale (auto-revues)
 
-`tsc 0` · `vitest` vert (tests réécrits) · `next build` · captures Playwright
-(agenda en fuseau décalé, 404, `/recrutement` sans header, carte projet au survol)
-· grep email : **0** `atherislabs.com` en adresse email.
+Chaque agent termine par **`AUTO-OK`** (périmètre respecté, TypeScript strict, conventions du repo, zéro fichier hors partition) ; sinon **`AUTO-KO`** + tâche de correction isolée. Chaque tâche `AUTO-OK` est commitée sérialisément au format Conventional Commits (`feat(db): …`, `feat(api): …`, `feat(ui): …`, `fix(mobile): …`…).

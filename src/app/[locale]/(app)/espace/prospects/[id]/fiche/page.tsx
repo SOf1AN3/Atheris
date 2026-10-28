@@ -212,15 +212,12 @@ export default async function ProspectBriefPage({
   // franchit jamais la frontière RSC) — motif : `activityPhrase` de la fiche
   // détaillée. Aucun littéral bilingue, aucune branche sur la locale.
   const clientAccessLabels: ClientAccessCardLabels = {
-    title: dict.auth.invitation.email.client.subject,
-    description: dict.auth.invitation.description,
-    submit: dict.client.send,
-    sending: dict.recruitment.modal.sending,
-    success: dict.activities.invitationCreated.replace(
-      "{actor}",
-      session.user.name,
-    ),
-    mailWarning: dict.recruitment.modal.errors.mailFailed,
+    title: dict.brief.clientAccess.title,
+    description: dict.brief.clientAccess.description,
+    submit: dict.brief.clientAccess.send,
+    sending: dict.brief.clientAccess.sending,
+    success: dict.brief.clientAccess.success,
+    mailWarning: dict.brief.clientAccess.mailFallback,
     linkLabel: dict.interviews.columns.link,
     copy: dict.interviews.copy,
     copied: dict.interviews.copied,
@@ -246,9 +243,10 @@ export default async function ProspectBriefPage({
         <h1 className="text-2xl font-bold tracking-[-0.02em] text-fg">{dict.brief.title}</h1>
       </div>
 
-      {/* Envoyer le lien d'accès client — seulement si éligible (statut
+      {/* Envoyer le lien d'accès client — CEO seul (l'action refuse tout autre
+          rôle : aucun bouton mort), et seulement si éligible (statut
           `client_actif`/`en_livraison` + projet de livraison). */}
-      {canInviteClient ? (
+      {canInviteClient && viewer.role === "ceo" ? (
         <ClientAccessCard
           prospectId={prospect.id}
           email={prospect.email}

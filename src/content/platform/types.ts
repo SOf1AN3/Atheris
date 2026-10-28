@@ -134,7 +134,7 @@ export interface PlatformNavContent {
   ceo: PlatformNavItem[];
   manager: PlatformNavItem[];
   commercial: PlatformNavItem[];
-  /** Rôle `sdr` (ex-« vendeur ») — aligné sur l'enum `role` de la DB. */
+  /** Rôle `sdr` — aligné sur l'enum `role` de la DB (renommé dans le Lot 3). */
   sdr: PlatformNavItem[];
   client: PlatformNavItem[];
   logout: string;
@@ -414,6 +414,21 @@ export interface BriefContent {
   backToProspect: string;
   /** Libellé du bouton pendant l'enregistrement. */
   saving: string;
+  /** Carte « Envoyer le lien d'accès client » (fiche prospect, CEO seul). */
+  clientAccess: {
+    /** Titre de la carte (au-dessus du bouton d'envoi). */
+    title: string;
+    /** Phrase d'explication : lien e-mail, 48 h, création sans validation. */
+    description: string;
+    /** Libellé du bouton d'envoi. */
+    send: string;
+    /** Libellé du bouton pendant l'appel serveur. */
+    sending: string;
+    /** Accusé de réception après envoi de l'e-mail. */
+    success: string;
+    /** Avertissement si l'e-mail n'a pas pu être envoyé (repli copie). */
+    mailFallback: string;
+  };
   steps: Record<BriefBlockKey, BriefStep>;
   gauge: {
     /** ex. `"{done}/{total}"` → « 3/5 » — `{done}`/`{total}` remplacés à l'affichage. */
@@ -476,7 +491,7 @@ export interface DashboardContent {
     /** Sous-ligne totaux — `{count}` = nombre de versements. */
     paidCount: string;
   };
-  /** Colonnes du classement vendeurs (manager). */
+  /** Colonnes du classement SDR (manager). */
   ranking: {
     /** Rang d'affichage (1 = tête). */
     rank: string;
@@ -548,7 +563,7 @@ export interface CommissionsContent {
   paid: string;
   /** Avertissement métier : pas de récupération sur commission versée. */
   noClawbackWarning: string;
-  /** Titre de l'espace gains du vendeur. */
+  /** Titre de l'espace gains du sdr. */
   myEarnings: string;
   /** Colonne « Réf deal » (uuid court du devis). */
   dealRef: string;

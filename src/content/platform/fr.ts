@@ -127,7 +127,7 @@ export const fr: PlatformContent = {
         "Ce lien personnel vous permet de créer votre compte Atheris. Il est valable 48 heures.",
       submit: "Activer mon compte",
       successTitle: "Compte activé",
-      successBody: "Votre espace client est prêt. Connectez-vous pour suivre votre projet.",
+      successBody: "Votre compte est prêt. Connectez-vous pour y accéder.",
       expired: "Ce lien d’invitation a expiré. Demandez un nouveau lien.",
       used: "Ce lien d’invitation a déjà été utilisé.",
       invalid: "Ce lien d’invitation est invalide.",
@@ -282,6 +282,16 @@ export const fr: PlatformContent = {
     previous: "Précédent",
     backToProspect: "Retour au prospect",
     saving: "Enregistrement…",
+    clientAccess: {
+      title: "Accès à l’espace client",
+      description:
+        "Envoyez par e-mail un lien personnel de création de compte (valable 48 heures) : le client crée lui-même son compte, sans validation manuelle.",
+      send: "Envoyer le lien d’accès client",
+      sending: "Envoi…",
+      success: "Lien d’accès envoyé par e-mail au client.",
+      mailFallback:
+        "L’e-mail n’a pas pu être envoyé. Copiez le lien ci-dessous et transmettez-le vous-même.",
+    },
     steps: {
       context: {
         label: "Contexte",
