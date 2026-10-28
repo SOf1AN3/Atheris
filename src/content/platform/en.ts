@@ -423,6 +423,8 @@ export const en = {
       "Each link is single-use: once it has been booked, it can no longer be shared.",
     create: "Create an interview link",
     creating: "Creating…",
+    linkName: "Link name",
+    linkNamePlaceholder: "e.g. Interview — Jane Doe",
     linkTitle: "Link ready to send",
     linkLabel: "Public interview URL",
     copy: "Copy",

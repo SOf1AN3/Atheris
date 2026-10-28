@@ -11,10 +11,26 @@
  * traduits ici (`interviews.errors.*`).
  *
  * ─── CRÉATION ──────────────────────────────────────────────────────────────
- * `createInterviewLink(locale)` avec la locale lue via `useParams()` (jamais
- * de code langue en dur ; locale absente/invalide → `undefined`, l'action
- * applique son propre repli). Bouton désactivé pendant l'appel, retour
- * d'erreur `role="alert"`, puis affichage de l'URL + copie + lien direct.
+ * `createInterviewLink(locale, label?)` avec la locale lue via `useParams()`
+ * (jamais de code langue en dur ; locale absente/invalide → `undefined`,
+ * l'action applique son propre repli). Champ facultatif « Nom du lien »
+ * (120 car. max) transmis comme `label`. Bouton désactivé pendant l'appel,
+ * retour d'erreur `role="alert"`, puis affichage de l'URL + copie + lien
+ * direct.
+ *
+ * ─── NOM DE LIEN ───────────────────────────────────────────────────────────
+ * Chaque ligne affiche son étiquette (`row.label`) en titre de carte, avant
+ * les badges de statut ; étiquette absente → tiret sobre en `text-muted`
+ * (le candidat réservé reste dans le `dl`).
+ *
+ * ─── SUPPRESSION ───────────────────────────────────────────────────────────
+ * `deleteInterviewLink(id)` (CEO seul) avec confirmation EN LIGNE (jamais de
+ * `window.confirm`) : le bloc d'actions bascule en mode confirmation
+ * (`labels.deleteConfirm` + « Supprimer » + « Annuler ») et le second geste
+ * appelle l'action. `deletingId` fige la ligne en cours (bouton désactivé +
+ * libellé `labels.deleting`) ; succès → `router.refresh()`, échec →
+ * `role="alert"` avec un code traduit localement (`interviews.errors.*`,
+ * aucun message serveur en clair). L'annulation remet l'état initial.
  *
  * ─── COPIE ─────────────────────────────────────────────────────────────────
  * `navigator.clipboard.writeText` d'abord ; en échec → **sélection du champ**
@@ -46,7 +62,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { FocusEvent } from "react";
 
-import { createInterviewLink } from "@/actions/interviews";
+import { createInterviewLink, deleteInterviewLink } from "@/actions/interviews";
 import { Reveal } from "@/components/motion/Reveal";
 import { Button } from "@/components/ui/Button";
 import type { InterviewStatus } from "@/content/platform/types";
@@ -58,6 +74,10 @@ const COPY_FEEDBACK_MS = 1500;
 
 /** id du champ URL du bloc de création (repli de sélection). */
 const CREATE_FIELD_ID = "interview-create-url";
+/** id du champ « Nom du lien » (formulaire de création, carte + état vide). */
+const CREATE_LABEL_FIELD_ID = "interview-create-label";
+/** Longueur maximale du nom de lien (contrat serveur). */
+const LABEL_MAX_LENGTH = 120;
 /** clé de feedback du bloc de création (distincte de tout uuid). */
 const CREATE_KEY = "create";
 
@@ -85,6 +105,8 @@ export type InterviewRow = {
   status: InterviewStatus;
   /** `dict.interviews.status[status]`. */
   statusLabel: string;
+  /** Étiquette optionnelle du lien (titre de carte), `null` si absente. */
+  label: string | null;
   /** `false` = lien créé mais pas encore réservé. */
   booked: boolean;
   /** Créneau réel formaté server en `Africa/Algiers`, `null` si non réservé. */
@@ -109,9 +131,15 @@ export type InterviewLinksLabels = {
   copied: string;
   copyFallback: string;
   openLink: string;
+  delete: string;
+  deleting: string;
+  deleteConfirm: string;
+  cancel: string;
   listTitle: string;
   empty: string;
   emptyHint: string;
+  linkName: string;
+  linkNamePlaceholder: string;
   booked: string;
   notBooked: string;
   timezoneNote: string;
@@ -177,6 +205,17 @@ export function InterviewLinks({
   const [fallbackId, setFallbackId] = useState<string | null>(null);
   const copyTimerRef = useRef<number | null>(null);
 
+  /** Nom de lien facultatif du formulaire de création. */
+  const [createLabel, setCreateLabel] = useState<string>("");
+  /** Ligne dont le bloc d'actions est en mode confirmation (sinon `null`). */
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  /** Ligne en cours de suppression (bouton figé + libellé « Suppression… »). */
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  /** Échec de suppression : id de la ligne + message localisé (jamais serveur). */
+  const [deleteError, setDeleteError] = useState<{ id: string; message: string } | null>(
+    null,
+  );
+
   // Origine absolue : renseignée après montage (état initial `""` = rendu
   // serveur → aucun mismatch d'hydratation).
   useEffect(() => {
@@ -189,6 +228,14 @@ export function InterviewLinks({
       if (copyTimerRef.current !== null) window.clearTimeout(copyTimerRef.current);
     };
   }, []);
+
+  // Confirmation en ligne : le focus clavier suit la bascule (le bouton
+  // « Supprimer » initial est remplacé par le bloc de confirmation).
+  useEffect(() => {
+    if (confirmDeleteId === null) return;
+    const button = document.getElementById(`interview-delete-confirm-${confirmDeleteId}`);
+    if (button instanceof HTMLButtonElement) button.focus();
+  }, [confirmDeleteId]);
 
   /** URL absolue affichée ET copiée (jamais de divergence entre les deux). */
   function absoluteUrl(path: string): string {
@@ -218,7 +265,9 @@ export function InterviewLinks({
   }
 
   /** Code brut du serveur → message localisé (jamais de string serveur). */
-  function errorMessage(code: "forbidden" | "invalid" | "failed"): string {
+  function errorMessage(
+    code: "forbidden" | "invalid" | "not_found" | "failed",
+  ): string {
     switch (code) {
       case "forbidden":
         return labels.errors.forbidden;
@@ -236,8 +285,13 @@ export function InterviewLinks({
     setCopiedId(null);
     setFallbackId(null);
     try {
-      const result = await createInterviewLink(locale);
+      const label = createLabel.trim();
+      const result = await createInterviewLink(
+        locale,
+        label.length > 0 ? label : undefined,
+      );
       if (result.ok) {
+        setCreateLabel("");
         setCreated({
           path: result.url,
           url: `${window.location.origin}${result.url}`,
@@ -253,6 +307,45 @@ export function InterviewLinks({
       setCreateError(labels.errors.failed);
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  /** Ouvre la confirmation en ligne d'une ligne (annule toute erreur résiduelle). */
+  function startDelete(id: string): void {
+    setDeleteError(null);
+    setConfirmDeleteId(id);
+  }
+
+  /** Annulation : retour à l'état initial de la ligne. */
+  function cancelDelete(): void {
+    setConfirmDeleteId(null);
+    setDeleteError(null);
+  }
+
+  /** Suppression — le SECOND geste après la confirmation en ligne. */
+  async function handleDelete(id: string): Promise<void> {
+    if (deletingId !== null) return;
+    setDeletingId(id);
+    setDeleteError(null);
+    try {
+      const result = await deleteInterviewLink(id);
+      if (result.ok) {
+        setConfirmDeleteId(null);
+        // Nettoyage des retours de copie de la ligne supprimée.
+        setCopiedId((key) => (key === id ? null : key));
+        setFallbackId((key) => (key === id ? null : key));
+        // La page server re-fetch la liste ; aucun message serveur en clair.
+        router.refresh();
+      } else {
+        setConfirmDeleteId(null);
+        setDeleteError({ id, message: errorMessage(result.code) });
+      }
+    } catch {
+      // Erreur d'infra propagée par l'action : aucun détail technique en UI.
+      setConfirmDeleteId(null);
+      setDeleteError({ id, message: labels.errors.failed });
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -343,10 +436,29 @@ export function InterviewLinks({
             </div>
 
             {showCreateButton ? (
-              <div>
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                  <label
+                    htmlFor={CREATE_LABEL_FIELD_ID}
+                    className="text-[13px] font-semibold text-fg-2"
+                  >
+                    {labels.linkName}
+                  </label>
+                  <input
+                    id={CREATE_LABEL_FIELD_ID}
+                    type="text"
+                    maxLength={LABEL_MAX_LENGTH}
+                    value={createLabel}
+                    onChange={(event) => setCreateLabel(event.currentTarget.value)}
+                    placeholder={labels.linkNamePlaceholder}
+                    className={FIELD_CLASSES}
+                  />
+                </div>
                 <Button
                   type="button"
                   variant="primary"
+                  size="sm"
+                  className="shrink-0"
                   disabled={isSubmitting}
                   onClick={() => {
                     void handleCreate();
@@ -396,20 +508,26 @@ export function InterviewLinks({
                   className="flex flex-col gap-4 rounded-[20px] border border-line bg-surface p-5 md:p-6"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-3">
-                    <span className="flex flex-wrap items-center gap-2">
-                      <span
-                        className={cn(
-                          "inline-flex items-center whitespace-nowrap rounded-full border px-3 py-1.5 micro",
-                          STATUS_TONE_CLASSES[row.status],
-                        )}
-                      >
-                        {row.statusLabel}
-                      </span>
-                      {row.booked ? (
-                        <span className="inline-flex items-center whitespace-nowrap rounded-full border border-line-2 bg-white/[0.04] px-3 py-1.5 micro text-fg-2">
-                          {labels.booked}
+                    <span className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                      {/* Étiquette du lien = titre de carte (fallback sobre). */}
+                      <h3 className="text-[15px] font-semibold text-fg">
+                        {row.label ?? <span className="text-muted">—</span>}
+                      </h3>
+                      <span className="flex flex-wrap items-center gap-2">
+                        <span
+                          className={cn(
+                            "inline-flex items-center whitespace-nowrap rounded-full border px-3 py-1.5 micro",
+                            STATUS_TONE_CLASSES[row.status],
+                          )}
+                        >
+                          {row.statusLabel}
                         </span>
-                      ) : null}
+                        {row.booked ? (
+                          <span className="inline-flex items-center whitespace-nowrap rounded-full border border-line-2 bg-white/[0.04] px-3 py-1.5 micro text-fg-2">
+                            {labels.booked}
+                          </span>
+                        ) : null}
+                      </span>
                     </span>
                     <span className="flex items-baseline gap-2">
                       <span className="micro text-faint">{labels.columns.created}</span>
@@ -470,6 +588,65 @@ export function InterviewLinks({
                       {renderFeedback(row.id)}
                     </div>
                   ) : null}
+
+                  {/* ------------------------------------ Suppression --- */}
+                  <div className="flex flex-col gap-3 border-t border-line pt-4">
+                    {confirmDeleteId === row.id ? (
+                      <>
+                        <p
+                          id={`interview-delete-message-${row.id}`}
+                          className="max-w-[62ch] text-sm leading-[1.6] text-danger"
+                        >
+                          {labels.deleteConfirm}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Button
+                            type="button"
+                            id={`interview-delete-confirm-${row.id}`}
+                            variant="secondary"
+                            size="sm"
+                            className="border-danger text-danger hover:border-danger"
+                            disabled={deletingId !== null}
+                            aria-describedby={`interview-delete-message-${row.id}`}
+                            onClick={() => {
+                              void handleDelete(row.id);
+                            }}
+                          >
+                            {deletingId === row.id ? labels.deleting : labels.delete}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            disabled={deletingId !== null}
+                            onClick={cancelDelete}
+                          >
+                            {labels.cancel}
+                          </Button>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        {deleteError?.id === row.id ? (
+                          <p role="alert" className="max-w-[52ch] text-sm text-danger">
+                            {deleteError.message}
+                          </p>
+                        ) : (
+                          <span />
+                        )}
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          className="text-danger hover:border-danger"
+                          disabled={deletingId !== null}
+                          onClick={() => startDelete(row.id)}
+                        >
+                          {deletingId === row.id ? labels.deleting : labels.delete}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </Reveal>
               );
             })}
@@ -487,17 +664,37 @@ export function InterviewLinks({
               <span className="text-[15px] font-semibold text-fg">{labels.empty}</span>
               <span className="text-sm text-muted">{labels.emptyHint}</span>
             </span>
-            <Button
-              type="button"
-              variant="primary"
-              size="sm"
-              disabled={isSubmitting}
-              onClick={() => {
-                void handleCreate();
-              }}
-            >
-              {isSubmitting ? labels.creating : labels.create}
-            </Button>
+            <div className="flex w-full max-w-[420px] flex-col gap-3">
+              <div className="flex flex-col gap-1.5 text-left">
+                <label
+                  htmlFor={CREATE_LABEL_FIELD_ID}
+                  className="text-[13px] font-semibold text-fg-2"
+                >
+                  {labels.linkName}
+                </label>
+                <input
+                  id={CREATE_LABEL_FIELD_ID}
+                  type="text"
+                  maxLength={LABEL_MAX_LENGTH}
+                  value={createLabel}
+                  onChange={(event) => setCreateLabel(event.currentTarget.value)}
+                  placeholder={labels.linkNamePlaceholder}
+                  className={FIELD_CLASSES}
+                />
+              </div>
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                className="w-full"
+                disabled={isSubmitting}
+                onClick={() => {
+                  void handleCreate();
+                }}
+              >
+                {isSubmitting ? labels.creating : labels.create}
+              </Button>
+            </div>
           </div>
         )}
       </section>

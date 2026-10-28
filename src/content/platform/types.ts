@@ -621,6 +621,10 @@ export interface InterviewsContent {
   create: string;
   /** Libellé du bouton pendant l'appel serveur. */
   creating: string;
+  /** Champ facultatif « Nom du lien » du formulaire de création. */
+  linkName: string;
+  /** Placeholder du champ facultatif « Nom du lien ». */
+  linkNamePlaceholder: string;
   /** Titre du bloc « lien fraîchement créé ». */
   linkTitle: string;
   /** Label visible + `aria-label` du champ URL. */

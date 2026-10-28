@@ -429,6 +429,8 @@ export const fr: PlatformContent = {
       "Chaque lien est à usage unique : une fois réservé, il ne peut plus être partagé.",
     create: "Créer un lien d’entretien",
     creating: "Création en cours…",
+    linkName: "Nom du lien",
+    linkNamePlaceholder: "Ex. Entretien — Marie Dupont",
     linkTitle: "Lien prêt à envoyer",
     linkLabel: "URL publique de l’entretien",
     copy: "Copier",
