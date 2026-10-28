@@ -214,7 +214,7 @@ export function ProfileForms({
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4 sm:gap-6">
       {banner !== null ? (
         <p
           role="alert"

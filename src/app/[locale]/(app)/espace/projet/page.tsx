@@ -292,7 +292,7 @@ export default async function ProjetPage({
   };
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-6 sm:gap-8">
       {/* En-tête : nom du projet + badge statut (neutre, voir helper). */}
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-bold tracking-[-0.02em] text-fg">

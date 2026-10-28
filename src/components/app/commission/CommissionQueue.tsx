@@ -203,6 +203,9 @@ export function CommissionQueue({
         type="button"
         variant="primary"
         size="sm"
+        // Cible tactile ≥ 44 px en mobile (DESIGN §2.7) ; taille d'origine
+        // restaurée sur desktop (≥ md).
+        className="min-h-11 md:min-h-0"
         disabled={selectedItems.length === 0}
         onClick={() => {
           setOpen(true);

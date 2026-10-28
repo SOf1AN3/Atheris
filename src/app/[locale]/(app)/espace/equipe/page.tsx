@@ -149,55 +149,129 @@ function EmployeeStatsSection({
           <p className="text-[15px] font-semibold text-fg">{labels.noData}</p>
         </div>
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead scope="col">{labels.name}</TableHead>
-              <TableHead scope="col">{labels.added}</TableHead>
-              <TableHead scope="col">{labels.qualified}</TableHead>
-              <TableHead scope="col">{labels.signed}</TableHead>
-              <TableHead scope="col">{labels.conversion}</TableHead>
-              <TableHead scope="col">{labels.changes}</TableHead>
-              <TableHead scope="col">{labels.lastActivity}</TableHead>
-              <TableHead scope="col">{labels.generated}</TableHead>
-              <TableHead scope="col">{labels.cost}</TableHead>
-              <TableHead scope="col">{labels.margin}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((row) => (
-              <TableRow key={row.userId}>
-                <TableCell className="font-medium text-fg">{row.name}</TableCell>
-                <TableCell className="tabular-nums text-muted">{row.funnel.added}</TableCell>
-                <TableCell className="tabular-nums text-muted">{row.funnel.qualified}</TableCell>
-                <TableCell className="tabular-nums text-muted">{row.funnel.signed}</TableCell>
-                <TableCell className="tabular-nums text-fg">
-                  {formatPercent(row.funnel.conversionRate, locale)}
-                </TableCell>
-                <TableCell className="tabular-nums text-muted">
-                  {row.activity.statusChanges}
-                </TableCell>
-                <TableCell className="tabular-nums text-muted">
-                  {formatDate(row.activity.lastActivityAt, locale)}
-                </TableCell>
-                <TableCell className="tabular-nums text-fg">
-                  {formatCents(row.profitability.generatedCents)}
-                </TableCell>
-                <TableCell className="tabular-nums text-muted">
-                  {formatCents(row.profitability.commissionsCostCents)}
-                </TableCell>
-                <TableCell
-                  className={cn(
-                    "font-semibold tabular-nums",
-                    row.profitability.marginCents < 0 ? "text-danger" : "text-success",
-                  )}
-                >
-                  {formatCents(row.profitability.marginCents)}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <>
+          {/* Desktop (≥ md) : le tableau reste strictement inchangé. */}
+          <div className="hidden md:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead scope="col">{labels.name}</TableHead>
+                  <TableHead scope="col">{labels.added}</TableHead>
+                  <TableHead scope="col">{labels.qualified}</TableHead>
+                  <TableHead scope="col">{labels.signed}</TableHead>
+                  <TableHead scope="col">{labels.conversion}</TableHead>
+                  <TableHead scope="col">{labels.changes}</TableHead>
+                  <TableHead scope="col">{labels.lastActivity}</TableHead>
+                  <TableHead scope="col">{labels.generated}</TableHead>
+                  <TableHead scope="col">{labels.cost}</TableHead>
+                  <TableHead scope="col">{labels.margin}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.map((row) => (
+                  <TableRow key={row.userId}>
+                    <TableCell className="font-medium text-fg">{row.name}</TableCell>
+                    <TableCell className="tabular-nums text-muted">{row.funnel.added}</TableCell>
+                    <TableCell className="tabular-nums text-muted">{row.funnel.qualified}</TableCell>
+                    <TableCell className="tabular-nums text-muted">{row.funnel.signed}</TableCell>
+                    <TableCell className="tabular-nums text-fg">
+                      {formatPercent(row.funnel.conversionRate, locale)}
+                    </TableCell>
+                    <TableCell className="tabular-nums text-muted">
+                      {row.activity.statusChanges}
+                    </TableCell>
+                    <TableCell className="tabular-nums text-muted">
+                      {formatDate(row.activity.lastActivityAt, locale)}
+                    </TableCell>
+                    <TableCell className="tabular-nums text-fg">
+                      {formatCents(row.profitability.generatedCents)}
+                    </TableCell>
+                    <TableCell className="tabular-nums text-muted">
+                      {formatCents(row.profitability.commissionsCostCents)}
+                    </TableCell>
+                    <TableCell
+                      className={cn(
+                        "font-semibold tabular-nums",
+                        row.profitability.marginCents < 0 ? "text-danger" : "text-success",
+                      )}
+                    >
+                      {formatCents(row.profitability.marginCents)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Mobile (< md) : chaque ligne devient une carte empilée —
+              libellé `.micro` (text-muted) + valeur, filets `border-line`,
+              zéro scroll horizontal (Lot 3 · FE-E). */}
+          <ul className="flex flex-col gap-3 md:hidden">
+            {rows.map((row) => {
+              const cells: Array<{ label: string; value: string; className: string }> = [
+                { label: labels.added, value: String(row.funnel.added), className: "text-muted" },
+                {
+                  label: labels.qualified,
+                  value: String(row.funnel.qualified),
+                  className: "text-muted",
+                },
+                { label: labels.signed, value: String(row.funnel.signed), className: "text-muted" },
+                {
+                  label: labels.conversion,
+                  value: formatPercent(row.funnel.conversionRate, locale),
+                  className: "text-fg",
+                },
+                {
+                  label: labels.changes,
+                  value: String(row.activity.statusChanges),
+                  className: "text-muted",
+                },
+                {
+                  label: labels.lastActivity,
+                  value: formatDate(row.activity.lastActivityAt, locale),
+                  className: "text-muted",
+                },
+                {
+                  label: labels.generated,
+                  value: formatCents(row.profitability.generatedCents),
+                  className: "text-fg",
+                },
+                {
+                  label: labels.cost,
+                  value: formatCents(row.profitability.commissionsCostCents),
+                  className: "text-muted",
+                },
+                {
+                  label: labels.margin,
+                  value: formatCents(row.profitability.marginCents),
+                  className:
+                    row.profitability.marginCents < 0 ? "text-danger font-semibold" : "text-success font-semibold",
+                },
+              ];
+              return (
+                <li key={row.userId} className="rounded-xl border border-line bg-surface p-4">
+                  <p className="text-[15px] font-semibold text-fg">{row.name}</p>
+                  <dl className="mt-1 flex flex-col">
+                    {cells.map((cell, index) => (
+                      <div
+                        key={`${cell.label}-${index}`}
+                        className={cn(
+                          "flex items-baseline justify-between gap-3",
+                          index === 0 ? "pb-2" : "border-t border-line py-2",
+                        )}
+                      >
+                        <dt className="micro shrink-0 text-muted">{cell.label}</dt>
+                        <dd className={cn("text-right text-sm tabular-nums", cell.className)}>
+                          {cell.value}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                </li>
+              );
+            })}
+          </ul>
+        </>
       )}
     </section>
   );
@@ -323,7 +397,7 @@ export default async function EquipePage({
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4 sm:gap-6">
       <h1 className="text-2xl font-bold tracking-[-0.02em] text-fg">{title}</h1>
 
       {/* --------------------------------- 1. Candidatures ---------------- */}

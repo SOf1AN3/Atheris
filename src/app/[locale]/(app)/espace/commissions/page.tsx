@@ -37,7 +37,7 @@ export const dynamic = "force-dynamic";
  * Atheris — page « Commissions » (FE-7 · T20 + FE-8 · T23/T24 · structure.md §3.3).
  *
  * ─── TROIS VUES SELON LE RÔLE (décision FE-8) ──────────────────────────────
- * - `vendeur` : « Mes gains » scopé `WHERE beneficiary_id = $me` (FE-7, inchangé) ;
+ * - `sdr` : « Mes gains » scopé `WHERE beneficiary_id = $me` (FE-7, inchangé) ;
  * - `ceo` : **file de versement** (`CommissionQueue` : sélection multi +
  *   `markCommissionsPaid`) + **historique** (`CommissionHistory`) sur TOUTES
  *   les lignes, avec les infos deal (JOIN `quotes` → `prospects`) ;
@@ -61,9 +61,9 @@ export const dynamic = "force-dynamic";
  * L'historique affiche les **50 dernières** lignes `paid`, mais son total
  * `paidCents` est un `SUM()` SQL sur TOUTES les lignes versées.
  *
- * ─── DÉCISION `paidCount` (documentée — vue vendeur) ───────────────────────
+ * ─── DÉCISION `paidCount` (documentée — vue sdr) ───────────────────────
  * `paidCount = COUNT(DISTINCT quote_id)` sur les lignes `kind = 'seller'` du
- * vendeur, **indépendamment de `due`/`paid`** : le palier se base sur les
+ * sdr, **indépendamment de `due`/`paid`** : le palier se base sur les
  * deals **ayant déclenché une commission** (i.e. acompte payé / prospect
  * `client_actif` chez `generateCommissionsForQuote`), pas sur l'état du
  * versement — sinon le palier affiché serait retardé par un simple délai
@@ -118,7 +118,7 @@ function formatDate(value: Date | null | undefined, locale: Locale): string {
 /** Titre de la page : label de nav du rôle (pattern repris de FE-5). */
 function resolvePageTitle(
   dict: Awaited<ReturnType<typeof getPlatformDictionary>>,
-  role: "ceo" | "manager" | "vendeur",
+  role: "ceo" | "manager" | "sdr",
 ): string {
   return (
     dict.nav[role].find((item) => item.href === "/espace/commissions")?.label ??
@@ -158,7 +158,7 @@ export default async function CommissionsPage({
   const dict = await getPlatformDictionary(locale);
   const title = resolvePageTitle(dict, role === "commercial" ? "ceo" : role);
 
-  if (role !== "vendeur") {
+  if (role !== "sdr") {
     // ---------------------------------------------------------------------
     // Vue CEO / manager (FE-8) — file de versement + historique sur TOUTES
     // les lignes, avec les infos deal (JOIN `quotes` → `prospects`).
@@ -250,7 +250,7 @@ export default async function CommissionsPage({
       };
 
       return (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4 sm:gap-6">
           <h1 className="text-2xl font-bold tracking-[-0.02em] text-fg">{title}</h1>
 
           <CommissionQueue
@@ -272,10 +272,10 @@ export default async function CommissionsPage({
 
     // ---------------------------------------------------------------------
     // Repli sobre conservé (FE-7) : `commercial` n'accède jamais à cette page
-    // (`ROUTE_ACCESS.commissions` = ceo | manager | vendeur → middleware 404).
+    // (`ROUTE_ACCESS.commissions` = ceo | manager | sdr → middleware 404).
     // ---------------------------------------------------------------------
     return (
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-4 sm:gap-6">
         <h1 className="text-2xl font-bold tracking-[-0.02em] text-fg">{title}</h1>
         <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-line bg-surface px-6 py-16 text-center">
           <p className="text-[15px] font-semibold text-fg">{dict.common.noData}</p>
@@ -285,7 +285,7 @@ export default async function CommissionsPage({
   }
 
   // -----------------------------------------------------------------------
-  // Vue vendeur — SES seules lignes (scoping serveur non contournable).
+  // Vue sdr — SES seules lignes (scoping serveur non contournable).
   // -----------------------------------------------------------------------
   const me = session.user.id;
   const db = getDb();
@@ -296,7 +296,7 @@ export default async function CommissionsPage({
   } catch (error) {
     // Erreur d'infra DB : journalisée puis propagée (500), jamais présentée
     // comme « aucune donnée » (cohérent avec `listProspects`).
-    console.error("[commissions] échec de lecture du registre vendeur", error);
+    console.error("[commissions] échec de lecture du registre sdr", error);
     throw error;
   }
 
@@ -309,7 +309,7 @@ export default async function CommissionsPage({
     if (row.status === "due") pendingCents += row.amountCents;
     else paidCents += row.amountCents;
     // Décision documentée (en-tête) : palier = deals ayant déclenché une
-    // commission vendeur, **sans distinction due/paid**.
+    // commission sdr, **sans distinction due/paid**.
     if (row.kind === "seller") sellerQuoteIds.add(row.quoteId);
   }
   const paidCount = sellerQuoteIds.size;
@@ -363,7 +363,7 @@ export default async function CommissionsPage({
   }));
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4 sm:gap-6">
       <h1 className="text-2xl font-bold tracking-[-0.02em] text-fg">{title}</h1>
 
       <TierGauge {...tierLabels} />
@@ -378,7 +378,7 @@ export default async function CommissionsPage({
 // aucune Server Action : lecture RSC seule, scoping `WHERE beneficiary_id`).
 // ---------------------------------------------------------------------------
 
-/** Colonnes du registre vendeur (montants en cents, taux en dixièmes). */
+/** Colonnes du registre sdr (montants en cents, taux en dixièmes). */
 async function selectMyCommissions(
   db: ReturnType<typeof getDb>,
   beneficiaryId: string,
