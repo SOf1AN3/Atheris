@@ -135,9 +135,11 @@ export function CaseStudyCard({
 
         {/* PLAN §4.1 — bouton « Visiter le site » : uniquement si `study.url`
             existe (MYKS : aucun bouton ET aucun espace réservé → rendu
-            conditionnel total). Le bloc est TOUJOURS présent quand l'URL existe
-            (masqué en `opacity-0 translate-y-2`) : la place est réservée, le
-            survol ne fait donc JAMAIS sauter la métrique au-dessus.
+            conditionnel total). Le bloc est TOUJOURS présent quand l'URL existe :
+            la place est réservée (`min-h-11`), le survol ne fait donc JAMAIS
+            sauter la métrique au-dessus. Sous `md` le bouton reste PERMANENT
+            (aucun survol sur mobile) ; au-dessus de `md` il est masqué par
+            défaut puis révélé au survol / au focus.
             Révélation `group-hover` ET `group-focus-within` (le lien reste
             atteignable au clavier même sans survol) ; la transition est
             neutralisée sous `prefers-reduced-motion` par la règle globale de
@@ -158,9 +160,11 @@ export function CaseStudyCard({
                 "ease-[cubic-bezier(0.16,1,0.3,1)] cursor-pointer",
                 "hover:border-line-3 hover:bg-white/[0.04]",
                 "focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-[3px]",
-                // Révélation : survol de la carte OU focus clavier dans la carte.
-                "opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0",
-                "group-focus-within:opacity-100 group-focus-within:translate-y-0",
+                // Toujours visible sous `md` (pas de survol sur mobile) ;
+                // révélation au survol / focus clavier uniquement au-dessus de `md`.
+                "opacity-100 translate-y-0 md:opacity-0 md:translate-y-2",
+                "md:group-hover:opacity-100 md:group-hover:translate-y-0",
+                "md:group-focus-within:opacity-100 md:group-focus-within:translate-y-0",
               )}
             >
               {visitLabel}

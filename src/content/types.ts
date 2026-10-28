@@ -131,7 +131,7 @@ export interface CasesContent {
   /** Libellé du bouton « visiter » révélé au survol d'une carte. */
   visitLabel: string;
   filters: { all: string; web: string; mobile: string; ai: string };
-  /** 5 items (4 projets portfolio + MYKS Radio). */
+  /** 4 items (portfolio) — MYKS Radio retiré sur demande (commenté dans fr.ts/en.ts). */
   items: CaseStudy[];
 }
 

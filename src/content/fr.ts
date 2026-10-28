@@ -149,16 +149,17 @@ export const fr: SiteContent = {
           "Plateforme de consulting avec messagerie temps réel sécurisée via WebSockets, notifications, historique persistant et mise à l'échelle Redis.",
         tags: ["MongoDB", "Express", "React", "Node.js", "Socket.io"],
       },
-      {
-        id: "myks-radio",
-        categories: ["mobile"],
-        featured: false,
-        mockup: "radio",
-        title: "MYKS Radio",
-        description:
-          "Infrastructure web et mobile de streaming audio temps réel, avec dashboard de gestion personnalisé et applications iOS et Android diffusant les flux en HLS.",
-        tags: ["React Native", "WebSockets", "Node.js", "HLS"],
-      },
+      // RETIRÉ SUR DEMANDE (28/10/2026) : MYKS Radio hors ligne — réactiver en supprimant les commentaires.
+      // {
+      //   id: "myks-radio",
+      //   categories: ["mobile"],
+      //   featured: false,
+      //   mockup: "radio",
+      //   title: "MYKS Radio",
+      //   description:
+      //     "Infrastructure web et mobile de streaming audio temps réel, avec dashboard de gestion personnalisé et applications iOS et Android diffusant les flux en HLS.",
+      //   tags: ["React Native", "WebSockets", "Node.js", "HLS"],
+      // },
     ],
   },
 
