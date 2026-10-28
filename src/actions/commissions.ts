@@ -130,15 +130,15 @@ function isUniqueViolation(error: unknown): boolean {
  * 5. **Part manager sur CHAQUE deal** (règle économique validée) : ligne
  *    `manager` 5 % toujours émise, tous canaux — bénéficiaire = compte
  *    `role = 'manager'` le plus ancien (`createdAt ASC`) ; compte absent →
- *    la part est omise (montant revenant au CEO), documenté. Si le vendeur EST
+ *    la part est omise (montant revenant au CEO), documenté. Si le SDR EST
  *    le manager (Rayan génère lui-même le prospect) : **2 lignes** sur le même
  *    deal (mêmes comptes possibles, `kind` distincts → index unique OK). Le
- *    rôle du vendeur ne sert qu'à la garde-fou de plafond de `computeDealShares`.
+ *    rôle du SDR ne sert qu'à la garde-fou de plafond de `computeDealShares`.
  * 6. Insertions via `computeDealShares` dans **un seul `db.batch([...])`**
  *    atomique (commissions + audit `commissions.generated`) — le driver
  *    `neon-http` n'offre aucun `db.transaction()`.
  *
- * `beneficiaryId` vendeur = `prospects.sourceUserId` — **peut être `null`**
+ * `beneficiaryId` SDR = `prospects.sourceUserId` — **peut être `null`**
  * (leads Ads/Landing) : la ligne est créée quand même (file « sans
  * bénéficiaire », décision Lead).
  *
@@ -168,7 +168,7 @@ export async function generateCommissionsForQuote(
   const db = getDb();
 
   try {
-    // 2. Devis + prospect (porte le `sourceUserId` = bénéficiaire vendeur).
+    // 2. Devis + prospect (porte le `sourceUserId` = bénéficiaire SDR).
     const quoteRows = await db
       .select({
         status: quotes.status,
@@ -198,7 +198,7 @@ export async function generateCommissionsForQuote(
     let sellerIsManager = false;
 
     if (sellerId !== null) {
-      // 4. Palier — deals du vendeur à `client_actif`, HORS ce devis
+      // 4. Palier — deals du SDR à `client_actif`, HORS ce devis
       // (frontière explicite `quotes.id != id`). Requête paramétrée partout.
       const paidRows = await db
         .select({ id: quotes.id })
@@ -213,10 +213,10 @@ export async function generateCommissionsForQuote(
         );
       paidCount = paidRows.length;
 
-      // Rôle du vendeur — UNIQUEMENT pour la garde-fou de plafond de
-      // `computeDealShares` (le vendeur = manager → double prise sur le même
+      // Rôle du SDR — UNIQUEMENT pour la garde-fou de plafond de
+      // `computeDealShares` (le SDR = manager → double prise sur le même
       // compte) : la part manager est émise dans tous les cas, quel que soit
-      // le rôle du vendeur.
+      // le rôle du SDR.
       const sellerRows = await db
         .select({ role: users.role })
         .from(users)
@@ -227,7 +227,7 @@ export async function generateCommissionsForQuote(
 
     // 5. Parts pures (aucune écriture) — snapshot du taux figé sur la ligne.
     // `computeDealShares` renvoie TOUJOURS la part manager (5 %, tous canaux)
-    // en plus du palier vendeur.
+    // en plus du palier SDR.
     const { shares } = computeDealShares({
       dealCents: quote.amountUsdCents,
       sellerRateTenths: getTier(paidCount),
@@ -263,7 +263,7 @@ export async function generateCommissionsForQuote(
             amountCents: share.amountCents,
           };
         }
-        // Part vendeur — `beneficiaryId` peut être `null` (file orpheline).
+        // Part SDR — `beneficiaryId` peut être `null` (file orpheline).
         return {
           kind: "seller",
           beneficiaryId: sellerId,

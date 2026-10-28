@@ -17,11 +17,11 @@
  * exporté et factorisé) : projet introuvable **ou** visiteur non autorisé →
  * `not_found` (aucune distinction qui confirmerait l'existence, cohérent avec
  * la route documents en 404). Règles de la matrice (rappel) : `client` =
- * son seul projet ; `ceo|manager|commercial` = tous ; `vendeur` = ses deals
+ * son seul projet ; `ceo|manager|commercial` = tous ; `sdr` = ses deals
  * uniquement.
  *
  * ÉCRITURE — **tous les rôles ayant accès peuvent poster** (décision Lead :
- * la messagerie projet est bilatérale client ↔ équipe ; le vendeur rattaché
+ * la messagerie projet est bilatérale client ↔ équipe ; le SDR rattaché
  * au deal y participe en lecture/écriture, ce qui ne lui donne aucun droit de
  * gestion sur les jalons ni la clôture — voir `resolveProjectAccess`).
  * `postMessage` n'écrit **aucune ligne d'audit** : le message EST

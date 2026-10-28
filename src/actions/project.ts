@@ -21,16 +21,16 @@
  *   `canManage: false` (lecture seule, messagerie comprise côté écriture
  *   seulement — voir `postMessage`) ;
  * - `ceo` / `manager` / `commercial` : tous les projets → `canManage: true` ;
- * - `vendeur` : uniquement si `client_projects → quotes →
+ * - `sdr` : uniquement si `client_projects → quotes →
  *   prospects.source_user_id = moi` → `canManage: false` (**décision Lead** :
- *   le vendeur suit ses deals mais ne gère ni jalons ni messagerie) ;
+ *   le SDR suit ses deals mais ne gère ni jalons ni messagerie) ;
  * - projet **introuvable OU non autorisé → `null`** (appelants → `not_found`) :
  *   **jamais de distinction qui confirmerait l'existence** d'un projet à un
  *   visiteur non autorisé — cohérent avec la route documents (404 uniforme).
  *
  * DÉCISIONS MÉTIER (Lead, structure.md §5 / PLAN §3.2) :
  * - **Validation jalon = `client` + `ceo`** (le CEO débloque un client
- *   absent) ; `manager` / `commercial` / `vendeur` → `forbidden`.
+ *   absent) ; `manager` / `commercial` / `sdr` → `forbidden`.
  * - **Séquence non sautable** : `milestoneKey` doit être la 1ʳᵉ étape
  *   `en_cours` du projet (tri `order ASC`) ; sinon `invalid`. Un jalon déjà
  *   `valide` ou encore `en_attente` n'est jamais validable.
@@ -203,8 +203,8 @@ export async function resolveProjectAccess(
         return { projectId, canManage: true };
       }
 
-      case "vendeur": {
-        // Scoping vendeur : uniquement les projets issus de SES prospects
+      case "sdr": {
+        // Scoping SDR : uniquement les projets issus de SES prospects
         // (`prospects.source_user_id`), lecture seule (décision Lead).
         const rows = await db
           .select({ id: clientProjects.id })
@@ -233,8 +233,8 @@ export async function resolveProjectAccess(
  * Étapes :
  * 1. Validation Zod (uuid, enum `milestone_key`) → `invalid` ; acteur forgé →
  *    `invalid` ; rôle ∉ {`client`, `ceo`} → `forbidden` (**décision Lead** :
- *    le CEO débloque un client absent ; manager/commercial/vendeur n'y
- *    touchent pas — le vendeur suit ses deals, lecture seule).
+ *    le CEO débloque un client absent ; manager/commercial/sdr n'y
+ *    touchent pas — le SDR suit ses deals, lecture seule).
  * 2. `resolveProjectAccess` → `null` → `not_found` (aucune distinction
  *    révélant l'existence d'un projet).
  * 3. Jalons du projet triés `order ASC` : la 1ʳᵉ étape `en_cours` DOIT

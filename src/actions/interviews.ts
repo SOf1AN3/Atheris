@@ -9,6 +9,8 @@
  *   `{ ok: false; code: "forbidden" | "invalid" | "failed" }` ;
  * - `listInterviews()` → `{ ok: true; interviews: InterviewListItem[] }` |
  *   `{ ok: false; code: "forbidden" }` ;
+ * - `deleteInterviewLink(id)` → `{ ok: true }` |
+ *   `{ ok: false; code: "forbidden" | "not_found" | "invalid" | "failed" }` ;
  * - `submitInterview(input)` → `{ ok: true }` |
  *   `{ ok: false; code: "invalid" | "not_found" | "taken" | "rate_limited" | "failed" }`.
  *
@@ -60,7 +62,7 @@ import { z } from "zod";
 import { auth } from "@/auth";
 import { locales, type Locale } from "@/i18n/config";
 import { getDb } from "@/lib/db";
-import { interviewStatus, interviews } from "@/lib/db/schema";
+import { activities, interviewStatus, interviews, jobApplications } from "@/lib/db/schema";
 import { sendMail } from "@/lib/mail";
 import { normalizeEmail } from "@/lib/prospect-dedup";
 import { getSlotsForWindowDates, isValidSlot, toRecruiterTime } from "@/lib/slots";
@@ -103,6 +105,11 @@ export type InterviewListItem = {
 export type ListInterviewsResult =
   | { ok: true; interviews: InterviewListItem[] }
   | { ok: false; code: "forbidden" };
+
+/** Contrat de `deleteInterviewLink` (union discriminée par `ok`). */
+export type DeleteInterviewLinkResult =
+  | { ok: true }
+  | { ok: false; code: "forbidden" | "not_found" | "invalid" | "failed" };
 
 /** Entrée de `submitInterview` (contrat PLAN §Contrats inter-pistes). */
 export type SubmitInterviewInput = {
@@ -436,6 +443,82 @@ export async function listInterviews(): Promise<ListInterviewsResult> {
   } catch (error) {
     console.error("[interviews] échec de la liste des entretiens", error);
     throw error;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// deleteInterviewLink — suppression d'un lien (CEO seul).
+// ---------------------------------------------------------------------------
+
+/**
+ * Supprime un lien d'entretien (rôle `ceo` uniquement, miroir des autres
+ * actions du fichier : session `active` relu côté serveur).
+ *
+ * SÉQUENCE (driver `neon-http` : **aucun `db.transaction()`** → statements
+ * séquentiels) :
+ * 1. Zod uuid sur `id` → sinon `invalid` ; acteur non `ceo` → `forbidden` ;
+ * 2. si une candidature référence l'entretien (`job_applications.interview_id`)
+ *    : d'abord `UPDATE job_applications SET interview_id = NULL WHERE
+ *    interview_id = $id` (la FK `no action` interdirait le DELETE tant que la
+ *    référence existe) ;
+ * 3. `DELETE FROM interviews WHERE id = $id` — 0 ligne (entretien déjà
+ *    supprimé / id inconnu) → `not_found` ;
+ * 4. Audit `interview.deleted` — **non fatal**, jamais le token.
+ *
+ * @param id uuid de la ligne `interviews` (validé par Zod).
+ * @returns `{ ok: true }` ; sinon `invalid` (id malformé), `forbidden`
+ *   (session absente / rôle non `ceo`), `not_found` (ligne absente) ou
+ *   `failed` (infra).
+ */
+export async function deleteInterviewLink(id: string): Promise<DeleteInterviewLinkResult> {
+  // 1. Validation Zod AVANT toute requête — id forgé → `invalid`.
+  const parsedId = z.uuid().safeParse(id);
+  if (!parsedId.success) return { ok: false, code: "invalid" };
+
+  const actor = await activeActor();
+  if (actor === null) return { ok: false, code: "forbidden" };
+
+  const interviewId = parsedId.data;
+  const db = getDb();
+
+  try {
+    // 2. Détachement des candidatures référençant cet entretien — 0 ou N
+    //    lignes, sans conséquence (le DELETE juste après fait foi).
+    await db
+      .update(jobApplications)
+      .set({ interviewId: null })
+      .where(eq(jobApplications.interviewId, interviewId));
+
+    // 3. Suppression — `.returning()` : 0 ligne = entretien inconnu/déjà
+    //    supprimé, même refus non fuiteux qu'un id forgé côté liste.
+    const deleted = await db
+      .delete(interviews)
+      .where(eq(interviews.id, interviewId))
+      .returning({ id: interviews.id });
+    if (deleted[0] === undefined) return { ok: false, code: "not_found" };
+
+    // 4. Audit NON FATAL — jamais le token (métadonnées seulement).
+    try {
+      await db.insert(activities).values({
+        actorId: actor.id,
+        action: "interview.deleted",
+        entityType: "interview",
+        entityId: interviewId,
+        meta: { actorId: actor.id },
+      });
+    } catch (error) {
+      console.error(
+        "[interviews] activité `interview.deleted` non journalisée (lien supprimé)",
+        error,
+      );
+    }
+
+    return { ok: true };
+  } catch (error) {
+    // Erreur d'infra (DB indisponible…) : journalisée, code `failed` — le
+    // contrat public de suppression prévoit ce code, pas de 500.
+    console.error("[interviews] échec de suppression du lien", error);
+    return { ok: false, code: "failed" };
   }
 }
 

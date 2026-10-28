@@ -40,7 +40,7 @@ export const HOME_BY_ROLE: Record<Role, string> = {
   ceo: "/espace/tableau-de-bord",
   manager: "/espace/tableau-de-bord",
   commercial: "/espace/tableau-de-bord",
-  vendeur: "/espace/prospects",
+  sdr: "/espace/prospects",
   client: "/espace/projet",
 };
 
@@ -48,8 +48,8 @@ export const HOME_BY_ROLE: Record<Role, string> = {
 // Accès aux routes d'espace (structure.md §4.2).
 // ---------------------------------------------------------------------------
 
-const ALL_ROLES: readonly Role[] = ["ceo", "manager", "commercial", "vendeur", "client"];
-const INTERNAL_ROLES: readonly Role[] = ["ceo", "manager", "commercial", "vendeur"];
+const ALL_ROLES: readonly Role[] = ["ceo", "manager", "commercial", "sdr", "client"];
+const INTERNAL_ROLES: readonly Role[] = ["ceo", "manager", "commercial", "sdr"];
 
 /**
  * Matrice route d'espace → rôles admis. Les prefixes sont des suffixes sous
@@ -65,7 +65,7 @@ const INTERNAL_ROLES: readonly Role[] = ["ceo", "manager", "commercial", "vendeu
  * Notes :
  * - `/` (soit `/{locale}/espace` nu) : tout rôle authentifié y accède, la
  *   page se re-dirige vers `HOME_BY_ROLE`.
- * - `/prospects` englobe `/prospects/[id]` : le vendeur n'y est **pas**
+ * - `/prospects` englobe `/prospects/[id]` : le SDR n'y est **pas**
  *   bloqué côté route, le scoping est une règle de **données**
  *   (`WHERE source_user_id = …`, PLAN.md §Sécurité).
  * - `/profil` est commun à tous les rôles (nav de la plateforme T06).
@@ -75,7 +75,7 @@ export const ROUTE_ACCESS: ReadonlyArray<{ prefix: string; roles: readonly Role[
   { prefix: "/profil", roles: ALL_ROLES },
   { prefix: "/tableau-de-bord", roles: INTERNAL_ROLES },
   { prefix: "/prospects", roles: INTERNAL_ROLES },
-  { prefix: "/commissions", roles: ["ceo", "manager", "vendeur"] },
+  { prefix: "/commissions", roles: ["ceo", "manager", "sdr"] },
   { prefix: "/equipe", roles: ["ceo", "manager"] },
   { prefix: "/projet", roles: ["client"] },
   // Entretiens Sales Development Representative (PLAN Q3) : réservé CEO — miroir des contrôles de
@@ -197,7 +197,7 @@ const SALES_REP_TRANSITIONS: Record<ProspectStatus, readonly ProspectStatus[]> =
  * - `manager` / `commercial` : plafond `SALES_REP_TRANSITIONS` (le manager a
  *   les mêmes droits commerciaux que le commercial — validation des
  *   candidatures = CEO seul, mais aucune route dédiée en T07) ;
- * - `vendeur` : lecture seule, **jamais** de transition ;
+ * - `sdr` : lecture seule, **jamais** de transition ;
  * - `client` : jamais.
  *
  * (structure.md §4.2 · PLAN.md §3.2 — la vérification doit aussi être refaite
@@ -210,7 +210,7 @@ export function canChangeStatus(role: Role, from: ProspectStatus, to: ProspectSt
     case "manager":
     case "commercial":
       return SALES_REP_TRANSITIONS[from].includes(to);
-    case "vendeur":
+    case "sdr":
     case "client":
       return false;
   }
@@ -227,7 +227,7 @@ export function isTerminalStatus(status: ProspectStatus): boolean {
 /**
  * Ce rôle voit-il **tous** les prospects (pipeline complet) ?
  * - `true` : ceo, manager, commercial ;
- * - `false` : vendeur (les siens uniquement, scoping `source_user_id`),
+ * - `false` : sdr (les siens uniquement, scoping `source_user_id`),
  *   client (aucun accès pipeline).
  */
 export function canViewAllProspects(role: Role): boolean {

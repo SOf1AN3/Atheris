@@ -33,7 +33,7 @@
  *
  * BASCULE PROSPECT (A) AVANT l'appel (B) : vérifié dans le code de
  * `generateCommissionsForQuote` (BK-3) — son compteur `paidCount` compte les
- * deals du vendeur à `client_actif` **hors le devis courant**
+ * deals du SDR à `client_actif` **hors le devis courant**
  * (`ne(quotes.id, quoteId)`), la bascule du deal courant ne modifie donc
  * jamais le palier calculé. Garde-fou : la bascule n'est écrite que si
  * `canChangeStatus("ceo", "signe", "client_actif")` l'autorise — sinon on

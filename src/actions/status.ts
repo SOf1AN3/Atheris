@@ -79,7 +79,7 @@ export type ChangeProspectStatusResult =
 // Règles métier locales.
 // ---------------------------------------------------------------------------
 
-/** Rôles avec droit d'ÉCRITURE sur le pipeline (le vendeur est lecture seule). */
+/** Rôles avec droit d'ÉCRITURE sur le pipeline (le SDR est lecture seule). */
 const WRITE_ROLES: readonly Role[] = ["ceo", "manager", "commercial"];
 
 // ---------------------------------------------------------------------------
@@ -107,7 +107,7 @@ export async function changeProspectStatus(
   const parsed = changeStatusInputSchema.safeParse(input);
   if (!parsed.success) return { ok: false, code: "invalid" };
 
-  // 2. Droit d'écriture : rôle valide mais non habilité (vendeur/client), ou
+  // 2. Droit d'écriture : rôle valide mais non habilité (sdr/client), ou
   //    rôle inconnu (JWT forgé) → refus identique, aucun détail.
   const parsedRole = roleSchema.safeParse(viewer?.role);
   if (!parsedRole.success) return { ok: false, code: "forbidden" };

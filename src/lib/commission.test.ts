@@ -20,10 +20,10 @@ import {
 } from "./commission";
 
 // ---------------------------------------------------------------------------
-// getTier — barème vendeur par cumul de clients payés (structure.md §3.3).
+// getTier — barème SDR par cumul de clients payés (structure.md §3.3).
 // ---------------------------------------------------------------------------
 
-describe("getTier — barème vendeur par cumul de clients payés", () => {
+describe("getTier — barème SDR par cumul de clients payés", () => {
   it("0 à 4 clients payés → palier 100 (10 %)", () => {
     expect(getTier(0)).toBe(100);
     expect(getTier(1)).toBe(100);
@@ -64,7 +64,7 @@ describe("getTier — barème vendeur par cumul de clients payés", () => {
 });
 
 // ---------------------------------------------------------------------------
-// computeDealShares — répartition vendeur / manager / CEO.
+// computeDealShares — répartition SDR / manager / CEO.
 //
 // Règle centrale (structure.md §3.3) : la part manager (5 %) est émise sur
 // **CHAQUE deal, tous canaux** — `sellerIsManager` ne pilote que la garde-fou
@@ -116,7 +116,7 @@ describe("computeDealShares — répartition d'un deal", () => {
     expect(result.ceoShareCents).toBe(75_000);
   });
 
-  it("Rayan vendeur palier 10 % → seller 10 % + manager 5 % = 15 %, CEO 85 %", () => {
+  it("Rayan SDR palier 10 % → seller 10 % + manager 5 % = 15 %, CEO 85 %", () => {
     const result = computeDealShares({
       dealCents: 100_000,
       sellerRateTenths: 100,
@@ -134,7 +134,7 @@ describe("computeDealShares — répartition d'un deal", () => {
     expect(result.ceoShareCents).toBe(85_000);
   });
 
-  it("Rayan vendeur (15 %) : parts seller + manager = 25 % cumul, jamais de manager en double", () => {
+  it("Rayan SDR (15 %) : parts seller + manager = 25 % cumul, jamais de manager en double", () => {
     const result = computeDealShares({
       dealCents: 100_000,
       sellerRateTenths: 150,
@@ -154,7 +154,7 @@ describe("computeDealShares — répartition d'un deal", () => {
     expect(result.ceoShareCents).toBe(80_000);
   });
 
-  it("la part manager est émise sur TOUS les deals, quel que soit le rôle du vendeur", () => {
+  it("la part manager est émise sur TOUS les deals, quel que soit le rôle du SDR", () => {
     // Sales Development Representative/commercial (`sellerIsManager` absent ou false) ET Rayan (true) :
     // la part manager 5 % est toujours présente, sur tous les paliers.
     for (const sellerIsManager of [false, true]) {
@@ -174,7 +174,7 @@ describe("computeDealShares — répartition d'un deal", () => {
     expect(noFlag.totalRateTenths).toBe(150);
   });
 
-  it("plafond cumul : vendeur + manager ne dépasse jamais 250 dixièmes (25 %)", () => {
+  it("plafond cumul : SDR + manager ne dépasse jamais 250 dixièmes (25 %)", () => {
     const deals = [1, 7, 999, 10_000, 100_000, 999_999];
     for (const rateTenths of [100, 125, 150, 200]) {
       for (const sellerIsManager of [false, true]) {
@@ -190,9 +190,9 @@ describe("computeDealShares — répartition d'un deal", () => {
     }
   });
 
-  it("garde-fou : taux vendeur hors barème (> 200) plafonné quand le vendeur est manager", () => {
-    // Palier hypothétique à 30 % pour un vendeur qui EST manager : la garde
-    // ramène le taux vendeur à 200 → cumul 200 + 50 = 250 (25 %) maximum.
+  it("garde-fou : taux SDR hors barème (> 200) plafonné quand le SDR est manager", () => {
+    // Palier hypothétique à 30 % pour un SDR qui EST manager : la garde
+    // ramène le taux SDR à 200 → cumul 200 + 50 = 250 (25 %) maximum.
     const capped = computeDealShares({
       dealCents: 100_000,
       sellerRateTenths: 300,
@@ -203,7 +203,7 @@ describe("computeDealShares — répartition d'un deal", () => {
     expect(capped.ceoShareCents).toBe(75_000);
 
     // Avec le barème actuel (`getTier` ≤ 200) la garde ne se déclenche jamais
-    // et le cumul vaut exactement 250 au palier maximal, vendeur manager ou
+    // et le cumul vaut exactement 250 au palier maximal, SDR manager ou
     // non — c'est structurel (200 + 50 = 250).
     const rayanTopTier = computeDealShares({
       dealCents: 100_000,

@@ -13,7 +13,10 @@
  * - `getEmailTemplate(kind, locale)` → `{ ok: true; subject; body }` |
  *   `{ ok: false; code: "forbidden" }` ;
  * - `inviteToInterview(input)` / `rejectApplication(input)` →
- *   `{ ok: true; url }` | `{ ok: false; code: ApplicationEmailFailureCode }`.
+ *   `{ ok: true; url }` | `{ ok: false; code: ApplicationEmailFailureCode }` ;
+ * - `recruitCandidate(input, actor)` → `{ ok: true }` |
+ *   `{ ok: false; code: "forbidden" | "not_found" | "invalid" | "mail_failed" |
+ *   "failed" }`.
  *
  * RÈGLE INVARIABLE (miroir inversé de `submitInterview`) : **e-mail
  * d'abord, écriture ensuite** — un échec Resend (`mail_failed`) ne fige
@@ -34,13 +37,24 @@
  * `next build` ne lit jamais `DATABASE_URL`.
  */
 
-import { and, desc, eq, ne, sql } from "drizzle-orm";
+import { randomBytes } from "node:crypto";
+
+import { and, desc, eq, isNull, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { createInterviewLink } from "@/actions/interviews";
 import { auth } from "@/auth";
+import { locales, type Locale } from "@/i18n/config";
+import { getPlatformDictionary } from "@/i18n/platform-dictionaries";
 import { getDb } from "@/lib/db";
-import { activities, interviews, jobApplications, recruitmentTemplates } from "@/lib/db/schema";
+import {
+  activities,
+  interviews,
+  invitations,
+  jobApplications,
+  recruitmentTemplates,
+  roleEnum,
+} from "@/lib/db/schema";
 import { sendMail } from "@/lib/mail";
 import {
   absoluteInterviewUrl,
@@ -57,7 +71,7 @@ import type { Role } from "@/lib/permissions";
 // ---------------------------------------------------------------------------
 
 /** Statut d'une candidature, dérivé de l'enum Drizzle `application_status`. */
-export type JobApplicationStatus = "nouveau" | "invite" | "refuse";
+export type JobApplicationStatus = "nouveau" | "invite" | "refuse" | "recrute";
 
 /** Ligne de la liste `/espace/recrutement` — dates ISO 8601 (sérialisables). */
 export type JobApplicationListItem = {
@@ -106,6 +120,11 @@ export type SendApplicationEmailResult =
   | { ok: true; url: string }
   | { ok: false; code: ApplicationEmailFailureCode };
 
+/** Contrat de `recruitCandidate` (union discriminée par `ok`). */
+export type RecruitCandidateResult =
+  | { ok: true }
+  | { ok: false; code: "forbidden" | "not_found" | "invalid" | "mail_failed" | "failed" };
+
 // ---------------------------------------------------------------------------
 // Schémas Zod (v4) — validation systématique AVANT tout accès DB.
 // ---------------------------------------------------------------------------
@@ -123,12 +142,20 @@ const sendApplicationEmailSchema = z.object({
   saveTemplate: z.boolean().optional(),
 });
 
+const recruitCandidateSchema = z.object({
+  applicationId: z.uuid(),
+  locale: z.enum(locales),
+});
+
 // ---------------------------------------------------------------------------
 // Constantes applicatives.
 // ---------------------------------------------------------------------------
 
 /** Volume maximal renvoyé par `listJobApplications` (plafond de payload). */
 const LIST_LIMIT = 200;
+
+/** Durée de vie d'une invitation de recrutement (48 h, miroir T26). */
+const INVITATION_TTL_MS = 48 * 60 * 60 * 1000;
 
 // ---------------------------------------------------------------------------
 // Aides privées.
@@ -683,6 +710,166 @@ export async function rejectApplication(
   } catch (error) {
     // Erreur d'infra (DB indisponible…) : journalisée, code `failed`.
     console.error("[recrutement] échec de refus de candidature", error);
+    return { ok: false, code: "failed" };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// recruitCandidate — recrutement d'un candidat en SDR (CEO seul).
+// ---------------------------------------------------------------------------
+
+/**
+ * Recrute un candidat (statut → `recrute`) et lui émet une **invitation
+ * `sdr`** (lien d'activation de compte, même mécanique que le portail client).
+ *
+ * SÉQUENCE (motif `inviteToInterview`, e-mail d'abord sur le STATUT) :
+ * 1. Zod (`applicationId` uuid + `locale` ∈ locales) → `invalid` ; acteur
+ *    revalidé (uuid → `invalid`, rôle ≠ `ceo` → `forbidden`) ;
+ * 2. candidature lue en base (e-mail LUE EN BASE) → absente → `not_found` ;
+ *    `status` ∉ {`nouveau`, `invite`} → `invalid` (déjà recrutée ou refusée) ;
+ * 3. invitation `sdr` **non utilisée** existante pour (email normalisé,
+ *    `role = 'sdr'`) → réutilisée (refresh `expiresAt`, même jeton) ; sinon
+ *    insert `invitations` : jeton 32 bytes hex, `role: "sdr"`, `projectId:
+ *    null`, `applicationId`, TTL 48 h, `createdBy = actor.id` ;
+ * 4. `sendMail` avec `dict.auth.invitation.email.sdr.{subject,body}`
+ *    (placeholders `{{name}}` = prénom+nom, `{{link}}` = URL **absolue** du
+ *    lien d'activation `/{locale}/invitation/{token}`) → échec →
+ *    **`mail_failed` SANS changer le statut** (le CEO réessaiera :
+ *    l'invitation restante sera réutilisée) ;
+ * 5. UPDATE `status = 'recrute'`, `recruited_at = now()` + audit
+ *    `application.recruited` (non fatal, **jamais le jeton**) → `{ ok: true }`.
+ *
+ * ATOMICITÉ (driver `neon-http`) : statements séquentiels, pas de
+ * `db.transaction()` — l'ordre ci-dessus garantit qu'aucun statut n'est figé
+ * sans e-mail envoyé.
+ *
+ * @param input `applicationId` (uuid), `locale` (dict d'e-mail).
+ * @param actor `{ id, role }` issu de la session serveur (revalidé par Zod).
+ * @returns `{ ok: true }` ; sinon `invalid`, `forbidden`, `not_found`,
+ *   `mail_failed` ou `failed` (infra).
+ */
+export async function recruitCandidate(
+  input: { applicationId: string; locale: Locale },
+  actor: { id: string; role: Role },
+): Promise<RecruitCandidateResult> {
+  // 1. Validation Zod — avant tout accès DB.
+  const parsed = recruitCandidateSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, code: "invalid" };
+  const { applicationId, locale } = parsed.data;
+
+  // Acteur revalidé : uuid → `invalid`, rôle ≠ `ceo` → `forbidden`.
+  const parsedActor = z
+    .object({ id: z.uuid(), role: z.enum(roleEnum.enumValues) })
+    .safeParse({ id: actor?.id, role: actor?.role });
+  if (!parsedActor.success) return { ok: false, code: "invalid" };
+  if (parsedActor.data.role !== "ceo") return { ok: false, code: "forbidden" };
+  const actorId = parsedActor.data.id;
+
+  try {
+    const db = getDb();
+
+    // 2. Candidature — e-mail LUE EN BASE, id inconnu = `not_found`.
+    const rows = await db
+      .select({
+        id: jobApplications.id,
+        firstName: jobApplications.firstName,
+        lastName: jobApplications.lastName,
+        email: jobApplications.email,
+        emailNorm: jobApplications.emailNorm,
+        status: jobApplications.status,
+      })
+      .from(jobApplications)
+      .where(eq(jobApplications.id, applicationId))
+      .limit(1);
+    const application = rows[0];
+    if (application === undefined) return { ok: false, code: "not_found" };
+    // États recrutables : `nouveau` ou `invite` (post-entretien) — un refus
+    // est terminal, un recrutement déjà effectué est idempotent-refusé.
+    if (application.status !== "nouveau" && application.status !== "invite") {
+      return { ok: false, code: "invalid" };
+    }
+
+    const emailNorm = application.emailNorm.trim().toLowerCase();
+    const expiresAtMs = Date.now() + INVITATION_TTL_MS;
+    const expiresAt = new Date(expiresAtMs);
+
+    // 3. Invitation `sdr` non utilisée existante (email + rôle) → refresh.
+    const existingRows = await db
+      .select({ id: invitations.id, token: invitations.token })
+      .from(invitations)
+      .where(
+        and(
+          eq(invitations.email, emailNorm),
+          eq(invitations.role, "sdr"),
+          isNull(invitations.usedAt),
+        ),
+      )
+      .orderBy(desc(invitations.createdAt))
+      .limit(1);
+    const existing = existingRows[0];
+
+    let token: string;
+
+    if (existing !== undefined) {
+      // Réutilisation : seul `expiresAt` est rafraîchi (même jeton).
+      token = existing.token;
+      await db
+        .update(invitations)
+        .set({ expiresAt })
+        .where(eq(invitations.id, existing.id));
+    } else {
+      // Nouveau jeton : 32 octets aléatoires → 64 caractères hex.
+      token = randomBytes(32).toString("hex");
+      await db.insert(invitations).values({
+        email: emailNorm,
+        token,
+        role: "sdr",
+        projectId: null,
+        applicationId,
+        expiresAt,
+        createdBy: actorId,
+      });
+    }
+
+    // 4. E-mail — aucun STATUT écrit avant ce point (`mail_failed` ne fige
+    //    rien : le CEO réessaiera et l'invitation sera réutilisée).
+    const dict = await getPlatformDictionary(locale);
+    const rawSubject = dict.auth.invitation.email.sdr.subject;
+    const body = dict.auth.invitation.email.sdr.body;
+    const lien = absoluteInterviewUrl(`/${locale}/invitation/${token}`);
+    const name = `${application.firstName} ${application.lastName}`;
+    const subject = rawSubject.replaceAll("{{name}}", name).replaceAll("{{link}}", lien);
+    const text = body.replaceAll("{{name}}", name).replaceAll("{{link}}", lien);
+    const mail = await sendMail({ to: application.email, subject, text });
+    if (!mail.ok) {
+      console.error(
+        "[recrutement] invitation sdr non envoyée (candidature inchangée)",
+        mail.error,
+      );
+      return { ok: false, code: "mail_failed" };
+    }
+
+    // 5. Écriture du recrutement + audit NON FATAL (e-mail déjà parti).
+    await db
+      .update(jobApplications)
+      .set({
+        status: "recrute",
+        recruitedAt: sql`now()`,
+        updatedAt: sql`now()`,
+      })
+      .where(eq(jobApplications.id, applicationId));
+
+    await writeAuditActivity(db, {
+      actorId,
+      action: "application.recruited",
+      entityId: applicationId,
+      meta: { applicationId, actorId, locale },
+    });
+
+    return { ok: true };
+  } catch (error) {
+    // Erreur d'infra (DB indisponible…) : journalisée, code `failed`.
+    console.error("[recrutement] échec du recrutement du candidat", error);
     return { ok: false, code: "failed" };
   }
 }

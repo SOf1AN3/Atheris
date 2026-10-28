@@ -1,7 +1,7 @@
 "use server";
 
 /**
- * Atheris — Server Action vendeur (FE-7 · T20) : wrapper `createProspect`.
+ * Atheris — Server Action SDR (FE-7 · T20) : wrapper `createProspect`.
  *
  * SÉCURITÉ DU VIEWER (décision Lead — le cœur de ce fichier) :
  * le viewer `{ id, role }` de `createProspect(input, viewer)` (contrat C-5,

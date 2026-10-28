@@ -19,12 +19,12 @@
  *    (`not_signed` côté action).
  * 2. L'acompte **payé** est le DÉCLENCHEUR : l'action est appelée par le flux
  *    de paiement (BK-4 `markPaymentPaid`), jamais par une page publique.
- * 3. `paidCount` = deals du vendeur **antérieurs** à ce deal ayant atteint
+ * 3. `paidCount` = deals du SDR **antérieurs** à ce deal ayant atteint
  *    `client_actif` → palier **non rétroactif** : le taux du jour du deal ne
- *    bouge plus si le vendeur monte ensuite dans la grille.
+ *    bouge plus si le SDR monte ensuite dans la grille.
  * 4. SNAPSHOT : `ratePercent` est écrit une fois sur la ligne, jamais
  *    recalculé ensuite (la colonne porte le taux « à la génération »).
- * 5. `beneficiaryId` vendeur = `prospects.sourceUserId` — **peut être `null`**
+ * 5. `beneficiaryId` SDR = `prospects.sourceUserId` — **peut être `null`**
  *    (leads Ads/Landing sans auteur interne) → **DÉCISION LEAD** : la ligne
  *    est créée quand même et atterrit dans la file « sans bénéficiaire »
  *    (bannière CEO côté UI). L'index unique `(quoteId, beneficiaryId, kind)`
@@ -35,15 +35,15 @@
  *    compte `role = 'manager'` le **plus ancien** (`createdAt ASC`, en
  *    pratique Rayan) ; compte absent → la part est omise et son montant
  *    revient au CEO. Exemple canonique (structure.md §3.3) : *Rayan clôture un
- *    prospect d'un Sales Development Representative → la part vendeur reste au Sales Development Representative, **Rayan touche alors
+ *    prospect d'un Sales Development Representative → la part SDR reste au Sales Development Representative, **Rayan touche alors
  *    uniquement ses 5 % de manager***.
- *    La double part (seller **+** manager) ne se produit que si le vendeur
+ *    La double part (seller **+** manager) ne se produit que si le SDR
  *    EST le manager (Rayan génère lui-même le prospect) : il reçoit alors son
- *    palier vendeur **et** ses 5 % sur le même compte → **2 lignes** (mêmes
+ *    palier SDR **et** ses 5 % sur le même compte → **2 lignes** (mêmes
  *    comptes possibles, `kind` distincts, jamais de manager en double).
  *
  * ─── INVARIANT CEO ─────────────────────────────────────────────────────────
- * Chaque deal porte la part manager (50 = 5 %) en plus du palier vendeur :
+ * Chaque deal porte la part manager (50 = 5 %) en plus du palier SDR :
  * le cumul ne dépasse jamais `MAX_TOTAL_TENTHS` (250 = 25 %) — `getTier`
  * plafonne à 200 (20 %), donc 200 + 50 = 250 sur **tous** les deals → le CEO
  * conserve au minimum **75 %** de chaque deal (asserté dans les tests,
@@ -58,11 +58,11 @@
  */
 export const TIER_MANAGER_RATE_TENTHS = 50;
 
-/** Paliers du barème vendeur, exprimés en dixièmes de pourcentage. */
+/** Paliers du barème SDR, exprimés en dixièmes de pourcentage. */
 export type CommissionTier = 100 | 125 | 150 | 200;
 
 /**
- * Barème vendeur par cumul de clients payés (structure.md §3.3).
+ * Barème SDR par cumul de clients payés (structure.md §3.3).
  *
  * | Clients payés (`paidCount`) | Palier | Taux   |
  * | --------------------------- | ------ | ------ |
@@ -80,7 +80,7 @@ export type CommissionTier = 100 | 125 | 150 | 200;
  * - valeur fractionnaire → `Math.floor` (4,9 client ne franchit pas la
  *   borne 5).
  *
- * @param paidCount Nombre de deals du vendeur déjà passés à `client_actif`.
+ * @param paidCount Nombre de deals du SDR déjà passés à `client_actif`.
  * @returns Le palier en dixièmes (jamais en dessous de 100).
  */
 export function getTier(paidCount: number): CommissionTier {
@@ -91,7 +91,7 @@ export function getTier(paidCount: number): CommissionTier {
   return 100;
 }
 
-/** Plafond cumulé vendeur + manager : 250 dixièmes = 25 % du deal. */
+/** Plafond cumulé SDR + manager : 250 dixièmes = 25 % du deal. */
 export const MAX_TOTAL_TENTHS = 250;
 
 /** Une part de commission calculée (aucun bénéficiaire ici : module pur). */
@@ -104,7 +104,7 @@ export type DealShare = {
 /** Résultat du calcul des parts sur un deal. */
 export type DealSharesResult = {
   /**
-   * Parts émises : **2 par défaut** (vendeur + manager 5 %, tous canaux),
+   * Parts émises : **2 par défaut** (SDR + manager 5 %, tous canaux),
    * 1 seule si une part arrondit à 0 cent (alors omise — règle « jamais de
    * part à 0 cent »), 0 pour un deal à 0 ou 1 centime.
    */
@@ -132,7 +132,7 @@ export type GeneratedCommission = {
 };
 
 /**
- * Répartit un deal entre vendeur, manager et CEO.
+ * Répartit un deal entre SDR, manager et CEO.
  *
  * **La part manager (5 %) est émise sur CHAQUE deal, tous canaux** — un deal
  * Sales Development Representative produit `[seller (palier), manager 5 %]`, un deal de Rayan lui-même
@@ -141,9 +141,9 @@ export type GeneratedCommission = {
  *
  * @param params.dealCents Montant du deal en centimes USD (≥ 0 ; entier
  *   attendu, une valeur non finie/négative est ramenée à 0 — documenté).
- * @param params.sellerRateTenths Taux vendeur **déjà choisi par l'appelant**
+ * @param params.sellerRateTenths Taux SDR **déjà choisi par l'appelant**
  *   via `getTier(paidCount)` (ce module ne connaît pas le pipeline).
- * @param params.sellerIsManager `true` quand le vendeur EST le manager
+ * @param params.sellerIsManager `true` quand le SDR EST le manager
  *   (Rayan génère lui-même le prospect) — sert **uniquement** à la garde-fou
  *   de plafond (cf. ci-dessous) : il ne décide **PAS** de l'émission de la
  *   part manager, qui est systématique. `false` par défaut.
@@ -154,7 +154,7 @@ export type GeneratedCommission = {
  *   ajoutée à chaque deal (bénéficiaire attribué côté action : compte
  *   `role = 'manager'` le plus ancien).
  * - **Garde-fou cumul (25 %)** : `sellerIsManager === true` ET
- *   `tauxVendeur + 50 > MAX_TOTAL_TENTHS` → le taux vendeur est plafonné à
+ *   `tauxSdr + 50 > MAX_TOTAL_TENTHS` → le taux SDR est plafonné à
  *   `MAX_TOTAL_TENTHS - TIER_MANAGER_RATE_TENTHS` (250 − 50 = 200). Ce n'est
  *   **jamais** atteint avec le barème actuel : `getTier` plafonne à 200 et
  *   tout deal vaut alors 200 + 50 = 250 au maximum. VIGILANCE : si un palier
@@ -183,12 +183,12 @@ export function computeDealShares(params: {
   const sellerIsManager = params.sellerIsManager === true;
 
   // Garde-fou de plafond — UNIQUE usage de `sellerIsManager` : le cumul
-  // vendeur + manager (5 %) ne doit pas dépasser MAX_TOTAL_TENTHS (250).
+  // SDR + manager (5 %) ne doit pas dépasser MAX_TOTAL_TENTHS (250).
   if (sellerIsManager && sellerRateTenths + TIER_MANAGER_RATE_TENTHS > MAX_TOTAL_TENTHS) {
     sellerRateTenths = MAX_TOTAL_TENTHS - TIER_MANAGER_RATE_TENTHS;
   }
 
-  // 2 parts TOUJOURS : palier vendeur + manager 5 % (tous canaux).
+  // 2 parts TOUJOURS : palier SDR + manager 5 % (tous canaux).
   const rates: ReadonlyArray<{ kind: DealShare["kind"]; rateTenths: number }> = [
     { kind: "seller", rateTenths: sellerRateTenths },
     { kind: "manager", rateTenths: TIER_MANAGER_RATE_TENTHS },

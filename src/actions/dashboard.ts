@@ -110,10 +110,10 @@ const SIGNED_STATUSES: ProspectStatus[] = [
  *  ou clos. */
 const WON_STATUSES: ProspectStatus[] = ["client_actif", "en_livraison", "clos"];
 
-/** Employés vendeurs du classement/statistiques : `vendeur` + `manager`
- *  (Rayan touche aussi le palier vendeur — `src/lib/commission.ts` §6). Le
+/** Employés du classement/statistiques : `sdr` + `manager`
+ *  (Rayan touche aussi le palier SDR — `src/lib/commission.ts` §6). Le
  *  `commercial` et le `ceo` n'entrent pas dans ce périmètre (spec T31). */
-const EMPLOYEE_ROLES: readonly Role[] = ["vendeur", "manager"];
+const EMPLOYEE_ROLES: readonly Role[] = ["sdr", "manager"];
 
 /** Rôles habilités à lire les stats équipe et le dashboard manager. */
 const MANAGER_VIEW_ROLES: readonly Role[] = ["ceo", "manager"];
@@ -122,7 +122,7 @@ const MANAGER_VIEW_ROLES: readonly Role[] = ["ceo", "manager"];
  *  n'est exclu** (la page filtrera l'affichage, spec T32) ; seul le portail
  *  `client` est refusé (`forbidden`) : aucune donnée pipeline ne doit fuiter
  *  vers un client. */
-const SALES_VIEW_ROLES: readonly Role[] = ["ceo", "manager", "commercial", "vendeur"];
+const SALES_VIEW_ROLES: readonly Role[] = ["ceo", "manager", "commercial", "sdr"];
 
 /** Nombre maximal de lignes pour TOUTE liste renvoyée par ce module. */
 const ACTIVITY_LIMIT = 5;
@@ -191,7 +191,7 @@ export type EmployeeStatsResult =
   | { ok: true; data: EmployeeStatsRow[] }
   | { ok: false; code: "forbidden" | "invalid" };
 
-/** Une ligne de statistiques par employé vendeur (`vendeur`/`manager`). */
+/** Une ligne de statistiques par employé (`sdr`/`manager`). */
 export type EmployeeStatsRow = {
   userId: string;
   name: string;
@@ -231,7 +231,7 @@ export type ManagerDashboardResult =
   | { ok: true; data: ManagerDashboardData }
   | { ok: false; code: "forbidden" | "invalid" };
 
-/** Une ligne du classement vendeurs (dashboard manager). */
+/** Une ligne du classement des SDR (dashboard manager). */
 export type ManagerRankingRow = {
   userId: string;
   name: string;
@@ -240,14 +240,14 @@ export type ManagerRankingRow = {
   /** **Mesure palier alignée FE-7 (cohérence obligatoire)** :
    *  `COUNT(DISTINCT commissions.quote_id)` WHERE `kind = 'seller'` ET
    *  `beneficiary_id = employé` — identique à la jauge de palier affichée
-   *  côté vendeur ; c'est cette même valeur qui alimente `getTier()` ici. */
+   *  côté SDR ; c'est cette même valeur qui alimente `getTier()` ici. */
   paidDealCount: number;
   /** `signed / added × 100` à 1 décimale — 0 prospect → `null`. */
   conversionRate: number | null;
   /** `getTier(paidDealCount)` — taux courant en **dixièmes de pourcentage**
    *  (100 = 10 %, 125 = 12,5 %…), barème figé `src/lib/commission.ts`. */
   tierRateTenths: number;
-  /** Σ commissions du bénéficiaire, tous kinds (vendeur **+** parts manager
+  /** Σ commissions du bénéficiaire, tous kinds (SDR **+** parts manager
    *  5 % si le bénéficiaire EST le manager), `status = 'due'`. */
   commissionsDueCents: number;
   /** Idem, `status = 'paid'`. */
@@ -367,7 +367,7 @@ function reminderCondition(): SQL | undefined {
 /** Entonnoir mémorisé d'un employé (merge des requêtes groupées). */
 type EmployeeFunnel = { added: number; qualified: number; signed: number };
 
-/** Liste des employés vendeurs (`vendeur`/`manager`), triée par nom, bornée
+/** Liste des employés (`sdr`/`manager`), triée par nom, bornée
  *  par `EMPLOYEE_LIMIT` (toute liste est LIMITée). */
 async function loadEmployees(
   db: Database,
@@ -577,7 +577,7 @@ export async function getCeoDashboard(actor: DashboardActor): Promise<CeoDashboa
 // ---------------------------------------------------------------------------
 
 /**
- * Statistiques par employé vendeur (`role IN ('vendeur','manager')`) —
+ * Statistiques par employé (`role IN ('sdr','manager')`) —
  * rôles `ceo|manager` **uniquement**.
  *
  * Par employé : entonnoir (`added` → `qualified` → `signed`), activité
@@ -724,16 +724,16 @@ export async function getEmployeeStats(actor: DashboardActor): Promise<EmployeeS
 // ---------------------------------------------------------------------------
 
 /**
- * Dashboard manager : classement des vendeurs + totaux globaux des
+ * Dashboard manager : classement des SDR + totaux globaux des
  * commissions — rôles `ceo|manager` **uniquement**, 100 % lecture (aucune
  * action de versement ici : `markCommissionsPaid` reste CEO).
  *
  * **Mesure palier alignée FE-7 (cohérence obligatoire)** : `paidDealCount`
  * vaut `COUNT(DISTINCT commissions.quote_id)` WHERE `kind='seller'` ET
  * `beneficiary_id = employé` — strictement la mesure de la jauge de palier
- * affichée côté vendeur ; la même valeur alimente `getTier()` ici, de sorte
+ * affichée côté SDR ; la même valeur alimente `getTier()` ici, de sorte
  * que le taux affiché au manager est toujours celui du prochain deal du
- * vendeur.
+ * SDR.
  *
  * Classement trié `paidDealCount DESC`, puis `conversionRate DESC` (les
  * `null` en fin de groupe), puis nom (stabilité).
@@ -875,12 +875,12 @@ export async function getManagerDashboard(
  * prospects mis à jour.
  *
  * RÔLES : **aucun rôle interne n'est exclu** (`ceo`, `manager`, `commercial`,
- * `vendeur`) — la page filtrera l'affichage selon le rôle ; seul le portail
+ * `sdr`) — la page filtrera l'affichage selon le rôle ; seul le portail
  * `client` est refusé (`forbidden`) : aucune donnée pipeline (noms de
  * prospects, statuts) ne doit fuiter vers un client.
  *
  * SCOPING : seul `recent` est scopé — sans `canViewAllProspects(role)`, la
- * clause `source_user_id = actor.id` s'applique (vendeur : ses prospects
+ * clause `source_user_id = actor.id` s'applique (sdr : ses prospects
  * uniquement, PLAN.md §Sécurité). `remindersToday` et `incompleteBriefs`
  * restent globaux (listes de travail d'équipe, spec T32 — le filtrage
  * d'affichage est porté par la page).
@@ -898,7 +898,7 @@ export async function getSalesDashboard(actor: DashboardActor): Promise<SalesDas
   const db = getDb();
 
   try {
-    // Scoping vendeur sur `recent` uniquement (cf. doc de fonction).
+    // Scoping SDR sur `recent` uniquement (cf. doc de fonction).
     const recentConditions: SQL[] = [];
     if (!canViewAllProspects(parsedActor.role)) {
       recentConditions.push(eq(prospects.sourceUserId, parsedActor.id));
@@ -930,7 +930,7 @@ export async function getSalesDashboard(actor: DashboardActor): Promise<SalesDas
         // Les plus incomplets d'abord (tri déterministe avant LIMIT).
         .orderBy(asc(prospectBriefs.completedBlocks), asc(prospects.id))
         .limit(BRIEFS_LIMIT),
-      // Derniers prospects mis à jour (scopé vendeur si nécessaire).
+      // Derniers prospects mis à jour (scopé SDR si nécessaire).
       db
         .select({
           id: prospects.id,

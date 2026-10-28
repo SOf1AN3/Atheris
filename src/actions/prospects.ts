@@ -133,13 +133,13 @@ export type ProspectListResult = {
 // ---------------------------------------------------------------------------
 
 /** Rôles habilités à créer un prospect (le `client` est exclu). */
-const CREATE_ROLES: readonly Role[] = ["ceo", "manager", "commercial", "vendeur"];
+const CREATE_ROLES: readonly Role[] = ["ceo", "manager", "commercial", "sdr"];
 
 /**
  * Source du prospect dérivée DU RÔLE de l'auteur (jamais d'un champ envoyé
  * par le client — la source n'est pas falsifiable) :
- * - `vendeur`  → `"ldg"`   (prospecteur terrain) ;
- * - `manager`  → `"rayan"` (portefeuille Rayan) ;
+ * - `sdr`       → `"ldg"`   (prospecteur terrain) ;
+ * - `manager`   → `"rayan"` (portefeuille Rayan) ;
  * - `ceo` / `commercial` → `"ceo"`.
  *
  * Les canaux `ads` et `landing` n'ont pas d'auteur interne : ils entrent par
@@ -147,7 +147,7 @@ const CREATE_ROLES: readonly Role[] = ["ceo", "manager", "commercial", "vendeur"
  * `sourceUserId = NULL` — jamais par cette action.
  */
 function deriveSource(role: Role): ProspectSource {
-  if (role === "vendeur") return "ldg";
+  if (role === "sdr") return "ldg";
   if (role === "manager") return "rayan";
   return "ceo";
 }
@@ -320,7 +320,7 @@ export async function createProspect(
  *
  * SCOPING SERVEUR (non contournable côté client) :
  * - `canViewAllProspects(role) === false` → clause `source_user_id = viewer.id`
- *   ajoutée **toujours** (rôle `vendeur`) ;
+ *   ajoutée **toujours** (rôle `sdr`) ;
  * - `client` (ou viewer/rôles/filtres invalides) → `{ items: [], total: 0 }` :
  *   zéro donnée et **pas d'erreur**, pour ne pas révéler l'existence de quoi
  *   que ce soit.
@@ -357,8 +357,8 @@ export async function listProspects(
 
   const conditions: SQL[] = [];
 
-  // Scoping vendeur — ajouté systématiquement au-delà du plafond de lecture
-  // globale : un vendeur ne voit QUE ses prospects, quel que soit le filtre.
+  // Scoping SDR — ajouté systématiquement au-delà du plafond de lecture
+  // globale : un SDR ne voit QUE ses prospects, quel que soit le filtre.
   if (!canViewAllProspects(role)) conditions.push(eq(prospects.sourceUserId, viewerId));
 
   if (status !== undefined && status.length > 0) {
@@ -440,14 +440,14 @@ const ALLOWED_BRIEF_KEYS: Record<BriefBlockKey, readonly string[]> = {
 };
 
 /**
- * Rôles habilités à ÉCRIRE la fiche (le `vendeur` est en lecture seule côté
+ * Rôles habilités à ÉCRIRE la fiche (le `sdr` est en lecture seule côté
  * page, refusé ici) — identique au plafond d'écriture du pipeline.
  *
  * NOTE SÉCURITÉ (choix assumé) : **aucun contrôle `sourceUserId`** n'est
  * appliqué. Le brief est un outil de l'équipe commerciale (commercial /
  * manager / CEO) : un membre interne habilité peut renseigner la fiche de
  * n'importe quel prospect de l'entreprise, y compris porté par un autre
- * commercial. Le scoping vendeur (`source_user_id`) ne s'applique qu'à la
+ * commercial. Le scoping SDR (`source_user_id`) ne s'applique qu'à la
  * LISTE des prospects, pas à la fiche projet.
  */
 const BRIEF_WRITE_ROLES: readonly Role[] = ["ceo", "manager", "commercial"];
@@ -564,7 +564,7 @@ export async function saveBriefBlock(
   const parsed = saveBriefBlockSchema.safeParse(input);
   if (!parsed.success) return { ok: false, code: "invalid" };
 
-  // 2. Droit d'écriture : rôle valide mais non habilité (vendeur/client) ou
+  // 2. Droit d'écriture : rôle valide mais non habilité (sdr/client) ou
   //    rôle forgé (JWT ancien schéma) → refus identique, aucun détail.
   const parsedRole = roleSchema.safeParse(actor?.role);
   if (!parsedRole.success) return { ok: false, code: "forbidden" };
