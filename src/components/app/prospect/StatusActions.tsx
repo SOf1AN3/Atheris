@@ -162,7 +162,7 @@ export function StatusActions({
     }
   }
 
-  // --- Rôle lecture seule (vendeur / transition impossible) ----------------
+  // --- Rôle lecture seule (sdr / transition impossible) --------------------
   if (transitions.length === 0) {
     return <p className="text-sm text-muted">{labels.lockedByRole}</p>;
   }

@@ -306,8 +306,13 @@ export function AddProspectForm({
           type="submit"
           size="md"
           disabled={isSubmitting}
-          /* État submitting (DESIGN) : bouton désactivé + `opacity-70`. */
-          className={isSubmitting ? "h-12 w-full opacity-70" : "h-12 w-full"}
+          /* État submitting (DESIGN) : bouton désactivé + `opacity-70`.
+             Pleine largeur en mobile, largeur naturelle ≥ md (Lot 3). */
+          className={
+            isSubmitting
+              ? "h-12 w-full opacity-70 md:w-auto"
+              : "h-12 w-full md:w-auto"
+          }
         >
           {isSubmitting ? `${labels.submit}…` : labels.submit}
         </Button>

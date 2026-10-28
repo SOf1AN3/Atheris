@@ -34,7 +34,7 @@ export const dynamic = "force-dynamic";
  *   via `useProspectFilters` (FE-4) ;
  * - **cette page RELIT ses `searchParams`** (Next 15 : `Promise`), appelle
  *   `listProspects({ status, q, limit }, viewer)` et re-passe les items en
- *   props au client à chaque navigation. Le filtrage/tri/scoping vendeur
+ *   props au client à chaque navigation. Le filtrage/tri/scoping sdr
  *   sont donc faits une seule fois, côté serveur.
  *
  * `dynamic = "force-dynamic"` : la page est protégée (middleware + layout),
@@ -64,7 +64,7 @@ const MAX_SEARCH_LENGTH = 120;
 const PROSPECTS_HREF = "/espace/prospects";
 
 /** Rôles habilités à créer un prospect (miroir de `CREATE_ROLES`, C-5). */
-const CREATE_ROLES: readonly Role[] = ["ceo", "manager", "commercial", "vendeur"];
+const CREATE_ROLES: readonly Role[] = ["ceo", "manager", "commercial", "sdr"];
 
 /** Garde runtime sur l'URL forgée : seuls les 10 statuts DB sont admis. */
 const VALID_STATUS_VALUES: ReadonlySet<string> = new Set<string>(STATUS_ORDER);
@@ -109,7 +109,7 @@ function parseSearchParam(raw: string | string[] | undefined): string | undefine
 /**
  * Label de la page, **repris de la nav du rôle** (`dict.nav[role]`, entry
  * `/espace/prospects`) : « Pipeline » pour les rôles de management,
- * « Mes prospects » pour le vendeur. Replis 100 % dict (jamais de littéral) :
+ * « Mes prospects » pour le SDR. Replis 100 % dict (jamais de littéral) :
  * la 3ᵉ branche n'est jamais atteinte (`/prospects` est interdit au client
  * par le middleware RBAC).
  */
@@ -193,8 +193,8 @@ export default async function ProspectsPage({
   };
   const canCreate = CREATE_ROLES.includes(viewer.role);
   // Colonne « Relance » : lecture globale (ceo/manager/commercial) + tous les
-  // vendeurs internes (leur propre portefeuille).
-  const showReminder = canViewAllProspects(viewer.role) || viewer.role === "vendeur";
+  // SDR internes (leur propre portefeuille).
+  const showReminder = canViewAllProspects(viewer.role) || viewer.role === "sdr";
 
   const emptyState: PipelineEmptyState = {
     title: dict.common.noData,

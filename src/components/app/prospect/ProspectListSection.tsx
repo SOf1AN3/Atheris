@@ -13,7 +13,7 @@
  * 2. Chaque écriture d'URL déclenche une **navigation RSC** : Next.js
  *    ré-exécute `src/app/[locale]/(app)/espace/prospects/page.tsx` (server),
  *    qui RELIT ses `searchParams`, rappelle `listProspects(…, viewer)` côté
- *    serveur (scoping vendeur inclus) et **passe les nouveaux items en props**
+ *    serveur (scoping sdr inclus) et **passe les nouveaux items en props**
  *    à ce composant au re-rendu.
  * 3. Ce composant ne fetch donc **jamais** (`fetch`, `useEffect` de requête,
  *    Server Action de lecture : rien). Il ne fait que :

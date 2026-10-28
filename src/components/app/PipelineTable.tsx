@@ -220,7 +220,10 @@ export function PipelineTable({
       </div>
 
       {/* ------------------------------------------------- Mobile (< md) ---- */}
-      {/* Cartes empilées : même `href`, zéro scroll horizontal. */}
+      {/* Cartes empilées : même `href`, zéro scroll horizontal. Chaque
+          colonne devient un bloc libellé (`micro` muted + valeur `fg`)
+          séparé par un filet `border-line` — cible tactile = carte entière
+          (≫ 44 px). Le tableau desktop ci-dessus reste strictement inchangé. */}
       <ul className="flex flex-col gap-3 md:hidden">
         {items.map((item) => {
           const reminderAt = item.nextReminderAt;
@@ -231,36 +234,67 @@ export function PipelineTable({
             <li key={item.id}>
               <Link
                 href={item.href}
-                className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-4 transition-colors hover:bg-ink-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                className="flex flex-col rounded-xl border border-line bg-surface p-4 transition-colors hover:bg-ink-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
               >
-                <span className="flex items-start justify-between gap-3">
-                  <span className="flex min-w-0 flex-col">
-                    <span className="truncate text-[15px] font-semibold text-fg">
-                      {item.fullName}
-                    </span>
-                    {/* DESIGN §6.5 : faint (4,1:1) interdit sur du texte
-                        porteur d'info → muted (7:1+). */}
-                    <span className="mt-0.5 truncate text-xs font-medium text-muted">
-                      {item.companyLabel}
+                <span className="flex flex-col">
+                  <span className="truncate text-[15px] font-semibold text-fg">
+                    {item.fullName}
+                  </span>
+                  {/* DESIGN §6.5 : faint (4,1:1) interdit sur du texte
+                      porteur d'info → muted (7:1+). */}
+                  <span className="mt-0.5 truncate text-xs font-medium text-muted">
+                    {item.companyLabel}
+                  </span>
+                </span>
+
+                {/* Colonnes restantes, en blocs libellés séparés par un
+                    filet `border-line` (statut, source, activité, relance). */}
+                <span className="mt-3 flex flex-col border-t border-line">
+                  <span className="flex flex-col gap-1.5 py-2.5">
+                    <span className="micro text-muted">{columnLabels.status}</span>
+                    <span>
+                      <StatusBadge
+                        status={item.status}
+                        label={statusLabels[item.status]}
+                      />
                     </span>
                   </span>
-                  <StatusBadge
-                    status={item.status}
-                    label={statusLabels[item.status]}
-                    className="shrink-0"
-                  />
-                </span>
-                <span className="text-xs tabular-nums text-muted">
-                  {item.dateLabel}
-                </span>
-                {showReminder && reminderAt !== null ? (
-                  <span
-                    className={cn("text-xs", reminderClasses(isOverdue))}
-                    data-overdue={isOverdue ? "true" : undefined}
-                  >
-                    {reminderDateLabel(item, reminderAt)}
+                  <span className="flex flex-col gap-1.5 border-t border-line py-2.5">
+                    <span className="micro text-muted">{columnLabels.source}</span>
+                    <span className="text-sm text-fg">{item.source}</span>
                   </span>
-                ) : null}
+                  <span className="flex flex-col gap-1.5 border-t border-line py-2.5">
+                    <span className="micro text-muted">
+                      {columnLabels.lastActivity}
+                    </span>
+                    <span className="text-sm tabular-nums text-fg">
+                      {item.dateLabel}
+                    </span>
+                  </span>
+                  {showReminder ? (
+                    // Relance : date + teinte danger si dépassée « au jugé
+                    // client » (horloge navigateur, aucun flux temps réel) —
+                    // la couleur ne porte jamais seule le sens (WCAG 1.4.1).
+                    <span className="flex flex-col gap-1.5 border-t border-line py-2.5">
+                      <span className="micro text-muted">
+                        {columnLabels.reminder}
+                      </span>
+                      <span
+                        className={cn(
+                          "text-sm tabular-nums",
+                          reminderAt !== null && isOverdue
+                            ? "font-semibold text-danger"
+                            : "text-fg",
+                        )}
+                        data-overdue={isOverdue ? "true" : undefined}
+                      >
+                        {reminderAt !== null
+                          ? reminderDateLabel(item, reminderAt)
+                          : "—"}
+                      </span>
+                    </span>
+                  ) : null}
+                </span>
               </Link>
             </li>
           );

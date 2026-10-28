@@ -21,7 +21,7 @@
  * barre `h-1.5` `bg-surface` + jauge `bg-accent` (accent = indicateur d'état
  * actif, DESIGN §2.3), texte `gaugeTemplate.replace("{done}", …)`.
  *
- * `readOnly` (vendeur) : champs désactivés, bandeau de lecture seule, aucun
+ * `readOnly` (sdr) : champs désactivés, bandeau de lecture seule, aucun
  * bouton d'enregistrement ni de navigation par étapes (le rail reste
  * cliquable : il sert à CONSULTER les 5 blocs, pas à les modifier).
  *
@@ -65,7 +65,7 @@ export type BriefWizardLabels = {
   backToProspect: string;
   /** Validation client des blocs `context` / `need`. */
   requiredError: string;
-  /** Bandeau de lecture seule (rôle `vendeur`). */
+  /** Bandeau de lecture seule (rôle `sdr`). */
   readOnlyNotice: string;
   /** Lecture seule : aucun bouton d'écriture. */
   readOnly: boolean;
@@ -174,7 +174,7 @@ export function BriefWizard({
     if (targetIndex === stepIndex || isSaving) return;
     if (targetIndex < 0 || targetIndex >= totalSteps) return;
 
-    // Lecture seule (vendeur) : navigation de CONSULTATION uniquement, aucun
+    // Lecture seule (sdr) : navigation de CONSULTATION uniquement, aucun
     // appel serveur, aucune validation de saisie.
     if (labels.readOnly) {
       setStepError(null);
@@ -299,14 +299,18 @@ export function BriefWizard({
         }}
       />
 
-      {/* --- Navigation (aucun bouton en lecture seule) ---------------------- */}
+      {/* --- Navigation (aucun bouton en lecture seule) ----------------------
+          Mobile (< md) : boutons empilés pleine largeur (cible ≥ 44 px),
+          aucun scroll horizontal ; ≥ md : rangée `justify-between` identique
+          à la version d'origine (Lot 3). */}
       {labels.readOnly ? null : (
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5">
+        <div className="flex flex-col flex-wrap gap-3 border-t border-line pt-5 md:flex-row md:items-center md:justify-between">
           {stepIndex > 0 ? (
             <Button
               type="button"
               variant="secondary"
               disabled={isSaving}
+              className="w-full md:w-auto"
               onClick={() => {
                 void goTo(stepIndex - 1);
               }}
@@ -324,6 +328,7 @@ export function BriefWizard({
                   type="button"
                   variant="secondary"
                   disabled={isSaving || !isDirty(currentStep.key)}
+                  className="w-full md:w-auto"
                   onClick={() => {
                     void persist(currentStep.key);
                   }}
@@ -331,7 +336,12 @@ export function BriefWizard({
                   {isSaving ? labels.saving : labels.save}
                 </Button>
                 {completed >= totalSteps ? (
-                  <Button type="button" variant="primary" href={prospectHref}>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    href={prospectHref}
+                    className="w-full md:w-auto"
+                  >
                     {labels.backToProspect}
                   </Button>
                 ) : null}
@@ -341,6 +351,7 @@ export function BriefWizard({
                 type="button"
                 variant="primary"
                 disabled={isSaving}
+                className="w-full md:w-auto"
                 onClick={() => {
                   void goTo(stepIndex + 1);
                 }}

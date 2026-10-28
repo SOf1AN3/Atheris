@@ -9,11 +9,20 @@ import {
   type BriefWizardLabels,
   type BriefWizardProps,
 } from "@/components/app/prospect/BriefWizard";
+import {
+  ClientAccessCard,
+  type ClientAccessCardLabels,
+} from "@/components/app/prospect/ClientAccessCard";
 import type { BriefFieldLabel } from "@/components/app/prospect/brief-steps";
 import { isValidLocale } from "@/i18n/config";
 import { getPlatformDictionary } from "@/i18n/platform-dictionaries";
 import { getDb } from "@/lib/db";
-import { prospectBriefs, prospects } from "@/lib/db/schema";
+import {
+  clientProjects,
+  prospectBriefs,
+  prospects,
+  quotes,
+} from "@/lib/db/schema";
 import { isRole } from "@/lib/permissions";
 
 /**
@@ -33,7 +42,7 @@ import { isRole } from "@/lib/permissions";
  *  2. session absente / inactif / rôle inconnu → redirection connexion
  *     (filet défensif : le middleware RBAC fait déjà le même job) ;
  *  3. rôle `client` → `notFound()` : la fiche est un outil interne ;
- *  4. rôle `vendeur` → **lecture seule** (décision FE-6) : le brief est
+ *  4. rôle `sdr` → **lecture seule** (décision FE-6) : le brief est
  *     l'outil du commercial / manager / CEO — `saveBriefBlock` refuse de
  *     toute façon son rôle, la page se contente de désactiver la saisie ;
  *  5. uuid d'URL invalide ou prospect/brief absent → `notFound()` (le brief
@@ -94,7 +103,7 @@ export default async function ProspectBriefPage({
   if (session.user.role === "client") notFound();
 
   const viewer = { id: session.user.id, role: session.user.role };
-  const readOnly = viewer.role === "vendeur";
+  const readOnly = viewer.role === "sdr";
 
   if (!uuidSchema.safeParse(id).success) notFound();
 
@@ -121,12 +130,36 @@ export default async function ProspectBriefPage({
   const db = getDb();
 
   const prospectRows = await db
-    .select({ id: prospects.id, fullName: prospects.fullName })
+    .select({
+      id: prospects.id,
+      fullName: prospects.fullName,
+      email: prospects.email,
+      status: prospects.status,
+    })
     .from(prospects)
     .where(eq(prospects.id, id))
     .limit(1);
   const prospect = prospectRows[0];
   if (prospect === undefined) notFound();
+
+  // --- Éligibilité à l'espace client (Lot 3 · PLAN.md §FE-D) ---------------
+  // Miroir des gardes 3 et 4 de `createClientInvitation` (`@/actions/invitations`)
+  // : statut ouvrant le portail + projet de livraison rattaché au prospect.
+  // Le refus éventuel reste serveur (`invalid`), mais le bouton n'est jamais
+  // présenté sur un prospect non éligible.
+  const invitableStatus =
+    prospect.status === "client_actif" || prospect.status === "en_livraison";
+  let hasDeliveryProject = false;
+  if (invitableStatus) {
+    const projectRows = await db
+      .select({ id: clientProjects.id })
+      .from(clientProjects)
+      .innerJoin(quotes, eq(clientProjects.quoteId, quotes.id))
+      .where(eq(quotes.prospectId, prospect.id))
+      .limit(1);
+    hasDeliveryProject = projectRows.length > 0;
+  }
+  const canInviteClient = invitableStatus && hasDeliveryProject;
 
   const briefRows = await db
     .select({
@@ -174,6 +207,32 @@ export default async function ProspectBriefPage({
     fields: fieldDefs,
   };
 
+  // --- Carte « accès client » (Lot 3) — libellés 100 % dict ---------------
+  // `{actor}` de la phrase d'audit est remplacé ICI (le dictionnaire ne
+  // franchit jamais la frontière RSC) — motif : `activityPhrase` de la fiche
+  // détaillée. Aucun littéral bilingue, aucune branche sur la locale.
+  const clientAccessLabels: ClientAccessCardLabels = {
+    title: dict.auth.invitation.email.client.subject,
+    description: dict.auth.invitation.description,
+    submit: dict.client.send,
+    sending: dict.recruitment.modal.sending,
+    success: dict.activities.invitationCreated.replace(
+      "{actor}",
+      session.user.name,
+    ),
+    mailWarning: dict.recruitment.modal.errors.mailFailed,
+    linkLabel: dict.interviews.columns.link,
+    copy: dict.interviews.copy,
+    copied: dict.interviews.copied,
+    copyFallback: dict.interviews.copyFallback,
+    errors: {
+      forbidden: dict.interviews.errors.forbidden,
+      notFound: dict.common.notFound,
+      invalid: dict.interviews.errors.invalid,
+      failed: dict.interviews.errors.failed,
+    },
+  };
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3">
@@ -186,6 +245,19 @@ export default async function ProspectBriefPage({
         </Link>
         <h1 className="text-2xl font-bold tracking-[-0.02em] text-fg">{dict.brief.title}</h1>
       </div>
+
+      {/* Envoyer le lien d'accès client — seulement si éligible (statut
+          `client_actif`/`en_livraison` + projet de livraison). */}
+      {canInviteClient ? (
+        <ClientAccessCard
+          prospectId={prospect.id}
+          email={prospect.email}
+          name={prospect.fullName}
+          locale={locale}
+          actor={viewer}
+          labels={clientAccessLabels}
+        />
+      ) : null}
 
       {/* Jauge + rail + panneau vivent côté client (état dynamique). */}
       <BriefWizard
