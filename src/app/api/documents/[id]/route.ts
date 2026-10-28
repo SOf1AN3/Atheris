@@ -9,13 +9,13 @@
  * - **Jamais 401/403** : toute absence de droit (pas de session, compte non
  *   `active`, rôle inconnu, document absent, hors périmètre) répond **404**
  *   — on ne confirme ni l'existence du document ni celle d'un compte.
- * - `auth()` Auth.js v5 côté serveur ; les droits de données (`vendeur`,
+ * - `auth()` Auth.js v5 côté serveur ; les droits de données (`sdr`,
  *   `client`) sont une règle de **données** revérifiée ici, jamais supposée.
  * - Réponse `Cache-Control: private, no-store` : aucun cache partagé d'un
  *   PDF potentiellement sensible.
  *
  * MATRICE DES DROITS (branche de droite documentée en FR) :
- * | ownerType  | ceo/manager/commercial | vendeur                    | client                        |
+ * | ownerType  | ceo/manager/commercial | sdr                        | client                        |
  * |------------|------------------------|----------------------------|-------------------------------|
  * | `prospect` | OK                     | OK si `sourceUserId = moi` | toujours 404                  |
  * | `project`  | OK                     | OK si `sourceUserId = moi` | OK si `default_project_id = moi projet` |
@@ -125,10 +125,10 @@ export async function GET(
       case "manager":
       case "commercial":
         break;
-      // Vendeur : scoping de DONNÉES — uniquement SES prospects
+      // SDR : scoping de DONNÉES — uniquement SES prospects
       // (`prospects.sourceUserId = moi`, PLAN.md §Sécurité). Un prospect
-      // sans bénéficiaire (lead Ads/Sales Development Representative) n'est visible par aucun vendeur.
-      case "vendeur": {
+      // sans bénéficiaire (lead Ads) n'est visible par aucun SDR.
+      case "sdr": {
         const owners = await db
           .select({ sourceUserId: prospects.sourceUserId })
           .from(prospects)
@@ -158,9 +158,9 @@ export async function GET(
       case "manager":
       case "commercial":
         break;
-      // Vendeur : chaîne `client_projects → quotes → prospects` et contrôle
+      // SDR : chaîne `client_projects → quotes → prospects` et contrôle
       // de propriété sur le prospect d'origine du devis (`sourceUserId`).
-      case "vendeur": {
+      case "sdr": {
         const owners = await db
           .select({ sourceUserId: prospects.sourceUserId })
           .from(clientProjects)
