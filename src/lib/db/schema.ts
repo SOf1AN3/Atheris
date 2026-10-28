@@ -78,7 +78,7 @@ export const roleEnum = pgEnum("role", [
   "ceo",
   "manager",
   "commercial",
-  "vendeur",
+  "sdr",
   "client",
 ]);
 
@@ -127,7 +127,7 @@ export const commissionStatusEnum = pgEnum("commission_status", [
   "paid",
 ]);
 
-/** Bénéficiaire type : vendeur (palier) ou manager (5 % Rayan). */
+/** Bénéficiaire type : sdr (palier) ou manager (5 % Rayan). */
 export const commissionKindEnum = pgEnum("commission_kind", [
   "seller",
   "manager",
@@ -182,6 +182,7 @@ export const applicationStatusEnum = pgEnum("application_status", [
   "nouveau",
   "invite",
   "refuse",
+  "recrute",
 ]);
 
 // ---------------------------------------------------------------------------
@@ -266,7 +267,7 @@ export const prospects = pgTable(
     phoneNorm: text("phone_norm").notNull(),
     source: prospectSourceEnum("source").notNull().default("ldg"),
     // Lead `landing`/`ads` sans bénéficiaire → NULL + `set null` si le compte
-    // de référence est supprimé (les scoping vendeur passent par cette colonne).
+    // de référence est supprimé (les scoping sdr passent par cette colonne).
     sourceUserId: uuid("source_user_id").references((): PgColumn => users.id, {
       onDelete: "set null",
     }),
@@ -493,12 +494,21 @@ export const invitations = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     email: text("email").notNull(),
     token: text("token").notNull(),
+    // Rôle cible du destinataire (miroir de `roleEnum`) — NOT NULL : toute
+    // invitation porte un rôle (client portail, sdr recrutement…).
+    role: roleEnum("role").notNull(),
     // `no action` (hors périmètre `cascade` de la spec T02) : une invitation
     // ne doit pas être détruite silencieusement avec son projet — point à
-    // confirmer auprès du Lead/Reviewer.
-    projectId: uuid("project_id")
-      .references((): PgColumn => clientProjects.id)
-      .notNull(),
+    // confirmer auprès du Lead/Reviewer. Nullable : les invitations de
+    // recrutement (sdr) ne portent pas de projet.
+    projectId: uuid("project_id").references((): PgColumn => clientProjects.id),
+    // Candidature liée (invitation d'entretien depuis le pipeline recrutement)
+    // — nullable. FK « déclarée vers le bas » : `jobApplications` est déclaré
+    // plus bas dans le fichier, l'annotation `(): PgColumn =>` casse le cycle
+    // de types (note 7 en tête de fichier).
+    applicationId: uuid("application_id").references(
+      (): PgColumn => jobApplications.id,
+    ),
     expiresAt: tstz("expires_at").notNull(),
     usedAt: tstz("used_at"),
     createdBy: uuid("created_by").references((): PgColumn => users.id),
@@ -507,6 +517,12 @@ export const invitations = pgTable(
   (t) => [
     uniqueIndex("invitations_token_idx").on(t.token),
     index("invitations_email_idx").on(t.email),
+    // Anti-abus / anti-doublon : une seule invitation NON UTILISÉE par
+    // (email, rôle) — les invitations consommées (used_at NOT NULL) ne
+    // contraint plus rien (index partiel).
+    index("invitations_email_role_unused_idx")
+      .on(t.email, t.role)
+      .where(sql`used_at IS NULL`),
   ],
 );
 
@@ -673,6 +689,9 @@ export const jobApplications = pgTable(
     interviewId: uuid("interview_id").references((): PgColumn => interviews.id),
     invitedAt: tstz("invited_at"),
     rejectedAt: tstz("rejected_at"),
+    // Instant du recrutement (statut basculé en `recrute`) — nullable, pas de
+    // default : renseigné uniquement lors du passage à `recrute`.
+    recruitedAt: tstz("recruited_at"),
     createdAt: tstz("created_at").defaultNow().notNull(),
     updatedAt: tstz("updated_at").defaultNow().$onUpdate(() => new Date()),
   },

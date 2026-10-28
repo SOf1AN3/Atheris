@@ -4,7 +4,9 @@
  * ⚠ IDENTIFIANTS DE DÉMO UNIQUEMENT (domaine atherisdemo.dev) —
  * JAMAIS EXÉCUTER EN PRODUCTION.
  *
- * Deux garde-fous testables SANS base :
+ * Trois garde-fous testables SANS base :
+ *  0. `ALLOW_DEMO_SEED !== "1"` → NEUTRALISATION par défaut (Lot 3) : exit 0
+ *     silencieux, aucune écriture, aucun import DB résolu ;
  *  1. `SEED_DEMO !== "1"` → refus explicite, aucune connexion tentée ;
  *  2. `DATABASE_URL` absente ou contenant « placeholder » → refus DB-PENDING
  *     (message clair tant que l'URL du `.env.local` n'est pas renseignée).
@@ -108,6 +110,19 @@ function assertFixtureNorms(): void {
 }
 
 async function main(): Promise<void> {
+  // Garde-fou 0 — LE SEED DE DÉMO EST NEUTRALISÉ (Lot 3) : aucune écriture en
+  // base sans activation EXPLICITE `ALLOW_DEMO_SEED=1`. Le comportement par
+  // défaut est un exit silencieux (code 0), pas une erreur : relancer le seed
+  // par inattention (script, CI, commande npm) ne casse rien et n'écrit rien.
+  if (process.env.ALLOW_DEMO_SEED !== "1") {
+    console.warn(
+      "[seed] NEUTRALISÉ — aucune donnée de démo insérée. " +
+        "Pour réactiver explicitement : ALLOW_DEMO_SEED=1 SEED_DEMO=1 npm run db:seed " +
+        "(jamais en production).",
+    );
+    process.exit(0);
+  }
+
   // Le script tourne hors Next.js : charger `.env.local` (dotenv ne
   // surcharge jamais une variable déjà présente dans l'environnement).
   loadEnv({ path: ".env.local" });
@@ -274,7 +289,7 @@ async function main(): Promise<void> {
         },
       }),
 
-    // 6a. commissions — vendeur1 : 10 % (ratePercent = 100 dixièmes).
+    // 6a. commissions — sdr1 : 10 % (ratePercent = 100 dixièmes).
     db.insert(commissions)
       .values({
         id: SEED_COMMISSIONS[0].id,

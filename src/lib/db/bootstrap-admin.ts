@@ -5,7 +5,7 @@
  * `ceo` :
  *   - les migrations (`drizzle/*.sql`) n'insèrent aucune ligne ;
  *   - l'inscription publique (`applyAsCandidate`) ne crée que des comptes
- *     `vendeur` en statut `pending` — et **seul un CEO** peut les approuver
+ *     `sdr` en statut `pending` — et **seul un CEO** peut les approuver
  *     (`src/actions/applications.ts`) ;
  *   - les invitations client sont réservées au CEO (`src/actions/invitations.ts`).
  * Sans un premier CEO actif, personne ne peut donc créer ni valider un compte

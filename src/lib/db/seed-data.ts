@@ -30,7 +30,7 @@
 // ---------------------------------------------------------------------------
 
 /** Rôles — miroir de `roleEnum`. */
-export type SeedRole = "ceo" | "manager" | "commercial" | "vendeur" | "client";
+export type SeedRole = "ceo" | "manager" | "commercial" | "sdr" | "client";
 
 /** Statuts de compte — miroir de `userStatusEnum`. */
 export type SeedUserStatus = "pending" | "active" | "rejected" | "disabled";
@@ -82,8 +82,8 @@ export type SeedBriefBlock = Record<string, unknown>;
 export const SEED_USER_IDS = {
   ceo: "0a7e0001-0000-4000-8000-000000000001",
   rayan: "0a7e0001-0000-4000-8000-000000000002",
-  vendeur1: "0a7e0001-0000-4000-8000-000000000003",
-  vendeur2: "0a7e0001-0000-4000-8000-000000000004",
+  sdr1: "0a7e0001-0000-4000-8000-000000000003",
+  sdr2: "0a7e0001-0000-4000-8000-000000000004",
   commercial1: "0a7e0001-0000-4000-8000-000000000005",
   client: "0a7e0001-0000-4000-8000-000000000006",
 } as const;
@@ -161,21 +161,21 @@ export const SEED_USERS: readonly SeedUser[] = [
     status: "active",
   },
   {
-    id: SEED_USER_IDS.vendeur1,
-    email: "vendeur1@atherisdemo.dev",
-    password: "Vendeur1!Demo2026",
-    name: "Vendeur 1 (démo)",
+    id: SEED_USER_IDS.sdr1,
+    email: "sdr1@atherisdemo.dev",
+    password: "Sdr1!Demo2026",
+    name: "SDR 1 (démo)",
     phone: "+213 550 00 00 03",
-    role: "vendeur",
+    role: "sdr",
     status: "active",
   },
   {
-    id: SEED_USER_IDS.vendeur2,
-    email: "vendeur2@atherisdemo.dev",
-    password: "Vendeur1!Demo2026",
-    name: "Vendeur 2 (démo)",
+    id: SEED_USER_IDS.sdr2,
+    email: "sdr2@atherisdemo.dev",
+    password: "Sdr2!Demo2026",
+    name: "SDR 2 (démo)",
     phone: "+213 550 00 00 04",
-    role: "vendeur",
+    role: "sdr",
     status: "active",
   },
   {
@@ -200,7 +200,7 @@ export const SEED_USERS: readonly SeedUser[] = [
 
 // ---------------------------------------------------------------------------
 // 2. Prospects — 6 lignes réparties sur le pipeline.
-//    4 portés par vendeur1, 1 lead « ads » et 1 lead « landing » sans
+//    4 portés par sdr1, 1 lead « ads » et 1 lead « landing » sans
 //    bénéficiaire (source_user_id NULL → gestion « sans bénéficiaire »).
 //    `emailNorm`/`phoneNorm` sont les formes normalisées ANTI-DOUBLON
 //    (lowercase ; `+213`/`00213` → `0` ; chiffres uniquement) : `seed.ts`
@@ -264,7 +264,7 @@ export const SEED_PROSPECTS: readonly SeedProspect[] = [
     emailNorm: "yacine.haddad@marketplus.dz",
     phoneNorm: "0550445566",
     source: "ldg",
-    sourceUserId: SEED_USER_IDS.vendeur1,
+    sourceUserId: SEED_USER_IDS.sdr1,
     status: "qualifie",
     disqualifyReason: null,
     nextReminderInDays: null,
@@ -278,7 +278,7 @@ export const SEED_PROSPECTS: readonly SeedProspect[] = [
     emailNorm: "nadia.boumediene@translog-dz.com",
     phoneNorm: "0698778899",
     source: "ldg",
-    sourceUserId: SEED_USER_IDS.vendeur1,
+    sourceUserId: SEED_USER_IDS.sdr1,
     status: "devis_envoye",
     disqualifyReason: null,
     nextReminderInDays: 4,
@@ -293,7 +293,7 @@ export const SEED_PROSPECTS: readonly SeedProspect[] = [
     emailNorm: "leila.mansouri@clinique-elwafa.dz",
     phoneNorm: "0555901020",
     source: "ldg",
-    sourceUserId: SEED_USER_IDS.vendeur1,
+    sourceUserId: SEED_USER_IDS.sdr1,
     status: "client_actif",
     disqualifyReason: null,
     nextReminderInDays: null,
@@ -307,7 +307,7 @@ export const SEED_PROSPECTS: readonly SeedProspect[] = [
     emailNorm: "rachid.ouuali@zentech.dz",
     phoneNorm: "0662334455",
     source: "ldg",
-    sourceUserId: SEED_USER_IDS.vendeur1,
+    sourceUserId: SEED_USER_IDS.sdr1,
     status: "perdu",
     disqualifyReason: "Budget insuffisant — solution reportée au prochain exercice",
     nextReminderInDays: null,
@@ -326,7 +326,7 @@ export type SeedBrief = {
   blockNeed: SeedBriefBlock;
   blockConstraints: SeedBriefBlock;
   completedBlocks: number;
-  /** Compte ayant saisi la fiche (vendeur1). */
+  /** Compte ayant saisi la fiche (sdr1). */
   updatedBy: string;
 };
 
@@ -337,7 +337,7 @@ export const SEED_BRIEF: SeedBrief = {
     secteur: "E-commerce B2B",
     situation:
       "Boutique en ligne vieillissante, gestion manuelle des stocks et des commandes",
-    marche: "Grossistes et revendeurs en Algérie",
+    marche: "Grossistes et détaillants en Algérie",
   },
   blockNeed: {
     objectifs: [
@@ -353,7 +353,7 @@ export const SEED_BRIEF: SeedBrief = {
     contraintes: ["Multi-langue FR / AR", "Hébergement local"],
   },
   completedBlocks: 3,
-  updatedBy: SEED_USER_IDS.vendeur1,
+  updatedBy: SEED_USER_IDS.sdr1,
 };
 
 // ---------------------------------------------------------------------------
@@ -375,7 +375,7 @@ export const SEED_QUOTE: SeedQuote = {
   amountUsdCents: 250_000, // 2 500 USD
   externalRef: "DEV-2026-0001",
   status: "signed",
-  createdBy: SEED_USER_IDS.vendeur1,
+  createdBy: SEED_USER_IDS.sdr1,
 };
 
 // ---------------------------------------------------------------------------
@@ -397,7 +397,7 @@ export const SEED_PAYMENT: SeedPayment = {
   label: "Acompte",
   amountUsdCents: 75_000, // 750 USD
   method: "Virement bancaire",
-  createdBy: SEED_USER_IDS.vendeur1,
+  createdBy: SEED_USER_IDS.sdr1,
 };
 
 // ---------------------------------------------------------------------------
@@ -421,7 +421,7 @@ export const SEED_COMMISSIONS: readonly SeedCommission[] = [
   {
     id: SEED_IDS.commissionSeller,
     quoteId: SEED_IDS.quote,
-    beneficiaryId: SEED_USER_IDS.vendeur1,
+    beneficiaryId: SEED_USER_IDS.sdr1,
     kind: "seller",
     ratePercent: 100, // 10,0 %
     baseCents: 250_000,
