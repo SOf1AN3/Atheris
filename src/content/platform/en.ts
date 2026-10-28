@@ -54,7 +54,7 @@ export const en = {
       { label: "Dashboard", href: "/espace/tableau-de-bord" },
       { label: "Pipeline", href: "/espace/prospects" },
     ],
-    vendeur: [
+    sdr: [
       { label: "Dashboard", href: "/espace/tableau-de-bord" },
       { label: "My prospects", href: "/espace/prospects" },
       { label: "My earnings", href: "/espace/commissions" },
@@ -116,7 +116,9 @@ export const en = {
       tooLong: (max: number) => `Enter at most ${max} characters.`,
     },
     invitation: {
-      title: "Activate your workspace",
+      title: "Create your account",
+      description:
+        "This personal link lets you create your Atheris account. Valid for 48 hours.",
       submit: "Activate my account",
       successTitle: "Account activated",
       successBody: "Your client portal is ready. Sign in to follow your project.",
@@ -124,6 +126,16 @@ export const en = {
       used: "This invitation link has already been used.",
       invalid: "This invitation link is invalid.",
       duplicate: "An account already exists with this email address.",
+      email: {
+        sdr: {
+          subject: "Your Atheris onboarding — create your account",
+          body: "Hello {{name}},\n\nYour application has been selected. Your account is created through this personal link, valid for 48 hours.\n\n{{link}}\n\nThe Atheris team",
+        },
+        client: {
+          subject: "Your Atheris client portal",
+          body: "Hello {{name}},\n\nWe are pleased to welcome you. Your account is created through this personal link, valid for 48 hours.\n\n{{link}}\n\nThe Atheris team",
+        },
+      },
     },
   },
 
@@ -172,7 +184,7 @@ export const en = {
       ceo: "CEO",
       manager: "Manager",
       commercial: "Sales rep",
-      vendeur: "Business developer",
+      sdr: "SDR",
       client: "Client",
     },
     userStatus: {
@@ -407,6 +419,9 @@ export const en = {
     copied: "Copied",
     copyFallback: "Copy failed: the field is selected, use Ctrl+C.",
     openLink: "Open the link",
+    delete: "Delete",
+    deleting: "Deleting…",
+    deleteConfirm: "Permanently delete this interview link? This action cannot be undone.",
     listTitle: "Interviews",
     empty: "No interviews yet.",
     emptyHint: "Create a link to invite a candidate to pick a slot.",
@@ -449,6 +464,7 @@ export const en = {
       nouveau: "New",
       invite: "Invited",
       refuse: "Rejected",
+      recrute: "Hired",
     },
     filterLabel: "Filter by status",
     filterAll: "All",
@@ -466,6 +482,10 @@ export const en = {
     rejectedAtLabel: "Rejected on",
     inviteAction: "Invite to an interview",
     rejectAction: "Reject",
+    recruitAction: "Hire",
+    recruiting: "Hiring…",
+    recruitSuccess: "Hiring link emailed to the candidate.",
+    recruitError: "Could not send the hiring link. Please retry.",
     unavailable: "Unavailable",
     modal: {
       inviteTitle: "Invite to an interview",

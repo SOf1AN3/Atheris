@@ -134,7 +134,8 @@ export interface PlatformNavContent {
   ceo: PlatformNavItem[];
   manager: PlatformNavItem[];
   commercial: PlatformNavItem[];
-  vendeur: PlatformNavItem[];
+  /** Rôle `sdr` (ex-« vendeur ») — aligné sur l'enum `role` de la DB. */
+  sdr: PlatformNavItem[];
   client: PlatformNavItem[];
   logout: string;
   /** Lien « Mon profil » (commun à tous les rôles). */
@@ -213,9 +214,22 @@ export interface ValidationContent {
   tooLong: (max: number) => string;
 }
 
-/** Page de connexion d'un lien d'invitation client (activation de compte). */
+/** Textes de l'e-mail d'invitation à la création de compte. */
+export interface InvitationEmailContent {
+  /** Objet de l'e-mail. */
+  subject: string;
+  /**
+   * Corps de l'e-mail — placeholders littéraux `{{name}}` et `{{link}}`,
+   * remplacés côté serveur avant envoi (voir convention plus haut).
+   */
+  body: string;
+}
+
+/** Page d'activation d'un lien d'invitation (compte `sdr` ou `client`). */
 export interface InvitationContent {
   title: string;
+  /** Phrase descriptive sous le titre (générique, tous rôles). */
+  description: string;
   submit: string;
   successTitle: string;
   successBody: string;
@@ -227,6 +241,11 @@ export interface InvitationContent {
   invalid: string;
   /** Email déjà pourvu d'un compte (refus de takeover). */
   duplicate: string;
+  /** Textes des e-mails d'invitation, par rôle destinataire. */
+  email: {
+    sdr: InvitationEmailContent;
+    client: InvitationEmailContent;
+  };
 }
 
 /** Contenu authentification racine. */
@@ -599,6 +618,12 @@ export interface InterviewsContent {
   copyFallback: string;
   /** Lien direct vers la page publique `/{locale}/entretien/{token}`. */
   openLink: string;
+  /** Bouton de suppression d'un lien d'entretien. */
+  delete: string;
+  /** Libellé du bouton pendant l'appel serveur de suppression. */
+  deleting: string;
+  /** Confirmation avant suppression définitive (dialogue irréversible). */
+  deleteConfirm: string;
   /** Titre de la liste. */
   listTitle: string;
   /** État vide : phrase principale. */
@@ -649,7 +674,7 @@ export interface RecruitmentErrors {
 }
 
 /** Statuts d'une candidature, dérivés de l'enum `job_application_status`. */
-export type JobApplicationStatus = "nouveau" | "invite" | "refuse";
+export type JobApplicationStatus = "nouveau" | "invite" | "refuse" | "recrute";
 
 /** Contenu de la page « Recrutement » (/espace/recrutement, CEO seul). */
 export interface RecruitmentContent {
@@ -682,6 +707,14 @@ export interface RecruitmentContent {
   rejectedAtLabel: string;
   inviteAction: string;
   rejectAction: string;
+  /** CTA « Recruter » — envoie le lien de création de compte au candidat. */
+  recruitAction: string;
+  /** Libellé du bouton pendant l'appel serveur de recrutement. */
+  recruiting: string;
+  /** Toast de succès : le lien de recrutement a été envoyé par e-mail. */
+  recruitSuccess: string;
+  /** Erreur : envoi du lien de recrutement impossible. */
+  recruitError: string;
   unavailable: string;
   modal: {
     inviteTitle: string;

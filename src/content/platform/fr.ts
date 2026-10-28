@@ -58,7 +58,7 @@ export const fr: PlatformContent = {
       { label: "Tableau de bord", href: "/espace/tableau-de-bord" },
       { label: "Pipeline", href: "/espace/prospects" },
     ],
-    vendeur: [
+    sdr: [
       { label: "Tableau de bord", href: "/espace/tableau-de-bord" },
       { label: "Mes prospects", href: "/espace/prospects" },
       { label: "Mes gains", href: "/espace/commissions" },
@@ -122,7 +122,9 @@ export const fr: PlatformContent = {
       tooLong: (max: number) => `Saisissez au maximum ${max} caractères.`,
     },
     invitation: {
-      title: "Activation de votre espace",
+      title: "Créez votre compte",
+      description:
+        "Ce lien personnel vous permet de créer votre compte Atheris. Il est valable 48 heures.",
       submit: "Activer mon compte",
       successTitle: "Compte activé",
       successBody: "Votre espace client est prêt. Connectez-vous pour suivre votre projet.",
@@ -130,6 +132,16 @@ export const fr: PlatformContent = {
       used: "Ce lien d’invitation a déjà été utilisé.",
       invalid: "Ce lien d’invitation est invalide.",
       duplicate: "Un compte est déjà enregistré avec cette adresse email.",
+      email: {
+        sdr: {
+          subject: "Votre recrutement chez Atheris — créez votre compte",
+          body: "Bonjour {{name}},\n\nVotre candidature a été retenue. Votre compte est créé via ce lien personnel, valable 48 heures.\n\n{{link}}\n\nL’équipe Atheris",
+        },
+        client: {
+          subject: "Votre espace client Atheris",
+          body: "Bonjour {{name}},\n\nNous sommes ravis de vous accueillir. Votre compte est créé via ce lien personnel, valable 48 heures.\n\n{{link}}\n\nL’équipe Atheris",
+        },
+      },
     },
   },
 
@@ -178,7 +190,7 @@ export const fr: PlatformContent = {
       ceo: "CEO",
       manager: "Manager",
       commercial: "Commercial",
-      vendeur: "Vendeur",
+      sdr: "SDR",
       client: "Client",
     },
     userStatus: {
@@ -413,6 +425,10 @@ export const fr: PlatformContent = {
     copied: "Copié",
     copyFallback: "Copie impossible : le champ est sélectionné, utilisez Ctrl+C.",
     openLink: "Ouvrir le lien",
+    delete: "Supprimer",
+    deleting: "Suppression…",
+    deleteConfirm:
+      "Supprimer définitivement ce lien d’entretien ? Cette action est irréversible.",
     listTitle: "Entretiens",
     empty: "Aucun entretien pour le moment.",
     emptyHint: "Créez un lien pour inviter un candidat à choisir son créneau.",
@@ -455,6 +471,7 @@ export const fr: PlatformContent = {
       nouveau: "Nouveau",
       invite: "Invité",
       refuse: "Refusé",
+      recrute: "Recruté",
     },
     filterLabel: "Filtrer par statut",
     filterAll: "Tous",
@@ -472,6 +489,10 @@ export const fr: PlatformContent = {
     rejectedAtLabel: "Refusé le",
     inviteAction: "Inviter à un entretien",
     rejectAction: "Refuser",
+    recruitAction: "Recruter",
+    recruiting: "Recrutement en cours…",
+    recruitSuccess: "Lien de recrutement envoyé par e-mail au candidat.",
+    recruitError: "Impossible d’envoyer le lien de recrutement. Réessayez.",
     unavailable: "Indisponible",
     modal: {
       inviteTitle: "Inviter à un entretien",
