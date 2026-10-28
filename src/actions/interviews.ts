@@ -5,7 +5,7 @@
  *
  * CONTRAT PUBLIC (codes BRUTS uniquement — le client traduit, jamais de
  * message serveur, voir `SiteContent.interview.errors.*`) :
- * - `createInterviewLink(locale?)` → `{ ok: true; token; url }` |
+ * - `createInterviewLink(locale?, label?)` → `{ ok: true; token; url }` |
  *   `{ ok: false; code: "forbidden" | "invalid" | "failed" }` ;
  * - `listInterviews()` → `{ ok: true; interviews: InterviewListItem[] }` |
  *   `{ ok: false; code: "forbidden" }` ;
@@ -86,6 +86,12 @@ export type CreateInterviewLinkResult =
 export type InterviewListItem = {
   id: string;
   token: string;
+  /**
+   * Étiquette affichée au CEO (nom du candidat si lien issu d'une
+   * candidature, texte libre si création manuelle) — `null` si absente.
+   * Aucun rapport avec les colonnes de réservation (`firstName`/`lastName`).
+   */
+  label: string | null;
   firstName: string;
   lastName: string;
   email: string;
@@ -142,6 +148,14 @@ export type SubmitInterviewResult = { ok: true } | { ok: false; code: SubmitInte
 const TOKEN_PATTERN = /^[a-f0-9]{64}$/;
 
 const localeSchema = z.enum(locales);
+
+/**
+ * Étiquette optionnelle d'un lien (≤ 120 car.) : nom du candidat si le lien
+ * est issu d'une candidature, texte libre si création manuelle. Le trim est
+ * appliqué par Zod ; un label vide après trim est converti `null` en DB (voir
+ * `createInterviewLink`).
+ */
+const labelSchema = z.string().trim().max(120).optional();
 
 const submitInterviewSchema = z.object({
   token: z.string().regex(TOKEN_PATTERN),
@@ -335,18 +349,30 @@ function buildRecapText(args: {
  * non devinable) et l'URL est renvoyée **au CEO seul**.
  *
  * @param locale Locale optionnelle du lien (défaut `fr`) — validée par Zod.
+ * @param label Étiquette optionnelle affichée au CEO (nom du candidat si le
+ *   lien est issu d'une candidature, texte libre si création manuelle) —
+ *   validée par Zod (`trim`, max 120 car.) ; un label vide/absent est stocké
+ *   `null` en DB. Ne touche **jamais** aux colonnes de réservation.
  * @returns `{ ok: true; token; url }` ; sinon `forbidden` (session absente /
- *   rôle non `ceo`), `invalid` (locale forgée) ou `failed` (collision
+ *   rôle non `ceo`), `invalid` (locale ou label forgé) ou `failed` (collision
  *   d'index rare sur la sentinelle `starts_at`).
  * @throws Erreur d'infra DB — journalisée puis propagée → 500 (jamais
  *   transformée en code métier), sauf la violation d'unique traitée ci-dessus.
  */
-export async function createInterviewLink(locale?: Locale): Promise<CreateInterviewLinkResult> {
+export async function createInterviewLink(
+  locale?: Locale,
+  label?: string,
+): Promise<CreateInterviewLinkResult> {
   const actor = await activeActor();
   if (actor === null) return { ok: false, code: "forbidden" };
 
   const parsedLocale = localeSchema.safeParse(locale ?? DEFAULT_LOCALE);
   if (!parsedLocale.success) return { ok: false, code: "invalid" };
+
+  const parsedLabel = labelSchema.safeParse(label);
+  if (!parsedLabel.success) return { ok: false, code: "invalid" };
+  // Un label vide après trim (ou absent) → `null` en base.
+  const linkLabel = parsedLabel.data && parsedLabel.data.length > 0 ? parsedLabel.data : null;
 
   const token = randomBytes(TOKEN_BYTES).toString("hex");
   const db = getDb();
@@ -354,6 +380,7 @@ export async function createInterviewLink(locale?: Locale): Promise<CreateInterv
   try {
     await db.insert(interviews).values({
       token,
+      label: linkLabel,
       // Sentinelles « lien créé, pas encore réservé » (toutes ces colonnes
       // sont NOT NULL sans défaut, PLAN §1.1) — remplies à la réservation.
       firstName: "",
@@ -406,6 +433,7 @@ export async function listInterviews(): Promise<ListInterviewsResult> {
       .select({
         id: interviews.id,
         token: interviews.token,
+        label: interviews.label,
         firstName: interviews.firstName,
         lastName: interviews.lastName,
         email: interviews.email,
@@ -427,6 +455,7 @@ export async function listInterviews(): Promise<ListInterviewsResult> {
       interviews: rows.map((row) => ({
         id: row.id,
         token: row.token,
+        label: row.label,
         firstName: row.firstName,
         lastName: row.lastName,
         email: row.email,

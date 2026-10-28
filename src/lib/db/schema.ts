@@ -644,6 +644,10 @@ export const interviews = pgTable(
     localDate: text("local_date").notNull(), // AAAA-MM-JJ (tz candidat)
     localHour: text("local_hour").notNull(), // HH:mm (tz candidat)
     status: interviewStatus("status").notNull().default("pending"),
+    // Étiquette affichée au CEO (nom du candidat si lien issu d'une
+    // candidature, texte libre si création manuelle). Rien à voir avec les
+    // colonnes de réservation.
+    label: text("label"),
     // NULL = e-mail Récap non envoyé (échec Resend ≠ échec réservation, §2.3).
     notifiedAt: tstz("notified_at"),
     createdAt: tstz("created_at").defaultNow().notNull(),

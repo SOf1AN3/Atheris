@@ -542,11 +542,17 @@ export async function inviteToInterview(
 
     // 3. Lien d'entretien (jeton aléatoire) — codes internes propages en
     //    `failed` (le CEO est déjà authentifié ailleurs : pas de fuite).
+    //    Le label porte le nom du candidat (colonnes `label`, distinctes des
+    //    colonnes de réservation) — nom vide → aucun label.
     const recipient: ApplicationRecipient = {
       ...application,
       locale: asLocale(application.locale),
     };
-    const link = await createInterviewLink(recipient.locale);
+    const candidateLabel = `${application.firstName} ${application.lastName}`.trim();
+    const link = await createInterviewLink(
+      recipient.locale,
+      candidateLabel.length > 0 ? candidateLabel : undefined,
+    );
     if (!link.ok) return { ok: false, code: "failed" };
     const lien = absoluteInterviewUrl(link.url);
 
