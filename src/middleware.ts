@@ -231,18 +231,13 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     return NextResponse.next();
   }
 
-  // 2) Page de connexion : un compte déjà connecté (JWT vérifié +
-  //    rôle valide + statut actif) ne doit jamais revoir la page de connexion
-  //    (boucle connecté-sur-login). Un jeton non vérifiable ou un compte non
-  //    actif laisse la page s'afficher (le message dédié vient de `login()`).
+  // 2) Page de connexion : aucun renvoi d'ici. La règle « déjà connecté » vit
+  //    dans la page elle-même (src/app/[locale]/(auth)/connexion/page.tsx) via
+  //    le wrapper `auth()` qui REVALIDE en base : le middleware Edge ne peut
+  //    pas distinguer un jeton valable du jeton d'un compte SUPPRIMÉ, ce qui
+  //    créait une boucle infinie espace → connexion → espace (E2E Lot 4).
   //    (`/inscription` a été retiré : création de compte sur lien unique 48 h.)
   if (pathname === `/${locale}/connexion`) {
-    if (claims !== null) {
-      const { role, status } = claims;
-      if (isRole(role) && status === "active") {
-        return redirectToRoleHome(request, locale, role);
-      }
-    }
     return NextResponse.next();
   }
 

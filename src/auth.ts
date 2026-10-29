@@ -46,6 +46,7 @@
 import { and, count, eq, gte } from "drizzle-orm";
 import NextAuth from "next-auth";
 import { CredentialsSignin } from "next-auth";
+import type { Session } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { z } from "zod";
 
@@ -271,8 +272,75 @@ const config = {
   ],
 } satisfies Parameters<typeof NextAuth>[0];
 
-// `handlers` alimente src/app/api/auth/[...nextauth]/route.ts ; `auth` sert
-// aux Server Components / middleware (T07) ; `signIn`/`signOut` sont appelés
-// par la Server Action login()/logout() (src/actions/auth.ts) avec
-// `redirect: false` pour rester maître des redirections localisées.
-export const { handlers, auth, signIn, signOut } = NextAuth(config);
+// `handlers` alimente src/app/api/auth/[...nextauth]/route.ts ; `signIn`/
+// `signOut` sont appelés par la Server Action login()/logout()
+// (src/actions/auth.ts) avec `redirect: false` pour rester maître des
+// redirections localisées.
+const { handlers, auth: nextAuthSession, signIn, signOut } = NextAuth(config);
+
+export { handlers, signIn, signOut };
+
+// UUID canonique (forme basse/casse haute acceptée) — garde anti-jeton corrompu.
+const UUID_SHAPE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
+
+/**
+ * `auth()` — session de l'espace connecté, **revalidée en base à chaque
+ * résolution** (LE remplaçant de l'export `auth` de NextAuth : signature
+ * identique `(): Promise<Session | null>`, aucun consommateur à adapter).
+ *
+ * ─── POURQUOI ──────────────────────────────────────────────────────────────
+ * La session JWT survit à la suppression du compte : un ancien cookie d'un
+ * compte **purgé** restait valide `maxAge` (7 jours) — constaté en revue du
+ * Lot 4 (session fantôme d'un compte supprimé). Le callback `session` de
+ * cette version de NextAuth ne peut pas renvoyer `null` (typage), d'où ce
+ * wrapper : le jeton n'est plus qu'une PREUVE d'identité, l'état affiché
+ * (rôle, statut, nom) est relu en DB.
+ *
+ * ─── RÈGLES ────────────────────────────────────────────────────────────────
+ * - id de jeton hors forme uuid → `null` (jeton corrompu, zéro requête) ;
+ * - compte **absent** ou `status !== 'active'` → `null` (reconnexion forcée
+ *   à la prochaine requête) ;
+ * - rôle/statut/nom **resynchronisés** depuis la DB (autorité DB > claims
+ *   anciens : ex. renommage `vendeur` → `sdr`, changement de rôle) ;
+ * - **fail-open sur erreur d'infra** : la session est conservée et l'erreur
+ *   journalisée — un incident DB ne déconnecte pas tout le monde, et aucun
+ *   accès n'est ouvert au-delà de ce que le jeton prouvait déjà.
+ *
+ * ⚠ Le middleware Edge reste en lecture de claims (`getToken`, aucun DB) :
+ * il continue de servir de filet grossier ; ce wrapper est le contrôle fin,
+ * exécuté côté Node par chaque page/action (`await auth()`).
+ *
+ * Coût : une lecture PK `users` par résolution de session (index `users_pkey`).
+ */
+export async function auth(): Promise<Session | null> {
+  const session = await nextAuthSession();
+  if (session === null) return null;
+
+  if (
+    typeof session.user.id !== "string" ||
+    !UUID_SHAPE.test(session.user.id)
+  ) {
+    return null;
+  }
+
+  try {
+    const db = getDb();
+    const rows = await db
+      .select({ role: users.role, status: users.status, name: users.name })
+      .from(users)
+      .where(eq(users.id, session.user.id))
+      .limit(1);
+    const row = rows[0];
+
+    if (row === undefined || row.status !== "active") return null;
+
+    session.user.role = row.role;
+    session.user.status = row.status;
+    session.user.name = row.name;
+    return session;
+  } catch (error) {
+    console.error("[auth] revalidation de session impossible", error);
+    return session;
+  }
+}
