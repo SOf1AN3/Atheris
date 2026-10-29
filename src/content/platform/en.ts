@@ -439,6 +439,7 @@ export const en = {
     emptyHint: "Create a link to invite a candidate to pick a slot.",
     booked: "Booked",
     notBooked: "Not booked yet",
+    meetBadge: "Google Meet",
     timezoneNote: "Times shown in Algiers (UTC+1)",
     columns: {
       created: "Created",

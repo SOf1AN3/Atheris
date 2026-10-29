@@ -446,6 +446,7 @@ export const fr: PlatformContent = {
     emptyHint: "Créez un lien pour inviter un candidat à choisir son créneau.",
     booked: "Réservé",
     notBooked: "Pas encore réservé",
+    meetBadge: "Google Meet",
     timezoneNote: "Horaires affichés à Alger (UTC+1)",
     columns: {
       created: "Créé le",

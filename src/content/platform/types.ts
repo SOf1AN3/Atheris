@@ -653,6 +653,8 @@ export interface InterviewsContent {
   booked: string;
   /** Texte de remplacement d'une ligne pas encore réservée. */
   notBooked: string;
+  /** Badge identifiant la plateforme Google Meet (page CEO). */
+  meetBadge: string;
   /** Note sous le titre de la liste : fuseau d'affichage (`Africa/Algiers`). */
   timezoneNote: string;
   /** Micro-labels des blocs d'information de chaque ligne. */
