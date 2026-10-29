@@ -458,6 +458,30 @@ export const en = {
     },
   },
 
+  notifications: {
+    title: "Notifications",
+    open: "Open notifications",
+    empty: "No new notifications",
+    markAll: "Mark all as read",
+    unreadBadge: "{{count}} unread",
+    view: "View",
+    items: {
+      contact_received: "New contact: {{entity}}",
+      application_created: "New application: {{entity}}",
+      interview_booked: "Interview booked: {{entity}}",
+      prospect_status_changed: "{{actor}} changed the status of {{entity}}",
+      quote_signed: "Signed quote: {{entity}}",
+      project_message: "New message from {{actor}}",
+      commission_due: "Commission due: {{entity}}",
+      commission_paid: "Commission paid: {{entity}}",
+      milestone_validated: "Milestone validated: {{entity}}",
+      account_activated: "Account activated: {{entity}}",
+      reminder_due: "Reminder due: {{entity}}",
+      mail_failed: "Email not sent: {{entity}}",
+    },
+    unknown: "Notification",
+  },
+
   recruitment: {
     title: "Recruitment",
     intro:

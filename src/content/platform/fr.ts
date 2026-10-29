@@ -465,6 +465,32 @@ export const fr: PlatformContent = {
     },
   },
 
+  notifications: {
+    title: "Notifications",
+    open: "Ouvrir les notifications",
+    empty: "Aucune nouvelle notification",
+    markAll: "Tout marquer lu",
+    // Forme plurielle par défaut — le badge n'affiche jamais « 1 non lues »
+    // grâce au branchement client (compteur > 1 sinon repli « 1 non lue »).
+    unreadBadge: "{{count}} non lues",
+    view: "Voir",
+    items: {
+      contact_received: "Nouveau contact : {{entity}}",
+      application_created: "Nouvelle candidature : {{entity}}",
+      interview_booked: "Entretien réservé : {{entity}}",
+      prospect_status_changed: "{{actor}} a changé le statut de {{entity}}",
+      quote_signed: "Devis signé : {{entity}}",
+      project_message: "Nouveau message de {{actor}}",
+      commission_due: "Commission à verser : {{entity}}",
+      commission_paid: "Commission versée : {{entity}}",
+      milestone_validated: "Jalon validé : {{entity}}",
+      account_activated: "Compte activé : {{entity}}",
+      reminder_due: "Relance due : {{entity}}",
+      mail_failed: "E-mail non envoyé : {{entity}}",
+    },
+    unknown: "Notification",
+  },
+
   recruitment: {
     title: "Recrutement",
     intro:

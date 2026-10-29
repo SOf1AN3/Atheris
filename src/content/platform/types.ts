@@ -669,6 +669,57 @@ export interface InterviewsContent {
 }
 
 // ---------------------------------------------------------------------------
+// Notifications in-app (cloche topbar, PLAN §FE-A Lot 4).
+// ---------------------------------------------------------------------------
+
+/**
+ * Les 12 types de notifications, **miroir exact** de l'union `NotificationType`
+ * de `src/lib/notify.ts` (source de vérité des `type` écrits en DB). Volontairement
+ * redéfinie ici pour garder la couche contenu indépendante du module serveur ;
+ * les deux doivent rester alignés.
+ */
+export type NotificationType =
+  | "contact_received"
+  | "application_created"
+  | "interview_booked"
+  | "prospect_status_changed"
+  | "quote_signed"
+  | "project_message"
+  | "commission_due"
+  | "commission_paid"
+  | "milestone_validated"
+  | "account_activated"
+  | "reminder_due"
+  | "mail_failed";
+
+/**
+ * Contenu du panneau de notifications in-app.
+ *
+ * CONVENTION PLACEHOLDERS — double accolade (`{{actor}}`, `{{entity}}`,
+ * `{{count}}`), distincte des `{single}` de la landing : le `type` brut et le
+ * `meta` (`{ actor, entity, … }`, strings brutes) viennent de l'API, la phrase
+ * est assemblée côté client par simple `String.replace`.
+ */
+export interface NotificationsContent {
+  /** Titre du panneau déroulant. */
+  title: string;
+  /** `aria-label` du bouton cloche de la topbar. */
+  open: string;
+  /** État vide : aucune notification non lue. */
+  empty: string;
+  /** Bouton « tout marquer lu ». */
+  markAll: string;
+  /** Badge du compteur de non-lues — `{{count}}` = nombre de notifications non lues (forme plurielle par défaut). */
+  unreadBadge: string;
+  /** Libellé de l'action « Voir » (toasts de notification). */
+  view: string;
+  /** Phrase par type de notification — `{{actor}}` = nom de l'auteur, `{{entity}}` = libellé de l'entité concernée. */
+  items: Record<NotificationType, string>;
+  /** Repli affiché si le `type` renvoyé par l'API est inconnu côté client. */
+  unknown: string;
+}
+
+// ---------------------------------------------------------------------------
 // Recrutement (candidatures /recrutement — espace CEO).
 // ---------------------------------------------------------------------------
 
@@ -920,6 +971,8 @@ export interface PlatformContent {
   dashboard: DashboardContent;
   commissions: CommissionsContent;
   interviews: InterviewsContent;
+  /** Notifications in-app (cloche topbar, PLAN §FE-A Lot 4). */
+  notifications: NotificationsContent;
   /** Page « Recrutement » (candidatures /recrutement, CEO seul). */
   recruitment: RecruitmentContent;
   client: ClientContent;
