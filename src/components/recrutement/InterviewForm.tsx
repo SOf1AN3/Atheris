@@ -378,12 +378,20 @@ type InterviewFormProps = {
   dates: string[];
   /** `SiteContent.interview` : uniquement des strings → sérialisable RSC. */
   content: InterviewContent;
+  /**
+   * URL de la salle Google Meet lue côté SERVEUR uniquement (`@/lib/meet`,
+   * aucun `process.env` côté client) et transmise en prop sérialisable.
+   * `null` = aucune salle configurée → le bloc succès reste strictement
+   * identique (aucun CTA Meet affiché).
+   */
+  meetLink: string | null;
 };
 
 export function InterviewForm({
   token,
   dates,
   content,
+  meetLink,
 }: InterviewFormProps): ReactNode {
   const errors = content.form.errors;
   const router = useRouter();
@@ -626,6 +634,29 @@ export function InterviewForm({
                 <p className="mt-3 max-w-[38ch] text-[15px] text-muted">
                   {content.form.successMessage}
                 </p>
+                {/* Bloc Meet (optionnel) : phrase du dict avec `{{link}}`
+                    remplacé, puis CTA secondaire vers la salle (nouvel
+                    onglet) et URL brute copiable en dessous — indispensable
+                    pour un candidat sur mobile SANS app Meet. Rendu UNIQUEMENT
+                    si la page serveur a fourni un `meetLink`. */}
+                {meetLink !== null ? (
+                  <div className="mt-6 flex w-full flex-col items-center gap-3">
+                    <p className="max-w-[38ch] text-[15px] leading-[1.65] text-muted">
+                      {content.meetLink.replace("{{link}}", meetLink)}
+                    </p>
+                    <a
+                      href={meetLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex h-11 cursor-pointer items-center justify-center rounded-xl border border-line-2 px-5 text-[14px] font-medium text-fg-2 transition-colors duration-[180ms] ease-[cubic-bezier(0.16,1,0.3,1)] hover:border-line-3 hover:bg-white/[0.04]"
+                    >
+                      {content.meetCta}
+                    </a>
+                    <p className="text-[13px] text-muted break-all">
+                      {meetLink}
+                    </p>
+                  </div>
+                ) : null}
                 {/* Q3 : aucune action de modification — « Fermer » quitte la
                     page (le créneau validé est immuable, cf. `successMessage`). */}
                 <Button

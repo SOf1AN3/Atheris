@@ -9,6 +9,7 @@ import { isValidLocale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/dictionaries";
 import { getDb } from "@/lib/db";
 import { interviews } from "@/lib/db/schema";
+import { getMeetLink } from "@/lib/meet";
 import { getSlotsForWindow, getSlotsForWindowDates } from "@/lib/slots";
 
 /**
@@ -108,6 +109,10 @@ export default async function EntretienPage({
   const dict = await getDictionary(locale);
   const interview = dict.interview;
 
+  // URL Meet lue UNIQUEMENT côté serveur (env) — transmise en prop
+  // sérialisable `string | null` ; le client ne lit jamais `process.env`.
+  const meetLink = getMeetLink();
+
   // Lecture minimaliste : `status` + `createdAt` seuls, aucun email ni nom
   // renvoyés au client. Toute erreur inattendue sort du rendu 404 (boundary
   // Next), donc sans stack ni détail non plus.
@@ -160,6 +165,7 @@ export default async function EntretienPage({
                 token={token}
                 dates={dates}
                 content={interview}
+                meetLink={meetLink}
               />
             )
           ) : (
