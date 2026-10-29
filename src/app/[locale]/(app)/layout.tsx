@@ -60,6 +60,7 @@ export default async function AppLayout({
       user={{ name: session.user.name }}
       roleLabel={dict.statuses.role[role]}
       skipToContent={a11y.skipToContent}
+      notifications={dict.notifications}
     >
       {children}
     </AppShell>

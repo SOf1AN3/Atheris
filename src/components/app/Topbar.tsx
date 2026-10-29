@@ -6,6 +6,10 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 
 import { logout } from "@/actions/auth";
+import {
+  NotificationsBell,
+  type NotificationsLabels,
+} from "@/components/app/NotificationsBell";
 import { SidebarContent } from "@/components/app/Sidebar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -31,10 +35,16 @@ import { cn } from "@/lib/utils";
  * `backdrop-blur-[20px]` (§2.6 — glass), filet `border-b border-line`.
  *
  * RÉPARTITION GAUCHE / DROITE : le groupe de gauche porte l'ouverture du menu
- * mobile, le groupe de droite porte le switch de langue puis le menu
- * utilisateur. Les deux enfants de l'`<header>` passent par `justify-between` :
- * sur desktop (bouton menu masqué) le groupe de droite vient se caler au bord
- * droit au lieu de coller au bord gauche.
+ * mobile, le groupe de droite porte le switch de langue, la cloche de
+ * notifications (Lot 4) puis le menu utilisateur. Les deux enfants de
+ * l'`<header>` passent par `justify-between` : sur desktop (bouton menu masqué)
+ * le groupe de droite vient se caler au bord droit au lieu de coller au bord
+ * gauche.
+ *
+ * MOBILE (375 px) : hamburger (44) + langue (2 × ~44) + cloche (44) +
+ * avatar (44) + gaps tiennent sans débordement (~285 px < 375 px) — le switch
+ * de langue reste donc visible sous `sm` (aucun élément masqué, décision
+ * assumée vérifiée à 375 px).
  *
  * NON RENDUS (signalés, hors périmètre de cette passe d'habillage) : le
  * « titre de page / fil d'ariane » à gauche et le bouton d'action primaire à
@@ -69,6 +79,8 @@ export type TopbarProps = {
    * mobile (même valeur que la sidebar desktop).
    */
   roleLabel: string;
+  /** Libellés des notifications in-app (`dict.notifications`) — Lot 4. */
+  notifications: NotificationsLabels;
 };
 
 /** Préfixe de locale en tête de chemin (`/fr…`, `/en…`). */
@@ -100,6 +112,7 @@ export function Topbar({
   nav,
   user,
   roleLabel,
+  notifications,
 }: TopbarProps): ReactNode {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const pathname = usePathname();
@@ -152,7 +165,7 @@ export function Topbar({
         </Sheet>
       </div>
 
-      {/* Droite : switch de langue + menu avatar. */}
+      {/* Droite : switch de langue + cloche de notifications + menu avatar. */}
       <div className="flex shrink-0 items-center gap-2">
         <div
           role="group"
@@ -179,6 +192,9 @@ export function Topbar({
             );
           })}
         </div>
+
+        {/* Cloche de notifications (client) — entre langue et avatar. */}
+        <NotificationsBell labels={notifications} locale={locale} />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

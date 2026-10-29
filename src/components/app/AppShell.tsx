@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import type { NotificationsLabels } from "@/components/app/NotificationsBell";
 import { Sidebar } from "@/components/app/Sidebar";
 import { Topbar } from "@/components/app/Topbar";
 import { Toaster } from "@/components/ui/sonner";
@@ -33,6 +34,8 @@ export type AppShellProps = {
   roleLabel: string;
   /** DESIGN §6.4 — libellé du skip-link (`dict.a11y.skipToContent`). */
   skipToContent: string;
+  /** Libellés des notifications in-app (`dict.notifications`) — Lot 4. */
+  notifications: NotificationsLabels;
   children: ReactNode;
 };
 
@@ -43,6 +46,7 @@ export function AppShell({
   user,
   roleLabel,
   skipToContent,
+  notifications,
   children,
 }: AppShellProps): ReactNode {
   return (
@@ -70,6 +74,7 @@ export function AppShell({
             nav={nav}
             user={user}
             roleLabel={roleLabel}
+            notifications={notifications}
           />
           <main
             id="main"
