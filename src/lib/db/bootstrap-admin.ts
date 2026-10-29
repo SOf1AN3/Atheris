@@ -53,7 +53,7 @@ import { hashPassword } from "@/lib/password";
 const DEFAULT_ADMIN_EMAIL = "admin@sofianeasma.me";
 
 /** Nom par défaut du compte administrateur (surchargeable via `ADMIN_NAME`). */
-const DEFAULT_ADMIN_NAME = "Administrateur Atheris";
+const DEFAULT_ADMIN_NAME = "Sofiane ASMA";
 
 /**
  * Règle de robustesse imposée — identique à `auth.signup.passwordRules` :
