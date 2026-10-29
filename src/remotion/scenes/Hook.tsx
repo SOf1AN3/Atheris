@@ -43,8 +43,8 @@ export const Hook: React.FC = () => {
           }}
         />
 
-        <SafeArea justify="space-between">
-          {/* Wordmark */}
+        <SafeArea justify="space-between" align="center">
+          {/* Wordmark — centré sur ce plan (alternance d'alignement) */}
           <div
             style={{
               display: "flex",
@@ -71,23 +71,25 @@ export const Hook: React.FC = () => {
 
           {/* Titre à deux voix, révélé mot à mot — centré verticalement dans
               l'espace restant : le H1 reste le sommet de la composition. */}
-          <div style={{ flex: 1, display: "flex", alignItems: "center" }}>
+          <div style={{ flex: 1, display: "flex", alignItems: "center", width: "100%" }}>
             <TwoVoiceTitle
               parts={[{ text: "Your product deserves more than a" }, { text: "template.", voice: "emotion" }]}
               start={10}
               stagger={2.6}
               size={96}
+              align="center"
             />
           </div>
 
-          {/* Filet + signature mono */}
-          <div style={{ marginBottom: 40 }}>
+          {/* Filet + signature mono — centrés */}
+          <div style={{ width: "100%", marginBottom: 40 }}>
             <Hairline start={30} duration={26} />
             <div
               style={{
                 marginTop: 24,
                 display: "flex",
                 alignItems: "center",
+                justifyContent: "center",
                 gap: 18,
                 opacity: interpolate(frame, [38, 56], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }),
               }}

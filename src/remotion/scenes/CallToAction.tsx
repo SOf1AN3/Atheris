@@ -101,10 +101,10 @@ export const CallToAction: React.FC = () => {
               />
             </div>
 
-            {/* Coordonnées */}
+            {/* Coordonnées — parfaitement centrées comme le reste du plan */}
             <div style={{ width: "100%" }}>
               <Hairline start={78} duration={26} />
-              <div style={{ marginTop: 24, display: "flex", flexDirection: "column", gap: 12 }}>
+              <div style={{ marginTop: 24, display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
                 {CONTACT.map((c, i) => (
                   <div
                     key={c}
@@ -112,6 +112,7 @@ export const CallToAction: React.FC = () => {
                       fontFamily: "var(--mono)",
                       fontSize: type.small,
                       letterSpacing: "0.06em",
+                      textAlign: "center",
                       color: i === 0 ? "#F4F2ED" : "#8A909E",
                       opacity: interpolate(frame, [88 + i * 6, 104 + i * 6], [0, 1], {
                         extrapolateLeft: "clamp",

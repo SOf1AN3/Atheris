@@ -1,0 +1,145 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1600" height="840" viewBox="0 0 1600 840"><defs><filter id="grey"><feColorMatrix type="saturate" values="0"/></filter></defs><rect width="1600" height="840" fill="#f7f7f4"/><text x="60" y="78" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="40" font-weight="700" fill="#161616">Atheris Labs — ronde 2 : le &lt;/&gt; dans le A</text><text x="60" y="116" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="20" fill="#6b6b6b">3 façons de tailler le signe de code dans la lettre · --greyscale</text><rect x="60" y="150" width="474.667" height="630" rx="18" fill="#fff" stroke="#161616" stroke-width="2"/><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Atheris Labs - G / Traverse" viewBox="0 0 256 256" x="90" y="190" width="414.667" height="300" preserveAspectRatio="xMidYMid meet">
+  <title>ATHERIS — G / Traverse (&lt;/&gt; en traverse du A)</title>
+  <!--
+    G / Traverse
+    A : pente 5:2, sommet (128,16), base y=240 (16→240), jambes T=40,
+    intérieurs 56/200, rencontre y=96, largeur(y) = y-16.
+    Fraisage </> : hauteur 48, chevrons 24.0, / course 48, trait 11, gouttières 14.
+    Le tout est UN SEUL path en evenodd : la lettre, sa contre-forme et le
+    fraisage sont des trous lus par le fond — donc vrai en une seule couleur.
+  -->
+  <path fill="#06070A" fill-rule="evenodd" d="M16 240 L128 16 L240 240 H210 L196 212 H60 L46 240 H16 Z M128 76 L160 140 L96 140 Z M86.11 148.11 L58.22 176 L86.11 203.89 L93.89 196.11 L73.78 176 L93.89 155.89 Z M162.11 155.89 L182.22 176 L162.11 196.11 L169.89 203.89 L197.78 176 L169.89 148.11 Z M107.89 203.89 L155.89 155.89 L148.11 148.11 L100.11 196.11 Z"/>
+</svg>
+</g><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Atheris Labs - G / Traverse" viewBox="0 0 256 256" x="90" y="516" width="64" height="64" preserveAspectRatio="xMidYMid meet">
+  <title>ATHERIS — G / Traverse (&lt;/&gt; en traverse du A)</title>
+  <!--
+    G / Traverse
+    A : pente 5:2, sommet (128,16), base y=240 (16→240), jambes T=40,
+    intérieurs 56/200, rencontre y=96, largeur(y) = y-16.
+    Fraisage </> : hauteur 48, chevrons 24.0, / course 48, trait 11, gouttières 14.
+    Le tout est UN SEUL path en evenodd : la lettre, sa contre-forme et le
+    fraisage sont des trous lus par le fond — donc vrai en une seule couleur.
+  -->
+  <path fill="#06070A" fill-rule="evenodd" d="M16 240 L128 16 L240 240 H210 L196 212 H60 L46 240 H16 Z M128 76 L160 140 L96 140 Z M86.11 148.11 L58.22 176 L86.11 203.89 L93.89 196.11 L73.78 176 L93.89 155.89 Z M162.11 155.89 L182.22 176 L162.11 196.11 L169.89 203.89 L197.78 176 L169.89 148.11 Z M107.89 203.89 L155.89 155.89 L148.11 148.11 L100.11 196.11 Z"/>
+</svg>
+</g><text x="122" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">64px</text><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Atheris Labs - G / Traverse" viewBox="0 0 256 256" x="180" y="548" width="32" height="32" preserveAspectRatio="xMidYMid meet">
+  <title>ATHERIS — G / Traverse (&lt;/&gt; en traverse du A)</title>
+  <!--
+    G / Traverse
+    A : pente 5:2, sommet (128,16), base y=240 (16→240), jambes T=40,
+    intérieurs 56/200, rencontre y=96, largeur(y) = y-16.
+    Fraisage </> : hauteur 48, chevrons 24.0, / course 48, trait 11, gouttières 14.
+    Le tout est UN SEUL path en evenodd : la lettre, sa contre-forme et le
+    fraisage sont des trous lus par le fond — donc vrai en une seule couleur.
+  -->
+  <path fill="#06070A" fill-rule="evenodd" d="M16 240 L128 16 L240 240 H210 L196 212 H60 L46 240 H16 Z M128 76 L160 140 L96 140 Z M86.11 148.11 L58.22 176 L86.11 203.89 L93.89 196.11 L73.78 176 L93.89 155.89 Z M162.11 155.89 L182.22 176 L162.11 196.11 L169.89 203.89 L197.78 176 L169.89 148.11 Z M107.89 203.89 L155.89 155.89 L148.11 148.11 L100.11 196.11 Z"/>
+</svg>
+</g><text x="196" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">32px</text><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Atheris Labs - G / Traverse" viewBox="0 0 256 256" x="238" y="564" width="16" height="16" preserveAspectRatio="xMidYMid meet">
+  <title>ATHERIS — G / Traverse (&lt;/&gt; en traverse du A)</title>
+  <!--
+    G / Traverse
+    A : pente 5:2, sommet (128,16), base y=240 (16→240), jambes T=40,
+    intérieurs 56/200, rencontre y=96, largeur(y) = y-16.
+    Fraisage </> : hauteur 48, chevrons 24.0, / course 48, trait 11, gouttières 14.
+    Le tout est UN SEUL path en evenodd : la lettre, sa contre-forme et le
+    fraisage sont des trous lus par le fond — donc vrai en une seule couleur.
+  -->
+  <path fill="#06070A" fill-rule="evenodd" d="M16 240 L128 16 L240 240 H210 L196 212 H60 L46 240 H16 Z M128 76 L160 140 L96 140 Z M86.11 148.11 L58.22 176 L86.11 203.89 L93.89 196.11 L73.78 176 L93.89 155.89 Z M162.11 155.89 L182.22 176 L162.11 196.11 L169.89 203.89 L197.78 176 L169.89 148.11 Z M107.89 203.89 L155.89 155.89 L148.11 148.11 L100.11 196.11 Z"/>
+</svg>
+</g><text x="246" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">16px</text><text x="90.0" y="636" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="26" font-weight="700" fill="#161616">A · Traverse</text><text x="90.0" y="664" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="15" font-weight="700" fill="#161616" letter-spacing="1.5">RECOMMENDED</text><text x="90.0" y="698" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19" fill="#555">Le A dont la traverse EST le signe &lt;/&gt; :</text><text x="90.0" y="724" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19" fill="#555">fraisé dans la matière, trous pleins, zéro</text><text x="90.0" y="750" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19" fill="#555">colle.</text><rect x="562.667" y="150" width="474.667" height="630" rx="18" fill="#fff" stroke="#e4e4e0" stroke-width="1"/><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Atheris Labs - E / Fraisé" viewBox="0 0 256 256" x="592.667" y="190" width="414.667" height="300" preserveAspectRatio="xMidYMid meet">
+  <title>ATHERIS — E / Fraisé (&lt;/&gt; fraisé dans la traverse)</title>
+  <!--
+    E / Fraisé
+    A : pente 5:2, sommet (128,16), base y=240 (16→240), jambes T=40,
+    intérieurs 56/200, rencontre y=96, largeur(y) = y-16.
+    Fraisage </> : hauteur 36, chevrons 18.0, / course 36, trait 11, gouttières 12.
+    Le tout est UN SEUL path en evenodd : la lettre, sa contre-forme et le
+    fraisage sont des trous lus par le fond — donc vrai en une seule couleur.
+  -->
+  <path fill="#06070A" fill-rule="evenodd" d="M16 240 L128 16 L240 240 H200 L186 212 H70 L56 240 H16 Z M128 96 L155 150 L101 150 Z M94.11 160.11 L72.22 182 L94.11 203.89 L101.89 196.11 L87.78 182 L101.89 167.89 Z M154.11 167.89 L168.22 182 L154.11 196.11 L161.89 203.89 L183.78 182 L161.89 160.11 Z M113.89 203.89 L149.89 167.89 L142.11 160.11 L106.11 196.11 Z"/>
+</svg>
+</g><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Atheris Labs - E / Fraisé" viewBox="0 0 256 256" x="592.667" y="516" width="64" height="64" preserveAspectRatio="xMidYMid meet">
+  <title>ATHERIS — E / Fraisé (&lt;/&gt; fraisé dans la traverse)</title>
+  <!--
+    E / Fraisé
+    A : pente 5:2, sommet (128,16), base y=240 (16→240), jambes T=40,
+    intérieurs 56/200, rencontre y=96, largeur(y) = y-16.
+    Fraisage </> : hauteur 36, chevrons 18.0, / course 36, trait 11, gouttières 12.
+    Le tout est UN SEUL path en evenodd : la lettre, sa contre-forme et le
+    fraisage sont des trous lus par le fond — donc vrai en une seule couleur.
+  -->
+  <path fill="#06070A" fill-rule="evenodd" d="M16 240 L128 16 L240 240 H200 L186 212 H70 L56 240 H16 Z M128 96 L155 150 L101 150 Z M94.11 160.11 L72.22 182 L94.11 203.89 L101.89 196.11 L87.78 182 L101.89 167.89 Z M154.11 167.89 L168.22 182 L154.11 196.11 L161.89 203.89 L183.78 182 L161.89 160.11 Z M113.89 203.89 L149.89 167.89 L142.11 160.11 L106.11 196.11 Z"/>
+</svg>
+</g><text x="624.667" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">64px</text><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Atheris Labs - E / Fraisé" viewBox="0 0 256 256" x="682.667" y="548" width="32" height="32" preserveAspectRatio="xMidYMid meet">
+  <title>ATHERIS — E / Fraisé (&lt;/&gt; fraisé dans la traverse)</title>
+  <!--
+    E / Fraisé
+    A : pente 5:2, sommet (128,16), base y=240 (16→240), jambes T=40,
+    intérieurs 56/200, rencontre y=96, largeur(y) = y-16.
+    Fraisage </> : hauteur 36, chevrons 18.0, / course 36, trait 11, gouttières 12.
+    Le tout est UN SEUL path en evenodd : la lettre, sa contre-forme et le
+    fraisage sont des trous lus par le fond — donc vrai en une seule couleur.
+  -->
+  <path fill="#06070A" fill-rule="evenodd" d="M16 240 L128 16 L240 240 H200 L186 212 H70 L56 240 H16 Z M128 96 L155 150 L101 150 Z M94.11 160.11 L72.22 182 L94.11 203.89 L101.89 196.11 L87.78 182 L101.89 167.89 Z M154.11 167.89 L168.22 182 L154.11 196.11 L161.89 203.89 L183.78 182 L161.89 160.11 Z M113.89 203.89 L149.89 167.89 L142.11 160.11 L106.11 196.11 Z"/>
+</svg>
+</g><text x="698.667" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">32px</text><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Atheris Labs - E / Fraisé" viewBox="0 0 256 256" x="740.667" y="564" width="16" height="16" preserveAspectRatio="xMidYMid meet">
+  <title>ATHERIS — E / Fraisé (&lt;/&gt; fraisé dans la traverse)</title>
+  <!--
+    E / Fraisé
+    A : pente 5:2, sommet (128,16), base y=240 (16→240), jambes T=40,
+    intérieurs 56/200, rencontre y=96, largeur(y) = y-16.
+    Fraisage </> : hauteur 36, chevrons 18.0, / course 36, trait 11, gouttières 12.
+    Le tout est UN SEUL path en evenodd : la lettre, sa contre-forme et le
+    fraisage sont des trous lus par le fond — donc vrai en une seule couleur.
+  -->
+  <path fill="#06070A" fill-rule="evenodd" d="M16 240 L128 16 L240 240 H200 L186 212 H70 L56 240 H16 Z M128 96 L155 150 L101 150 Z M94.11 160.11 L72.22 182 L94.11 203.89 L101.89 196.11 L87.78 182 L101.89 167.89 Z M154.11 167.89 L168.22 182 L154.11 196.11 L161.89 203.89 L183.78 182 L161.89 160.11 Z M113.89 203.89 L149.89 167.89 L142.11 160.11 L106.11 196.11 Z"/>
+</svg>
+</g><text x="748.667" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">16px</text><text x="592.6666666666667" y="636" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="26" font-weight="700" fill="#161616">B · Fraisé</text><text x="592.6666666666667" y="670" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19" fill="#555">Même fraisage dans une traverse plus</text><text x="592.6666666666667" y="696" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19" fill="#555">épaisse — un A plus massif, plus</text><text x="592.6666666666667" y="722" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19" fill="#555">instrument.</text><rect x="1065.33" y="150" width="474.667" height="630" rx="18" fill="#fff" stroke="#e4e4e0" stroke-width="1"/><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Atheris Labs - F / Monolithe" viewBox="0 0 256 256" x="1095.33" y="190" width="414.667" height="300" preserveAspectRatio="xMidYMid meet">
+  <title>ATHERIS — F / Monolithe (&lt;/&gt; fraisé dans le corps plein)</title>
+  <!--
+    F / Monolithe
+    A : pente 5:2, sommet (128,16), base y=240 (16→240), jambes T=40,
+    intérieurs 56/200, rencontre y=96, largeur(y) = y-16.
+    Fraisage </> : hauteur 40, chevrons 20.0, / course 40, trait 11, gouttières 12.
+    Le tout est UN SEUL path en evenodd : la lettre, sa contre-forme et le
+    fraisage sont des trous lus par le fond — donc vrai en une seule couleur.
+  -->
+  <path fill="#06070A" fill-rule="evenodd" d="M16 240 L128 16 L240 240 H200 L186 212 H70 L56 240 H16 Z M92.11 150.11 L68.22 174 L92.11 197.89 L99.89 190.11 L83.78 174 L99.89 157.89 Z M156.11 157.89 L172.22 174 L156.11 190.11 L163.89 197.89 L187.78 174 L163.89 150.11 Z M111.89 197.89 L151.89 157.89 L144.11 150.11 L104.11 190.11 Z"/>
+</svg>
+</g><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Atheris Labs - F / Monolithe" viewBox="0 0 256 256" x="1095.33" y="516" width="64" height="64" preserveAspectRatio="xMidYMid meet">
+  <title>ATHERIS — F / Monolithe (&lt;/&gt; fraisé dans le corps plein)</title>
+  <!--
+    F / Monolithe
+    A : pente 5:2, sommet (128,16), base y=240 (16→240), jambes T=40,
+    intérieurs 56/200, rencontre y=96, largeur(y) = y-16.
+    Fraisage </> : hauteur 40, chevrons 20.0, / course 40, trait 11, gouttières 12.
+    Le tout est UN SEUL path en evenodd : la lettre, sa contre-forme et le
+    fraisage sont des trous lus par le fond — donc vrai en une seule couleur.
+  -->
+  <path fill="#06070A" fill-rule="evenodd" d="M16 240 L128 16 L240 240 H200 L186 212 H70 L56 240 H16 Z M92.11 150.11 L68.22 174 L92.11 197.89 L99.89 190.11 L83.78 174 L99.89 157.89 Z M156.11 157.89 L172.22 174 L156.11 190.11 L163.89 197.89 L187.78 174 L163.89 150.11 Z M111.89 197.89 L151.89 157.89 L144.11 150.11 L104.11 190.11 Z"/>
+</svg>
+</g><text x="1127.33" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">64px</text><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Atheris Labs - F / Monolithe" viewBox="0 0 256 256" x="1185.33" y="548" width="32" height="32" preserveAspectRatio="xMidYMid meet">
+  <title>ATHERIS — F / Monolithe (&lt;/&gt; fraisé dans le corps plein)</title>
+  <!--
+    F / Monolithe
+    A : pente 5:2, sommet (128,16), base y=240 (16→240), jambes T=40,
+    intérieurs 56/200, rencontre y=96, largeur(y) = y-16.
+    Fraisage </> : hauteur 40, chevrons 20.0, / course 40, trait 11, gouttières 12.
+    Le tout est UN SEUL path en evenodd : la lettre, sa contre-forme et le
+    fraisage sont des trous lus par le fond — donc vrai en une seule couleur.
+  -->
+  <path fill="#06070A" fill-rule="evenodd" d="M16 240 L128 16 L240 240 H200 L186 212 H70 L56 240 H16 Z M92.11 150.11 L68.22 174 L92.11 197.89 L99.89 190.11 L83.78 174 L99.89 157.89 Z M156.11 157.89 L172.22 174 L156.11 190.11 L163.89 197.89 L187.78 174 L163.89 150.11 Z M111.89 197.89 L151.89 157.89 L144.11 150.11 L104.11 190.11 Z"/>
+</svg>
+</g><text x="1201.33" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">32px</text><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Atheris Labs - F / Monolithe" viewBox="0 0 256 256" x="1243.33" y="564" width="16" height="16" preserveAspectRatio="xMidYMid meet">
+  <title>ATHERIS — F / Monolithe (&lt;/&gt; fraisé dans le corps plein)</title>
+  <!--
+    F / Monolithe
+    A : pente 5:2, sommet (128,16), base y=240 (16→240), jambes T=40,
+    intérieurs 56/200, rencontre y=96, largeur(y) = y-16.
+    Fraisage </> : hauteur 40, chevrons 20.0, / course 40, trait 11, gouttières 12.
+    Le tout est UN SEUL path en evenodd : la lettre, sa contre-forme et le
+    fraisage sont des trous lus par le fond — donc vrai en une seule couleur.
+  -->
+  <path fill="#06070A" fill-rule="evenodd" d="M16 240 L128 16 L240 240 H200 L186 212 H70 L56 240 H16 Z M92.11 150.11 L68.22 174 L92.11 197.89 L99.89 190.11 L83.78 174 L99.89 157.89 Z M156.11 157.89 L172.22 174 L156.11 190.11 L163.89 197.89 L187.78 174 L163.89 150.11 Z M111.89 197.89 L151.89 157.89 L144.11 150.11 L104.11 190.11 Z"/>
+</svg>
+</g><text x="1251.33" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">16px</text><text x="1095.3333333333335" y="636" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="26" font-weight="700" fill="#161616">C · Monolithe</text><text x="1095.3333333333335" y="670" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19" fill="#555">Corps plein sans contre-forme : &lt;/&gt; devient</text><text x="1095.3333333333335" y="696" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19" fill="#555">la seule ouverture du A.</text></svg>

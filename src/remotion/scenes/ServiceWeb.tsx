@@ -12,7 +12,11 @@ import { SafeArea } from "../components/SafeArea";
  * Pôle n°1 de la landing (`services.items[0]`). Preuve visuelle = la console.
  * Composition dans la SafeArea : le rail de boutons TikTok occupe la droite.
  */
-export const ServiceWeb: React.FC = () => {
+export const ServiceWeb: React.FC<{ index?: string; label?: string; center?: boolean }> = ({
+  index = "01",
+  label = "SERVICES",
+  center = false,
+}) => {
   const frame = useCurrentFrame();
 
   // Dérive verticale lente : le feed vertical respire
@@ -31,15 +35,16 @@ export const ServiceWeb: React.FC = () => {
   return (
     <SceneShell variant="wipeUp">
       <AbsoluteFill style={{ transform: `translateY(${drift}px)` }}>
-        <SafeArea gap={30}>
-          <SectionIndex n="01" label="SERVICES" start={0} />
+        <SafeArea gap={30} align={center ? "center" : "stretch"}>
+          <SectionIndex n={index} label={label} start={0} center={center} />
 
-          <div>
+          <div style={{ width: "100%", textAlign: center ? "center" : "left" }}>
             <TwoVoiceTitle
               parts={[{ text: "Web platforms &" }, { text: "SaaS", voice: "emotion" }, { text: "products" }]}
               start={0}
               stagger={2.2}
               size={type.h2}
+              align={center ? "center" : "left"}
             />
             <p
               style={{
@@ -56,7 +61,7 @@ export const ServiceWeb: React.FC = () => {
           </div>
 
           {/* Carte panneau : la preuve */}
-          <div style={{ position: "relative", overflow: "hidden", borderRadius: 20 }}>
+          <div style={{ position: "relative", overflow: "hidden", borderRadius: 20, width: "100%" }}>
             <ConsoleMockup start={10} />
             <div
               style={{
@@ -69,15 +74,25 @@ export const ServiceWeb: React.FC = () => {
           </div>
 
           {/* Chips : la stack du pôle Web (dict `services.items[0].tags`) */}
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
-            {["Next.js", "Node.js", "PostgreSQL", "Multi-tenant"].map((label, i) => (
-              <Chip key={label} label={label} start={40} index={i} />
-            ))}
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 12,
+              width: "100%",
+              justifyContent: center ? "center" : "flex-start",
+            }}
+          >
+              {["Next.js", "Node.js", "PostgreSQL", "Multi-tenant"].map((label, i) => (
+                <Chip key={label} label={label} start={22} index={i} />
+              ))}
           </div>
 
           {/* Usages couverts — mono, faint */}
           <div
             style={{
+              width: "100%",
+              textAlign: center ? "center" : "left",
               fontFamily: "var(--mono)",
               fontSize: type.micro,
               letterSpacing: "0.14em",

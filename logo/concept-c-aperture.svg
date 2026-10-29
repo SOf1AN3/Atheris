@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="Atheris Labs — concept C, Aperture">
+  <title>ATHERIS — C / Aperture</title>
+  <!--
+    CONCEPT C — « APERTURE »
+    Construction (grille 256) :
+      · plaque usinée 32 → 224, rayon 32, COIN HAUT-DROIT chanfreiné 48+48 à 45°
+      · le A est FRAISÉ dans la plaque : même path en evenodd → le A devient
+        trou, la contre-forme redevient matière (îlot) automatiquement.
+      · A source : x 56 → 200, y 44 → 224 ; mis à l'échelle 0,82 et centré
+        optiquement (coordonnées pré-calculées, aucun transform).
+      · signal : la traverse reste PLEINE — barreau volt dans le vide.
+    A scalé : (69,198) (128,50) (187,198) (164,198) (153,172) (103,172) (92,198)
+              contre-forme (128,108) (142,142) (114,142)
+    Barreau : (91,142) (165,142) (176,172) (80,172)
+  -->
+  <path fill="#06070A" fill-rule="evenodd" d="M64 32 H176 L224 80 V192 A32 32 0 0 1 192 224 H64 A32 32 0 0 1 32 192 V64 A32 32 0 0 1 64 32 Z M69 198 L128 50 L187 198 H164 L153 172 H103 L92 198 H69 Z M128 108 L142 142 L114 142 Z"/>
+  <path fill="#CCFF4A" d="M91 142 H165 L176 172 H80 Z"/>
+</svg>

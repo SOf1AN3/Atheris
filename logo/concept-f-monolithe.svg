@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="Atheris Labs - F / Monolithe">
+  <title>ATHERIS — F / Monolithe (&lt;/&gt; fraisé dans le corps plein)</title>
+  <!--
+    F / Monolithe
+    A : pente 5:2, sommet (128,16), base y=240 (16→240), jambes T=40,
+    intérieurs 56/200, rencontre y=96, largeur(y) = y-16.
+    Fraisage </> : hauteur 40, chevrons 20.0, / course 40, trait 11, gouttières 12.
+    Le tout est UN SEUL path en evenodd : la lettre, sa contre-forme et le
+    fraisage sont des trous lus par le fond — donc vrai en une seule couleur.
+  -->
+  <path fill="#06070A" fill-rule="evenodd" d="M16 240 L128 16 L240 240 H200 L186 212 H70 L56 240 H16 Z M92.11 150.11 L68.22 174 L92.11 197.89 L99.89 190.11 L83.78 174 L99.89 157.89 Z M156.11 157.89 L172.22 174 L156.11 190.11 L163.89 197.89 L187.78 174 L163.89 150.11 Z M111.89 197.89 L151.89 157.89 L144.11 150.11 L104.11 190.11 Z"/>
+</svg>

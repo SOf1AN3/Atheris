@@ -10,7 +10,19 @@ import { Proof } from "./scenes/Proof";
 import { CallToAction } from "./scenes/CallToAction";
 
 const FPS = VO_TIMELINE.fps;
-const SCENES = [Hook, ServiceWeb, ServiceMobile, Proof, CallToAction];
+/**
+ * Rythme d'alignement du film 1 : **C · L · C · L · C**
+ * (hook centré → service web à gauche → mobile centré → chiffres à gauche →
+ *  CTA centré). Alterner évite le défaut « tout à gauche » sans tomber dans
+ *  l'interdit §2.8 du DESIGN.md (« tous les titres centrés »).
+ */
+const SCENES: Array<React.FC> = [
+  Hook,
+  ServiceWeb,
+  () => <ServiceMobile center />,
+  Proof,
+  CallToAction,
+];
 
 /**
  * SFX posés sur l'axe absolu du montage.

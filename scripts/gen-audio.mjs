@@ -211,7 +211,7 @@ console.log("8 SFX générés dans public/audio/sfx/");
 
 /* --------------------------------------------------------------- MUSIQUE */
 /** Bed 30 s — obsidienne sonore : drone + pad La mineur + pulsation + riser */
-const DUR = 30;
+const DUR = Number(process.env.DUR ?? 30);
 const N = secs(DUR);
 const L = new Float32Array(N);
 const R = new Float32Array(N);
@@ -223,14 +223,21 @@ const midi = (name) => {
   return 12 * (+m[3] + 1) + map[m[1]] + (m[2] ? 1 : 0);
 };
 
-/** Pad : 3 voix saw filtrées, attaque longue, une par progression */
-const CHORDS = [
-  { at: 0.0, len: 6.5, notes: ["A2", "E3", "A3", "C4"] }, // Am
-  { at: 6.0, len: 6.5, notes: ["F2", "C3", "F3", "A3"] }, // F
-  { at: 12.0, len: 6.5, notes: ["C3", "G3", "C4", "E4"] }, // C
-  { at: 18.0, len: 6.5, notes: ["G2", "D3", "G3", "B3"] }, // G
-  { at: 24.0, len: 6.0, notes: ["A2", "E3", "A3", "C4"] }, // Am (retour)
+/** Pad : 3 voix saw filtrées, attaque longue — progression GÉNÉRÉE pour
+ *  s'adapter à la durée (30 s ou 45 s) : cycle Am F C G toutes les 6 s,
+ *  retour sur Am pour les 6 dernières secondes. */
+const CYCLE = [
+  ["A2", "E3", "A3", "C4"], // Am
+  ["F2", "C3", "F3", "A3"], // F
+  ["C3", "G3", "C4", "E4"], // C
+  ["G2", "D3", "G3", "B3"], // G
 ];
+const CHORDS = [];
+{
+  let k = 0;
+  for (let at = 0; at < DUR - 6; at += 6) CHORDS.push({ at, len: 6.5, notes: CYCLE[k++ % CYCLE.length] });
+  CHORDS.push({ at: DUR - 6, len: 6, notes: CYCLE[0] }); // retour tonique
+}
 
 for (const c of CHORDS) {
   const n = secs(c.len);
@@ -292,7 +299,7 @@ for (let b = 5; b * BEAT < DUR - 0.6; b++) {
 const ARP = ["A4", "C5", "E5", "C5", "A4", "G4", "E5", "G4"];
 for (let i = 0; i < secs(DUR) / (SR * 0.25); i++) {
   const at = i * 0.25;
-  if (at < 6 || at > 27) continue;
+  if (at < 6 || at > DUR - 3) continue;
   const name = ARP[i % ARP.length];
   const f = NOTE(midi(name));
   const n = secs(0.22);
@@ -306,18 +313,21 @@ for (let i = 0; i < secs(DUR) / (SR * 0.25); i++) {
   mixInto(R, buf, at, 0.055 * (1 + pan));
 }
 
-/** Riser 18 -> 21 s + coupure nette au hit du CTA */
+/** Riser final (3 s) + coupure nette au hit du CTA — positions relatives
+ *  à la durée, pour servir aussi bien au film 30 s qu'au film 45 s. */
+const RISER_AT = DUR - 9;
+const HIT_AT = DUR - 6;
 {
   const n = secs(3);
   const nz = lowpass(noise(n, 77), 300, 8200, 0.06);
   const buf = new Float32Array(n);
   for (let i = 0; i < n; i++) buf[i] = nz[i] * Math.pow(i / n, 2.6);
-  mixInto(L, buf, 18, 0.5);
-  mixInto(R, buf, 18.02, 0.5);
+  mixInto(L, buf, RISER_AT, 0.5);
+  mixInto(R, buf, RISER_AT + 0.02, 0.5);
 }
 
-/** Hit du CTA (21 s) — reprend la synchro du « shing » */
-{
+/** Hit du CTA — reprend la synchro du « shing » */
+const hit = (at, gain) => {
   const n = secs(2.2);
   const buf = new Float32Array(n);
   for (let i = 0; i < n; i++) {
@@ -327,17 +337,22 @@ for (let i = 0; i < secs(DUR) / (SR * 0.25); i++) {
   }
   const nz = lowpass(noise(n, 83), 2400, 200, 0.1);
   for (let i = 0; i < n; i++) buf[i] += nz[i] * expDecay(i, 0.14) * 0.4;
-  mixInto(L, buf, 21, 0.55);
-  mixInto(R, buf, 21, 0.55);
-}
+  mixInto(L, buf, at, gain);
+  mixInto(R, buf, at, gain);
+};
+hit(HIT_AT, 0.55);
 
-/** Retombée : tout est atténué progressivement après 26.5 s */
-for (let i = secs(26.5); i < N; i++) {
-  const g = 1 - 0.92 * Math.min(1, (i - secs(26.5)) / (secs(3.4)));
+// Film long : accent secondaire à l'entrée de la section « réalisations ».
+if (DUR > 36) hit(DUR - 21, 0.28);
+
+/** Retombée progressive sur les 3,5 dernières secondes */
+const OUTRO_AT = DUR - 3.5;
+for (let i = secs(OUTRO_AT); i < N; i++) {
+  const g = 1 - 0.92 * Math.min(1, (i - secs(OUTRO_AT)) / secs(3.4));
   L[i] *= g;
   R[i] *= g;
 }
 
-await writeWav(path.join(ROOT, "public", "audio", "music.wav"), [normalize(L, 0.62), normalize(R, 0.62)]);
+await writeWav(path.join(ROOT, "public", "audio", process.env.MUSIC_NAME ?? "music.wav"), [normalize(L, 0.62), normalize(R, 0.62)]);
 
 console.log(`-> public/audio/music.wav (${DUR}s) + 8 SFX dans public/audio/sfx/`);

@@ -1,0 +1,217 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1600" height="840" viewBox="0 0 1600 840"><defs><filter id="grey"><feColorMatrix type="saturate" values="0"/></filter></defs><rect width="1600" height="840" fill="#f7f7f4"/><text x="60" y="78" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="40" font-weight="700" fill="#161616">Atheris Labs — 3 concepts de logo</text><text x="60" y="116" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="20" fill="#6b6b6b">Obsidian Instrument · filet, précision, un seul signal · --greyscale (round 1)</text><rect x="60" y="150" width="474.667" height="630" rx="18" fill="#fff" stroke="#161616" stroke-width="2"/><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Atheris Labs — concept A v2, Arete" viewBox="0 0 256 256" x="90" y="190" width="414.667" height="300" preserveAspectRatio="xMidYMid meet">
+  <title>ATHERIS — A / Arête (v2)</title>
+  <!--
+    A v2 : biseau plus profond (coupe y = 90, chair 46) → face plane 36,
+    corps 134 × 144 (presque carré, mieux proportionné que v1).
+    Bande volt 14 d'épaisseur : la face usinée se lit enfin comme une FACE.
+  -->
+  <g transform="translate(128 128) scale(1.33) translate(-128 -128)">
+  <g transform="translate(0 -29)">
+    <path fill="#06070A" fill-rule="evenodd" d="M56 224 L110 90 H146 L200 224 H172 L159 192 H97 L84 224 H56 Z M128 114 L145 156 L111 156 Z"/>
+    <path fill="#CCFF4A" d="M110 90 H146 L152 104 H104 Z"/>
+  </g>
+  </g>
+</svg>
+</g><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Atheris Labs — concept A v2, Arete" viewBox="0 0 256 256" x="90" y="516" width="64" height="64" preserveAspectRatio="xMidYMid meet">
+  <title>ATHERIS — A / Arête (v2)</title>
+  <!--
+    A v2 : biseau plus profond (coupe y = 90, chair 46) → face plane 36,
+    corps 134 × 144 (presque carré, mieux proportionné que v1).
+    Bande volt 14 d'épaisseur : la face usinée se lit enfin comme une FACE.
+  -->
+  <g transform="translate(128 128) scale(1.33) translate(-128 -128)">
+  <g transform="translate(0 -29)">
+    <path fill="#06070A" fill-rule="evenodd" d="M56 224 L110 90 H146 L200 224 H172 L159 192 H97 L84 224 H56 Z M128 114 L145 156 L111 156 Z"/>
+    <path fill="#CCFF4A" d="M110 90 H146 L152 104 H104 Z"/>
+  </g>
+  </g>
+</svg>
+</g><text x="122" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">64px</text><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Atheris Labs — concept A v2, Arete" viewBox="0 0 256 256" x="180" y="548" width="32" height="32" preserveAspectRatio="xMidYMid meet">
+  <title>ATHERIS — A / Arête (v2)</title>
+  <!--
+    A v2 : biseau plus profond (coupe y = 90, chair 46) → face plane 36,
+    corps 134 × 144 (presque carré, mieux proportionné que v1).
+    Bande volt 14 d'épaisseur : la face usinée se lit enfin comme une FACE.
+  -->
+  <g transform="translate(128 128) scale(1.33) translate(-128 -128)">
+  <g transform="translate(0 -29)">
+    <path fill="#06070A" fill-rule="evenodd" d="M56 224 L110 90 H146 L200 224 H172 L159 192 H97 L84 224 H56 Z M128 114 L145 156 L111 156 Z"/>
+    <path fill="#CCFF4A" d="M110 90 H146 L152 104 H104 Z"/>
+  </g>
+  </g>
+</svg>
+</g><text x="196" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">32px</text><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Atheris Labs — concept A v2, Arete" viewBox="0 0 256 256" x="238" y="564" width="16" height="16" preserveAspectRatio="xMidYMid meet">
+  <title>ATHERIS — A / Arête (v2)</title>
+  <!--
+    A v2 : biseau plus profond (coupe y = 90, chair 46) → face plane 36,
+    corps 134 × 144 (presque carré, mieux proportionné que v1).
+    Bande volt 14 d'épaisseur : la face usinée se lit enfin comme une FACE.
+  -->
+  <g transform="translate(128 128) scale(1.33) translate(-128 -128)">
+  <g transform="translate(0 -29)">
+    <path fill="#06070A" fill-rule="evenodd" d="M56 224 L110 90 H146 L200 224 H172 L159 192 H97 L84 224 H56 Z M128 114 L145 156 L111 156 Z"/>
+    <path fill="#CCFF4A" d="M110 90 H146 L152 104 H104 Z"/>
+  </g>
+  </g>
+</svg>
+</g><text x="246" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">16px</text><text x="90.0" y="636" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="26" font-weight="700" fill="#161616">A · Arête</text><text x="90.0" y="664" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="15" font-weight="700" fill="#161616" letter-spacing="1.5">RECOMMENDED</text><text x="90.0" y="698" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19" fill="#555">Le A usiné : sommet tranché à plat, et</text><text x="90.0" y="724" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19" fill="#555">cette face biseautée est la seule arête</text><text x="90.0" y="750" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19" fill="#555">éclairée — le signal volt.</text><rect x="562.667" y="150" width="474.667" height="630" rx="18" fill="#fff" stroke="#e4e4e0" stroke-width="1"/><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Atheris Labs — concept B3, Filet" viewBox="0 0 256 256" x="592.667" y="190" width="414.667" height="300" preserveAspectRatio="xMidYMid meet">
+  <title>ATHERIS — B / Filet (v3)</title>
+  <!--
+    B v3 — « FILET » : un filet de 12 perce le A de part en part à
+    y = 144 → 156. Comme la contre-forme occupe déjà 111→145 à cette
+    hauteur, le vide devient UNE SEULE ligne continue à travers toute la
+    lettre : la lumière passe.
+    Le dessus (sommet + haut des jambes) flotte au-dessus de la traverse
+    + bas des jambes. À 16 px le filet se referme → A plein.
+    pente 5:2 (dx=0,4·dy) · base y=224 (56→200) · sommet (128,44)
+    intérieurs 84/172 · contre-forme (128,114)→156 · traverse 156→192
+    Découpe : haut jusqu'à 144, bas à partir de 156.
+  -->
+  <g transform="translate(128 128) scale(1.07) translate(-128 -128)">
+  <g fill="#06070A" transform="translate(0 -6)">
+    <!-- haut : sommet + haut des jambes, contre-forme en encoche ouverte -->
+    <path d="M128 44 L168 144 H140 L128 114 L116 144 H88 Z"/>
+    <!-- bas : traverse + bas des jambes -->
+    <path d="M83 156 L56 224 H84 L97 192 H159 L172 224 H200 L173 156 Z"/>
+  </g>
+  </g>
+</svg>
+</g><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Atheris Labs — concept B3, Filet" viewBox="0 0 256 256" x="592.667" y="516" width="64" height="64" preserveAspectRatio="xMidYMid meet">
+  <title>ATHERIS — B / Filet (v3)</title>
+  <!--
+    B v3 — « FILET » : un filet de 12 perce le A de part en part à
+    y = 144 → 156. Comme la contre-forme occupe déjà 111→145 à cette
+    hauteur, le vide devient UNE SEULE ligne continue à travers toute la
+    lettre : la lumière passe.
+    Le dessus (sommet + haut des jambes) flotte au-dessus de la traverse
+    + bas des jambes. À 16 px le filet se referme → A plein.
+    pente 5:2 (dx=0,4·dy) · base y=224 (56→200) · sommet (128,44)
+    intérieurs 84/172 · contre-forme (128,114)→156 · traverse 156→192
+    Découpe : haut jusqu'à 144, bas à partir de 156.
+  -->
+  <g transform="translate(128 128) scale(1.07) translate(-128 -128)">
+  <g fill="#06070A" transform="translate(0 -6)">
+    <!-- haut : sommet + haut des jambes, contre-forme en encoche ouverte -->
+    <path d="M128 44 L168 144 H140 L128 114 L116 144 H88 Z"/>
+    <!-- bas : traverse + bas des jambes -->
+    <path d="M83 156 L56 224 H84 L97 192 H159 L172 224 H200 L173 156 Z"/>
+  </g>
+  </g>
+</svg>
+</g><text x="624.667" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">64px</text><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Atheris Labs — concept B3, Filet" viewBox="0 0 256 256" x="682.667" y="548" width="32" height="32" preserveAspectRatio="xMidYMid meet">
+  <title>ATHERIS — B / Filet (v3)</title>
+  <!--
+    B v3 — « FILET » : un filet de 12 perce le A de part en part à
+    y = 144 → 156. Comme la contre-forme occupe déjà 111→145 à cette
+    hauteur, le vide devient UNE SEULE ligne continue à travers toute la
+    lettre : la lumière passe.
+    Le dessus (sommet + haut des jambes) flotte au-dessus de la traverse
+    + bas des jambes. À 16 px le filet se referme → A plein.
+    pente 5:2 (dx=0,4·dy) · base y=224 (56→200) · sommet (128,44)
+    intérieurs 84/172 · contre-forme (128,114)→156 · traverse 156→192
+    Découpe : haut jusqu'à 144, bas à partir de 156.
+  -->
+  <g transform="translate(128 128) scale(1.07) translate(-128 -128)">
+  <g fill="#06070A" transform="translate(0 -6)">
+    <!-- haut : sommet + haut des jambes, contre-forme en encoche ouverte -->
+    <path d="M128 44 L168 144 H140 L128 114 L116 144 H88 Z"/>
+    <!-- bas : traverse + bas des jambes -->
+    <path d="M83 156 L56 224 H84 L97 192 H159 L172 224 H200 L173 156 Z"/>
+  </g>
+  </g>
+</svg>
+</g><text x="698.667" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">32px</text><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Atheris Labs — concept B3, Filet" viewBox="0 0 256 256" x="740.667" y="564" width="16" height="16" preserveAspectRatio="xMidYMid meet">
+  <title>ATHERIS — B / Filet (v3)</title>
+  <!--
+    B v3 — « FILET » : un filet de 12 perce le A de part en part à
+    y = 144 → 156. Comme la contre-forme occupe déjà 111→145 à cette
+    hauteur, le vide devient UNE SEULE ligne continue à travers toute la
+    lettre : la lumière passe.
+    Le dessus (sommet + haut des jambes) flotte au-dessus de la traverse
+    + bas des jambes. À 16 px le filet se referme → A plein.
+    pente 5:2 (dx=0,4·dy) · base y=224 (56→200) · sommet (128,44)
+    intérieurs 84/172 · contre-forme (128,114)→156 · traverse 156→192
+    Découpe : haut jusqu'à 144, bas à partir de 156.
+  -->
+  <g transform="translate(128 128) scale(1.07) translate(-128 -128)">
+  <g fill="#06070A" transform="translate(0 -6)">
+    <!-- haut : sommet + haut des jambes, contre-forme en encoche ouverte -->
+    <path d="M128 44 L168 144 H140 L128 114 L116 144 H88 Z"/>
+    <!-- bas : traverse + bas des jambes -->
+    <path d="M83 156 L56 224 H84 L97 192 H159 L172 224 H200 L173 156 Z"/>
+  </g>
+  </g>
+</svg>
+</g><text x="748.667" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">16px</text><text x="592.6666666666667" y="636" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="26" font-weight="700" fill="#161616">B · Filet</text><text x="592.6666666666667" y="670" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19" fill="#555">Un filet de lumière traverse la lettre : le</text><text x="592.6666666666667" y="696" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19" fill="#555">haut du A flotte au-dessus de sa traverse,</text><text x="592.6666666666667" y="722" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19" fill="#555">comme sur un plan.</text><rect x="1065.33" y="150" width="474.667" height="630" rx="18" fill="#fff" stroke="#e4e4e0" stroke-width="1"/><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Atheris Labs — concept C, Aperture" viewBox="0 0 256 256" x="1095.33" y="190" width="414.667" height="300" preserveAspectRatio="xMidYMid meet">
+  <title>ATHERIS — C / Aperture</title>
+  <!--
+    CONCEPT C — « APERTURE »
+    Construction (grille 256) :
+      · plaque usinée 32 → 224, rayon 32, COIN HAUT-DROIT chanfreiné 48+48 à 45°
+      · le A est FRAISÉ dans la plaque : même path en evenodd → le A devient
+        trou, la contre-forme redevient matière (îlot) automatiquement.
+      · A source : x 56 → 200, y 44 → 224 ; mis à l'échelle 0,82 et centré
+        optiquement (coordonnées pré-calculées, aucun transform).
+      · signal : la traverse reste PLEINE — barreau volt dans le vide.
+    A scalé : (69,198) (128,50) (187,198) (164,198) (153,172) (103,172) (92,198)
+              contre-forme (128,108) (142,142) (114,142)
+    Barreau : (91,142) (165,142) (176,172) (80,172)
+  -->
+  <path fill="#06070A" fill-rule="evenodd" d="M64 32 H176 L224 80 V192 A32 32 0 0 1 192 224 H64 A32 32 0 0 1 32 192 V64 A32 32 0 0 1 64 32 Z M69 198 L128 50 L187 198 H164 L153 172 H103 L92 198 H69 Z M128 108 L142 142 L114 142 Z"/>
+  <path fill="#CCFF4A" d="M91 142 H165 L176 172 H80 Z"/>
+</svg>
+</g><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Atheris Labs — concept C, Aperture" viewBox="0 0 256 256" x="1095.33" y="516" width="64" height="64" preserveAspectRatio="xMidYMid meet">
+  <title>ATHERIS — C / Aperture</title>
+  <!--
+    CONCEPT C — « APERTURE »
+    Construction (grille 256) :
+      · plaque usinée 32 → 224, rayon 32, COIN HAUT-DROIT chanfreiné 48+48 à 45°
+      · le A est FRAISÉ dans la plaque : même path en evenodd → le A devient
+        trou, la contre-forme redevient matière (îlot) automatiquement.
+      · A source : x 56 → 200, y 44 → 224 ; mis à l'échelle 0,82 et centré
+        optiquement (coordonnées pré-calculées, aucun transform).
+      · signal : la traverse reste PLEINE — barreau volt dans le vide.
+    A scalé : (69,198) (128,50) (187,198) (164,198) (153,172) (103,172) (92,198)
+              contre-forme (128,108) (142,142) (114,142)
+    Barreau : (91,142) (165,142) (176,172) (80,172)
+  -->
+  <path fill="#06070A" fill-rule="evenodd" d="M64 32 H176 L224 80 V192 A32 32 0 0 1 192 224 H64 A32 32 0 0 1 32 192 V64 A32 32 0 0 1 64 32 Z M69 198 L128 50 L187 198 H164 L153 172 H103 L92 198 H69 Z M128 108 L142 142 L114 142 Z"/>
+  <path fill="#CCFF4A" d="M91 142 H165 L176 172 H80 Z"/>
+</svg>
+</g><text x="1127.33" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">64px</text><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Atheris Labs — concept C, Aperture" viewBox="0 0 256 256" x="1185.33" y="548" width="32" height="32" preserveAspectRatio="xMidYMid meet">
+  <title>ATHERIS — C / Aperture</title>
+  <!--
+    CONCEPT C — « APERTURE »
+    Construction (grille 256) :
+      · plaque usinée 32 → 224, rayon 32, COIN HAUT-DROIT chanfreiné 48+48 à 45°
+      · le A est FRAISÉ dans la plaque : même path en evenodd → le A devient
+        trou, la contre-forme redevient matière (îlot) automatiquement.
+      · A source : x 56 → 200, y 44 → 224 ; mis à l'échelle 0,82 et centré
+        optiquement (coordonnées pré-calculées, aucun transform).
+      · signal : la traverse reste PLEINE — barreau volt dans le vide.
+    A scalé : (69,198) (128,50) (187,198) (164,198) (153,172) (103,172) (92,198)
+              contre-forme (128,108) (142,142) (114,142)
+    Barreau : (91,142) (165,142) (176,172) (80,172)
+  -->
+  <path fill="#06070A" fill-rule="evenodd" d="M64 32 H176 L224 80 V192 A32 32 0 0 1 192 224 H64 A32 32 0 0 1 32 192 V64 A32 32 0 0 1 64 32 Z M69 198 L128 50 L187 198 H164 L153 172 H103 L92 198 H69 Z M128 108 L142 142 L114 142 Z"/>
+  <path fill="#CCFF4A" d="M91 142 H165 L176 172 H80 Z"/>
+</svg>
+</g><text x="1201.33" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">32px</text><g filter="url(#grey)"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Atheris Labs — concept C, Aperture" viewBox="0 0 256 256" x="1243.33" y="564" width="16" height="16" preserveAspectRatio="xMidYMid meet">
+  <title>ATHERIS — C / Aperture</title>
+  <!--
+    CONCEPT C — « APERTURE »
+    Construction (grille 256) :
+      · plaque usinée 32 → 224, rayon 32, COIN HAUT-DROIT chanfreiné 48+48 à 45°
+      · le A est FRAISÉ dans la plaque : même path en evenodd → le A devient
+        trou, la contre-forme redevient matière (îlot) automatiquement.
+      · A source : x 56 → 200, y 44 → 224 ; mis à l'échelle 0,82 et centré
+        optiquement (coordonnées pré-calculées, aucun transform).
+      · signal : la traverse reste PLEINE — barreau volt dans le vide.
+    A scalé : (69,198) (128,50) (187,198) (164,198) (153,172) (103,172) (92,198)
+              contre-forme (128,108) (142,142) (114,142)
+    Barreau : (91,142) (165,142) (176,172) (80,172)
+  -->
+  <path fill="#06070A" fill-rule="evenodd" d="M64 32 H176 L224 80 V192 A32 32 0 0 1 192 224 H64 A32 32 0 0 1 32 192 V64 A32 32 0 0 1 64 32 Z M69 198 L128 50 L187 198 H164 L153 172 H103 L92 198 H69 Z M128 108 L142 142 L114 142 Z"/>
+  <path fill="#CCFF4A" d="M91 142 H165 L176 172 H80 Z"/>
+</svg>
+</g><text x="1251.33" y="600" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#8a8a8a" text-anchor="middle">16px</text><text x="1095.3333333333335" y="636" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="26" font-weight="700" fill="#161616">C · Aperture</text><text x="1095.3333333333335" y="670" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19" fill="#555">La plaque d&#x27;instrument : le A y est fraisé</text><text x="1095.3333333333335" y="696" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19" fill="#555">en creux, sa traverse reste le seul barreau</text><text x="1095.3333333333335" y="722" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19" fill="#555">volt.</text></svg>

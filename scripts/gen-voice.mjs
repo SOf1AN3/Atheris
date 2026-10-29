@@ -18,29 +18,100 @@ import { fileURLToPath } from "node:url";
 import { KokoroTTS } from "kokoro-js";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const OUT = path.join(ROOT, "public", "audio", "vo");
-const TS_OUT = path.join(ROOT, "src", "remotion", "data", "voice.ts");
+
+/**
+ * Deux jeux de VO pour deux films :
+ *   VO_SET=1 (défaut) → vidéo 1 « focus », 30 s, public/audio/vo,  voice.ts
+ *   VO_SET=2           → vidéo 2 « globale », 45 s, public/audio/vo2, voice2.ts
+ */
+const SET = Number(process.env.VO_SET ?? 1);
+
+const CONFIG = {
+  1: {
+    total: 30,
+    gap: 0.85,
+    dir: "vo",
+    ts: "voice.ts",
+    lines: [
+      "Your product deserves more than a template.",
+      "We build custom web platforms and SaaS products. Scalable, multi-tenant, rock solid.",
+      "And native iOS and Android apps, engineered for everyday use.",
+      "Twenty products shipped. Code you own, end to end.",
+      "Atheris Labs. Let's build yours.",
+    ],
+  },
+  2: {
+    total: 45,
+    gap: 0.75,
+    dir: "vo2",
+    ts: "voice2.ts",
+    // 10 segments courts : le rythme porte le film, pas la phrase.
+    lines: [
+      "Your product deserves more than a template.",
+      "Four disciplines. One team.",
+      "Web platforms and SaaS products, built to scale.",
+      "Native iOS and Android apps.",
+      "Desktop tools. Cloud modernisation.",
+      "Twenty products shipped in production.",
+      "One stack, chosen to last.",
+      "Scoping, design, sprints, support.",
+      "One hundred hours saved, every year.",
+      "Atheris Labs. Let's build yours.",
+    ],
+  },
+  // Film 3 — CRM sur-mesure, one-take 25 s (skill explainer-engaging).
+  3: {
+    total: 25,
+    gap: 0.5,
+    dir: "vo3",
+    ts: "voice3.ts",
+    // Une phrase PAR station — la VO épouse le passage du héros, un par un.
+    // Durées calées sur les fenêtres visuelles : la dernière ligne doit finir
+    // avant ~22,5 s pour laisser la révélation et la plongée à la musique.
+    lines: [
+      "A lead lands.",
+      "Qualified in minutes.",
+      "Quote sent, in one click.",
+      "The right person, assigned.",
+      "Commissions, calculated.",
+      "One dashboard, every decision.",
+      "Atheris Labs. Your CRM, built to fit.",
+    ],
+  },
+  // Film 1 redessiné — teaser haute énergie 18 s (skill explainer-high-energy).
+  4: {
+    total: 18,
+    gap: 0.6,
+    dir: "vo4",
+    ts: "voice4.ts",
+    // 5 traits secs, calés sur la grille de beats à 120 BPM (battement 0,5 s).
+    lines: [
+      "Atheris Labs.",
+      "Built to scale. Owned outright.",
+      "One team, start to finish.",
+      "Twenty products shipped.",
+      "Let's build yours.",
+    ],
+  },
+}[SET];
+
+const OUT = path.join(ROOT, "public", "audio", CONFIG.dir);
+const TS_OUT = path.join(ROOT, "src", "remotion", "data", CONFIG.ts);
 
 const MODEL = "onnx-community/Kokoro-82M-v1.0-ONNX";
 const VOICE = process.env.KOKORO_VOICE ?? "am_michael"; // masculine US, posée
 const SPEED = Number(process.env.KOKORO_SPEED ?? 0.92); // débit légèrement ralenti
 
 export const FPS = 30;
-export const TOTAL_SECONDS = 30;
+export const TOTAL_SECONDS = CONFIG.total;
 /** Respiration avant chaque segment (laisse la scène s'installer) */
 const PRE_ROLL = 0.65;
 /** Respiration après chaque segment (sauf le dernier) */
 const POST_ROLL = 0.6;
 /** Silence entre deux segments */
-const GAP = 0.85;
+const GAP = CONFIG.gap;
 
-const LINES = [
-  "Your product deserves more than a template.",
-  "We build custom web platforms and SaaS products. Scalable, multi-tenant, rock solid.",
-  "And native iOS and Android apps, engineered for everyday use.",
-  "Twenty products shipped. Code you own, end to end.",
-  "Atheris Labs. Let's build yours.",
-];
+const LINES = CONFIG.lines;
 
 console.log(`Kokoro TTS — ${MODEL} · voix ${VOICE} · vitesse ${SPEED}`);
 
@@ -93,7 +164,7 @@ const data = {
   segments: segments.map((s) => ({
     id: s.id,
     text: s.text,
-    src: `audio/vo/${s.file}`,
+    src: `audio/${CONFIG.dir}/${s.file}`,
     start: s.start,
     dur: s.dur,
     from: toFrames(s.start),

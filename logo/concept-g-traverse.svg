@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="Atheris Labs - G / Traverse">
+  <title>ATHERIS — G / Traverse (&lt;/&gt; en traverse du A)</title>
+  <!--
+    G / Traverse
+    A : pente 5:2, sommet (128,16), base y=240 (16→240), jambes T=40,
+    intérieurs 56/200, rencontre y=96, largeur(y) = y-16.
+    Fraisage </> : hauteur 48, chevrons 24.0, / course 48, trait 11, gouttières 14.
+    Le tout est UN SEUL path en evenodd : la lettre, sa contre-forme et le
+    fraisage sont des trous lus par le fond — donc vrai en une seule couleur.
+  -->
+  <path fill="#06070A" fill-rule="evenodd" d="M16 240 L128 16 L240 240 H210 L196 212 H60 L46 240 H16 Z M128 76 L160 140 L96 140 Z M86.11 148.11 L58.22 176 L86.11 203.89 L93.89 196.11 L73.78 176 L93.89 155.89 Z M162.11 155.89 L182.22 176 L162.11 196.11 L169.89 203.89 L197.78 176 L169.89 148.11 Z M107.89 203.89 L155.89 155.89 L148.11 148.11 L100.11 196.11 Z"/>
+</svg>

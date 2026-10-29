@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="Atheris Labs — concept B3, Filet">
+  <title>ATHERIS — B / Filet (v3)</title>
+  <!--
+    B v3 — « FILET » : un filet de 12 perce le A de part en part à
+    y = 144 → 156. Comme la contre-forme occupe déjà 111→145 à cette
+    hauteur, le vide devient UNE SEULE ligne continue à travers toute la
+    lettre : la lumière passe.
+    Le dessus (sommet + haut des jambes) flotte au-dessus de la traverse
+    + bas des jambes. À 16 px le filet se referme → A plein.
+    pente 5:2 (dx=0,4·dy) · base y=224 (56→200) · sommet (128,44)
+    intérieurs 84/172 · contre-forme (128,114)→156 · traverse 156→192
+    Découpe : haut jusqu'à 144, bas à partir de 156.
+  -->
+  <g transform="translate(128 128) scale(1.07) translate(-128 -128)">
+  <g fill="#06070A" transform="translate(0 -6)">
+    <!-- haut : sommet + haut des jambes, contre-forme en encoche ouverte -->
+    <path d="M128 44 L168 144 H140 L128 114 L116 144 H88 Z"/>
+    <!-- bas : traverse + bas des jambes -->
+    <path d="M83 156 L56 224 H84 L97 192 H159 L172 224 H200 L173 156 Z"/>
+  </g>
+  </g>
+</svg>

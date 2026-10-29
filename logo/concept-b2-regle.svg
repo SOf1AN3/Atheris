@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="Atheris Labs — concept B2, Regle">
+  <title>ATHERIS — B / Règle (v2)</title>
+  <!--
+    B v2 — « RÈGLE » : la traverse déborde des deux côtés, bouts coupés
+    droits — une règle de mesure posée sur la lettre.
+    Même A : pente 5:2 (dx=0,4·dy), base y=224 (56→200), sommet (128,44),
+    intérieurs 84/172, contre-forme (128,114)→156.
+    Traverse : y 156→192, x 51→205 (débord 32 au sommet de la traverse,
+    18 à son pied, à gauche comme à droite).
+    Un seul path evenodd : contour complet + trou de contre-forme.
+  -->
+  <path fill="#06070A" fill-rule="evenodd" transform="translate(0 -6)"
+        d="M51 156 H205 V192 H187 L200 224 H172 L159 192 H97 L84 224 H56 L69 192 H51 Z M128 114 L145 156 L111 156 Z"/>
+</svg>

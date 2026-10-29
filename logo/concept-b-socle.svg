@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="Atheris Labs — concept B, Socle">
+  <title>ATHERIS — B / Socle</title>
+  <!--
+    CONCEPT B — « SOCLE »
+    Construction (grille 256), même A que le concept A mais POINTU :
+      · pente 5:2 (dx = 0,4 × dy), base y = 224 (x = 56 → 200)
+      · sommet (128, 44) ; intérieurs 84 / 172 ; contre-forme (128,114) → y 156
+      · traverse y 156 → 192
+    COUPE : un filet plein cadre de 12 (y = 192 → 204) sépare le A de ses
+    deux appuis. Le filet s'aligne exactement sur le bas de la traverse :
+    la lettre est LÉGÈRE au-dessus de son socle.
+    Pièces : 1) corps du A (y 44 → 192, contre-forme en trou)
+             2) pied gauche  (64,204) (92,204) (84,224) (56,224)
+             3) pied droit   (164,204) (192,204) (200,224) (172,224)
+  -->
+  <g fill="#06070A" fill-rule="evenodd" transform="translate(0 -6)">
+    <path d="M128 44 L187 192 H69 Z M128 114 L145 156 L111 156 Z"/>
+    <path d="M64 204 L92 204 L84 224 L56 224 Z"/>
+    <path d="M164 204 L192 204 L200 224 L172 224 Z"/>
+  </g>
+</svg>

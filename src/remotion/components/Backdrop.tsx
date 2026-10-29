@@ -49,8 +49,15 @@ export const Hairline: React.FC<{
   );
 };
 
-/** Index de section `01 — SERVICES` (§2.6) : squelette de lecture. */
-export const SectionIndex: React.FC<{ n: string; label: string; start?: number }> = ({ n, label, start = 0 }) => {
+/** Index de section `01 — SERVICES` (§2.6) : squelette de lecture.
+ *  `center` : variante centrée avec filets des DEUX côtés — utilisée sur les
+ *  scènes paires de l'alternance d'alignement (voir VIDEO.md §rythme). */
+export const SectionIndex: React.FC<{ n: string; label: string; start?: number; center?: boolean }> = ({
+  n,
+  label,
+  start = 0,
+  center = false,
+}) => {
   const frame = useCurrentFrame();
   // Révélation rapide (12 f) : l'index doit être lisible DÈS le wipe d'entrée.
   const p = interpolate(frame, [start, start + 12], [0, 1], {
@@ -58,10 +65,27 @@ export const SectionIndex: React.FC<{ n: string; label: string; start?: number }
     extrapolateRight: "clamp",
     easing: EASE,
   });
+
+  const num = <span style={{ color: volt, letterSpacing: "0.18em", fontFamily: "var(--mono)", fontSize: 19, lineHeight: 1 }}>{n}</span>;
+  const lab = (
+    <span style={{ color: "#757D8F", letterSpacing: "0.18em", fontFamily: "var(--mono)", fontSize: 19, lineHeight: 1 }}>— {label}</span>
+  );
+
+  if (center) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: 18, opacity: p, lineHeight: 1, width: "100%" }}>
+        <div style={{ flex: 1, height: 1, backgroundColor: line2, transform: `scaleX(${p})`, transformOrigin: "right center" }} />
+        {num}
+        {lab}
+        <div style={{ flex: 1, height: 1, backgroundColor: line2, transform: `scaleX(${p})`, transformOrigin: "left center" }} />
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 18, opacity: p, lineHeight: 1 }}>
-      <span style={{ color: volt, letterSpacing: "0.18em", fontFamily: "var(--mono)", fontSize: 19, lineHeight: 1 }}>{n}</span>
-      <span style={{ color: "#757D8F", letterSpacing: "0.18em", fontFamily: "var(--mono)", fontSize: 19, lineHeight: 1 }}>— {label}</span>
+      {num}
+      {lab}
       <div style={{ flex: 1, height: 1, backgroundColor: line2, transform: `scaleX(${p})`, transformOrigin: "left center" }} />
     </div>
   );
@@ -150,36 +174,143 @@ export const VoltDot: React.FC<{ start?: number; size?: number }> = ({ start = 0
  *  - le vignettage d'ancrage reste fixe.
  * Aucun CSS `animation` : Chrome ne les synchro pas frame par frame.
  */
+/**
+ * « LA LUMIÈRE A UNE SOURCE » — **même système que la hero de la landing**
+ * (`globals.css`), reparamétré pour le 1080 × 1920 vertical :
+ *  - SOURCE : halo froid désaturé ancré en haut-droite (la vidéo n'a pas de
+ *    console, l'écran remplaçant l'objet : la lumière vient du même coin),
+ *  - CHUTE : lumière ambiante très large en haut à droite,
+ *  - puis `VIGNETTE` (ancrage + brume d'horizon) et la grille au sol.
+ * Le bleu n'est plus jamais un aplat : c'est une température de lumière.
+ */
 const NAPPE =
-  "radial-gradient(940px 660px at 74% 34%, rgba(52,102,255,0.78), transparent 64%)," +
-  "radial-gradient(760px 540px at 96% 60%, rgba(34,64,205,0.44), transparent 66%)," +
-  "radial-gradient(780px 540px at 10% 2%, rgba(36,62,180,0.34), transparent 72%)," +
-  "radial-gradient(900px 700px at 4% 92%, rgba(12,18,52,0.9), transparent 70%)";
+  "radial-gradient(620px 520px at 76% 20%, rgba(170,198,246,0.36), rgba(84,112,178,0.10) 46%, rgba(40,60,110,0.03) 68%, transparent 82%)," +
+  "radial-gradient(1200px 900px at 92% 2%, rgba(96,128,205,0.13), transparent 68%)";
 
-/** Vignettage : le fondu bas est adouci (74 % → 100 %) pour ne pas éteindre
- *  la dernière ligne de contenu, qui vit à ~75 % de la hauteur. */
+/** Chute verticale du fond (la lumière tombe du haut, le bas est encre) —
+ *  posée SOUS `withHeroBg` : la scène 4 « obsidienne plate » ne la prend pas. */
+const BASE_GRADIENT = "linear-gradient(180deg, #0b0f16 0%, #070910 46%, #06070a 100%)";
+
+/** Vignettage : le radial bas-gauche ancre le texte, le linéaire gère la
+ *  tête (0,55 → transparent 26 %, lisibilité des barres UI) et le pied
+ *  (transparent 76 % → 0,74 : la grille reste lisible). L'ordre compte :
+ *  la BRUME d'horizon est la dernière couche = peinte derrière les deux
+ *  voiles d'encre, mais bien PAR-DESSUS la grille (perspective atmosphérique). */
 const VIGNETTE =
-  "radial-gradient(74% 62% at 0% 100%, rgba(6,7,10,0.94), transparent 74%)," +
-  "linear-gradient(to bottom, rgba(6,7,10,0.42) 0%, transparent 30%, transparent 74%, rgba(6,7,10,0.90) 100%)";
+  "radial-gradient(74% 62% at 0% 100%, rgba(6,7,10,0.90), transparent 74%)," +
+  "linear-gradient(to bottom, rgba(6,7,10,0.55) 0%, transparent 26%, transparent 76%, rgba(6,7,10,0.74) 100%)," +
+  "radial-gradient(160% 520px at 50% 70%, rgba(150,185,240,0.16), transparent 70%)";
 
-const FLOOR_GRID =
-  "linear-gradient(rgba(255,255,255,0.24) 1px, transparent 1px)," +
-  "linear-gradient(90deg, rgba(255,255,255,0.24) 1px, transparent 1px)";
+const VERTICAL_GRID =
+  "linear-gradient(90deg, rgba(255,255,255,0.34) 1px, transparent 1px)";
+
+/**
+ * Géométrie du sol — reprise de `.floor` de la landing :
+ * bande de 48 % de hauteur, bord bas à `HEIGHT + 2`, largeur 160 % centrée,
+ * `perspective(820px) rotateX(60°)`, origine au centre du bord bas.
+ */
+const FLOOR = {
+  w: WIDTH * 1.6,
+  h: HEIGHT * 0.48,
+  persp: 820,
+  cos: 0.5, // cos(60°)
+  sin: 0.8660254, // sin(60°)
+  cell: 72,
+};
+
+/**
+ * Grille au sol — **projection analytique** pour les lignes horizontales.
+ *
+ * Un calque animé enfoui sous une transformation 3D + `mask-image` était
+ * figé au rendu (mesuré : MAD 0,34 au lieu de ~2 entre deux frames). On
+ * calcule donc ici la position écran de chaque maille, frame par frame :
+ *   scale = P / (P − sinθ·dy)   y = h + cosθ·dy·scale
+ * → zéro transform sur les lignes animées, zéro masque, boucle rigoureusement
+ *   périodique (phase mod 72), et la fuite en perspective reste exacte.
+ * Les lignes verticales ne défilent pas (elles sont parallèles au sens du
+ * mouvement) : elles restent en CSS, calque statique.
+ */
+const FloorGrid: React.FC<{ phase: number }> = ({ phase }) => {
+  const rows: Array<{ y: number; left: number; width: number; key: number }> = [];
+  for (let k = -1; k <= 40; k++) {
+    const dy = -k * FLOOR.cell + phase; // dy croissant → maille vers le spectateur
+    const scale = FLOOR.persp / (FLOOR.persp - FLOOR.sin * dy);
+    const y = FLOOR.h + FLOOR.cos * dy * scale;
+    if (y < -2 || y > FLOOR.h + 2) continue;
+    const width = FLOOR.w * scale;
+    rows.push({ y, left: (FLOOR.w - width) / 2, width, key: k });
+  }
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: "-30%",
+        right: "-30%",
+        bottom: -2,
+        height: FLOOR.h,
+        overflow: "hidden",
+      }}
+    >
+      {/* Lignes verticales — fuite en perspective, calque statique */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          backgroundImage: VERTICAL_GRID,
+          backgroundSize: `${FLOOR.cell}px ${FLOOR.cell}px`,
+          transform: `perspective(${FLOOR.persp}px) rotateX(60deg)`,
+          transformOrigin: "bottom center",
+        }}
+      />
+      {/* Lignes horizontales — projetées et animées par frame */}
+      {rows.map((r) => (
+        <div
+          key={r.key}
+          style={{
+            position: "absolute",
+            top: r.y,
+            left: r.left,
+            width: r.width,
+            height: 1,
+            backgroundColor: "rgba(255,255,255,0.34)",
+          }}
+        />
+      ))}
+      {/* Voile d'horizon : OPAC au niveau de la ligne d'horizon, mais
+          TRANSPARENT aux deux extrémités de la bande — sinon il découpe le
+          nappe bleue en plein milieu de cadre (couture visible). */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          background:
+            "linear-gradient(to top," +
+            " rgba(6,7,10,0) 0%," +
+            " rgba(6,7,10,0.22) 34%," +
+            " rgba(6,7,10,0.74) 51%," +
+            " rgba(6,7,10,0.45) 62%," +
+            " rgba(6,7,10,0.12) 78%," +
+            " rgba(6,7,10,0) 100%)",
+        }}
+      />
+    </div>
+  );
+};
 
 export const Backdrop: React.FC<{ variant?: "hero" | "plain" | "final" }> = ({ variant = "plain" }) => {
   const frame = useCurrentFrame();
   const t = frame / 30; // secondes
 
-  // Nappe : respiration + dérive LISIBLES (les amplitudes « site » sont trop
-  // discrètes en vidéo : 8 px en 2 s ne se voit pas). Reste locale, jamais
-  // saturée — on ne déplace que des transforms (§3.2.5).
-  const nappeScale = 1.05 + 0.075 * Math.sin(t * 0.34);
-  const nappeX = Math.sin(t * 0.31) * 4.2;
-  const nappeY = Math.cos(t * 0.26) * 3.4;
+  // Nappe : respiration + dérive LISIBLES. Fréquence volontairement rapide
+  // (la fenêtre de mesure est de 2 s) et amplitude haute — reste locale.
+  const nappeScale = 1.06 + 0.07 * Math.sin(t * 0.5);
+  const nappeX = Math.sin(t * 0.45) * 5;
+  const nappeY = Math.cos(t * 0.4) * 4;
 
-  // Grille au sol : 72 px toutes les 4 s (le site fait 72 px / 14 s).
-  // Défilement continu piloté par la frame → déterministe au rendu.
-  const floorY = ((frame * 72) / (30 * 4)) % 72;
+  // Grille au sol : 72 px toutes les 1,8 s, phase croissante = les mailles
+  // avancent VERS le spectateur (≈ 22 px/s en bord bas de cadre).
+  const floorPhase = ((frame * 72) / (30 * 1.8)) % 72;
 
   const withHeroBg = variant !== "plain";
 
@@ -187,7 +318,9 @@ export const Backdrop: React.FC<{ variant?: "hero" | "plain" | "final" }> = ({ v
     <AbsoluteFill style={{ backgroundColor: ink }}>
       {withHeroBg && (
         <div aria-hidden style={{ position: "absolute", inset: 0, overflow: "hidden" }}>
-          {/* Nappe froide localisée */}
+          {/* Chute — la lumière tombe du haut, le bas est encre */}
+          <div style={{ position: "absolute", inset: 0, backgroundImage: BASE_GRADIENT }} />
+          {/* Source — halo de l'instrument, respire et dérive */}
           <div
             style={{
               position: "absolute",
@@ -197,24 +330,8 @@ export const Backdrop: React.FC<{ variant?: "hero" | "plain" | "final" }> = ({ v
               transformOrigin: "center center",
             }}
           />
-          {/* Grille au sol en perspective, qui défile */}
-          <div
-            style={{
-              position: "absolute",
-              left: "-30%",
-              right: "-30%",
-              bottom: -2,
-              height: "48%",
-              backgroundImage: FLOOR_GRID,
-              backgroundSize: "72px 72px",
-              backgroundPosition: `0 ${floorY}px, 0 ${floorY}px`,
-              transform: "perspective(820px) rotateX(60deg)",
-              transformOrigin: "bottom center",
-              maskImage: "linear-gradient(to top, rgba(0,0,0,0.95), transparent 78%)",
-              WebkitMaskImage: "linear-gradient(to top, rgba(0,0,0,0.95), transparent 78%)",
-            }}
-          />
-          {/* Vignettage d'ancrage */}
+          <FloorGrid phase={floorPhase} />
+          {/* Vignettage + brume d'horizon (la grille se dissout dans la lumière) */}
           <div style={{ position: "absolute", inset: 0, backgroundImage: VIGNETTE }} />
         </div>
       )}

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="Atheris Labs — concept A, Arete">
+  <title>ATHERIS — A / Arête</title>
+  <!--
+    CONCEPT A — « ARÊTE »
+    Construction (grille 256) :
+      · pente des jambes  5:2 (dx = 0,4 × dy) — ratio exact, jamais « proche »
+      · base             y = 224, x = 56 → 200 (largeur 144)
+      · sommet naturel   (128, 44)   → A pointu carré 144 × 180
+      · ARÊTE : le sommet est ESCAMOTÉ d'un plan vertical à y = 76
+        (chair de 32) → face plane de 26 de large = le sommet « usiné »
+      · épaisseur jambes 28 (horizontale) → intérieurs 84 / 172
+      · contre-forme     sommet (128,114) — base y = 156
+      · traverse         y = 156 → 192 (36)
+      · encoche basse    y = 192 → 224 (97 → 159)
+    Signal : la face usinée du biseau (trapeze 10) = unique élément volt.
+  -->
+  <g transform="translate(0 -22)">
+    <path fill="#06070A" fill-rule="evenodd" d="M56 224 L115 76 H141 L200 224 H172 L159 192 H97 L84 224 H56 Z M128 114 L145 156 L111 156 Z"/>
+    <path fill="#CCFF4A" d="M115 76 H141 L145 86 H111 Z"/>
+  </g>
+</svg>

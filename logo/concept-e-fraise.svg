@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="Atheris Labs - E / Fraisé">
+  <title>ATHERIS — E / Fraisé (&lt;/&gt; fraisé dans la traverse)</title>
+  <!--
+    E / Fraisé
+    A : pente 5:2, sommet (128,16), base y=240 (16→240), jambes T=40,
+    intérieurs 56/200, rencontre y=96, largeur(y) = y-16.
+    Fraisage </> : hauteur 36, chevrons 18.0, / course 36, trait 11, gouttières 12.
+    Le tout est UN SEUL path en evenodd : la lettre, sa contre-forme et le
+    fraisage sont des trous lus par le fond — donc vrai en une seule couleur.
+  -->
+  <path fill="#06070A" fill-rule="evenodd" d="M16 240 L128 16 L240 240 H200 L186 212 H70 L56 240 H16 Z M128 96 L155 150 L101 150 Z M94.11 160.11 L72.22 182 L94.11 203.89 L101.89 196.11 L87.78 182 L101.89 167.89 Z M154.11 167.89 L168.22 182 L154.11 196.11 L161.89 203.89 L183.78 182 L161.89 160.11 Z M113.89 203.89 L149.89 167.89 L142.11 160.11 L106.11 196.11 Z"/>
+</svg>

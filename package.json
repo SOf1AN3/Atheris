@@ -15,8 +15,11 @@
     "db:bootstrap-admin": "tsx src/lib/db/bootstrap-admin.ts",
     "video:audio": "node scripts/gen-audio.mjs",
     "video:voice": "node scripts/gen-voice.mjs",
+    "video:audio:global": "cmd /c \"set DUR=45&& set MUSIC_NAME=music-global.wav&& node scripts/gen-audio.mjs\"",
+    "video:voice:global": "cmd /c \"set VO_SET=2&& node scripts/gen-voice.mjs\"",
     "video:studio": "remotion studio src/remotion/index.ts",
-    "video:render": "remotion render src/remotion/index.ts AtherisAd out/atheris-ad.mp4"
+    "video:render": "remotion render src/remotion/index.ts AtherisAd out/atheris-ad.mp4",
+    "video:render:global": "remotion render src/remotion/index.ts AtherisGlobal out/atheris-global.mp4"
   },
   "dependencies": {
     "@hookform/resolvers": "^6.0.0",
@@ -43,6 +46,7 @@
     "next": "15.5.28",
     "next-auth": "^5.0.0-beta.32",
     "next-themes": "^0.4.6",
+    "playwright": "^1.64.1",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-hook-form": "^7.90.0",

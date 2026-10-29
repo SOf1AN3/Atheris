@@ -12,7 +12,11 @@ import { SafeArea } from "../components/SafeArea";
  * Pôle n°2 de la landing (`services.items[1]`) : iOS & Android natifs.
  * Asymétrie 7/5 : iOS en grand, Android plus petit et décalé — jamais 2 clones.
  */
-export const ServiceMobile: React.FC = () => {
+export const ServiceMobile: React.FC<{ index?: string; label?: string; center?: boolean }> = ({
+  index = "02",
+  label = "SERVICES",
+  center = false,
+}) => {
   const frame = useCurrentFrame();
 
   // Push-in centré sur les téléphones (borné : jamais hors SafeArea)
@@ -21,15 +25,16 @@ export const ServiceMobile: React.FC = () => {
   return (
     <SceneShell variant="wipeDown">
       <AbsoluteFill style={{ transform: `scale(${scale})` }}>
-        <SafeArea gap={26} style={{ paddingBottom: 20 }}>
-          <SectionIndex n="02" label="SERVICES" start={0} />
+        <SafeArea gap={26} style={{ paddingBottom: 20 }} align={center ? "center" : "stretch"}>
+          <SectionIndex n={index} label={label} start={0} center={center} />
 
-          <div>
+          <div style={{ width: "100%", textAlign: center ? "center" : "left" }}>
             <TwoVoiceTitle
               parts={[{ text: "Native iOS &" }, { text: "Android", voice: "emotion" }, { text: "apps" }]}
               start={0}
               stagger={2.2}
               size={type.h2}
+              align={center ? "center" : "left"}
             />
             <p
               style={{
@@ -45,25 +50,35 @@ export const ServiceMobile: React.FC = () => {
             </p>
           </div>
 
-          {/* Deux silhouettes asymétriques (7/5) */}
-          <div style={{ position: "relative", height: 687 }}>
-            <div style={{ position: "absolute", left: 0, top: 0 }}>
+          {/* Deux silhouettes asymétriques (7/5) — recentrées en mode centré */}
+          <div style={{ position: "relative", height: 687, width: "100%" }}>
+            <div style={{ position: "absolute", left: center ? 78 : 0, top: 0 }}>
               <PhoneMockup width={340} label="iOS" start={8} delay={0} primary />
             </div>
-            <div style={{ position: "absolute", left: 372, top: 96 }}>
+            <div style={{ position: "absolute", left: center ? 450 : 372, top: 96 }}>
               <PhoneMockup width={245} label="ANDROID" start={8} delay={9} />
             </div>
           </div>
 
           {/* Chips + disponibilité stores */}
-          <div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 20 }}>
+          <div style={{ width: "100%" }}>
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 10,
+                marginBottom: 20,
+                justifyContent: center ? "center" : "flex-start",
+              }}
+            >
               {["Flutter", "React Native", "Mobile-first", "Stores"].map((label, i) => (
                 <Chip key={label} label={label} start={44} index={i} />
               ))}
             </div>
             <span
               style={{
+                display: "block",
+                textAlign: center ? "center" : "left",
                 fontFamily: "var(--mono)",
                 fontSize: type.micro,
                 letterSpacing: "0.16em",
