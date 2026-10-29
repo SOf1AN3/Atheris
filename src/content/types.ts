@@ -366,6 +366,12 @@ export interface InterviewContent {
   noteNoNightWork: string;
   /** Paragraphe 3/3 — Google Meet 5 min avant, ~30 min, créneau non modifiable. */
   noteMeetDay: string;
+  /** Phrase d'appel avec le lien Meet, placeholder `{{link}}` remplacé au rendu. */
+  meetLink: string;
+  /** Libellé du bouton d'ouverture de la réunion Google Meet. */
+  meetCta: string;
+  /** Badge/étiquette identifiant la plateforme Google Meet. */
+  meetBadge: string;
   /** Fenêtre J+1→J+3 déjà dépassée (liée à la génération du lien). */
   expiredTitle: string;
   expiredMessage: string;

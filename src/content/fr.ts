@@ -517,6 +517,9 @@ export const fr: SiteContent = {
       "Ce d\u00E9calage ne change rien \u00E0 vos horaires de travail\u00A0: la seule fois o\u00F9 il compte, c'est pour l'entretien lui-m\u00EAme.",
     noteMeetDay:
       "Le jour J\u00A0: rejoignez le Google Meet 5 minutes avant l'heure choisie. L'entretien dure en moyenne 30 minutes. Une fois valid\u00E9, le cr\u00E9neau n'est plus modifiable.",
+    meetLink: "Rejoindre l'entretien Google Meet\u00A0: {{link}}",
+    meetCta: "Ouvrir Google Meet",
+    meetBadge: "Google Meet",
     expiredTitle: "Ce lien a expir\u00E9",
     expiredMessage:
       "La p\u00E9riode de r\u00E9servation de cet entretien est termin\u00E9e. Contactez votre recruteur pour obtenir un nouveau lien.",

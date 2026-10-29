@@ -516,6 +516,9 @@ export const en: SiteContent = {
       "This time difference does not change your working hours: the only time it matters is for the interview itself.",
     noteMeetDay:
       "On the day: join the Google Meet 5 minutes before your chosen time. The interview lasts about 30 minutes. Once confirmed, the slot can no longer be changed.",
+    meetLink: "Join the Google Meet interview: {{link}}",
+    meetCta: "Open Google Meet",
+    meetBadge: "Google Meet",
     expiredTitle: "This link has expired",
     expiredMessage:
       "The booking window for this interview is over. Please contact your recruiter for a new link.",
