@@ -28,7 +28,7 @@
 
 import { Bell } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import {
@@ -188,6 +188,18 @@ export function NotificationsBell({
 
   const { hydrated, unreadCount, items, markAll, markRead } =
     useNotifications(handleNew);
+
+  /**
+   * L'horloge de rendu suit les ARRIVÉES : `setNow` n'était rafraîchie qu'à
+   * l'ouverture du panneau, si bien qu'une notification créée pendant que le
+   * panneau restait ouvert s'affichait en FUTUR (« dans 9 minutes » au lieu de
+   * « il y a 9 minutes » — constaté en E2E). Le changement de l'item le plus
+   * récent (arrivée ou premier rendu) repositionne `now` immédiatement.
+   */
+  const latestId = items[0]?.id ?? null;
+  useEffect(() => {
+    setNow(Date.now());
+  }, [latestId]);
 
   /** Clic sur un item : marquage lecture (si non lu) + navigation. Radix ferme
    *  le menu automatiquement à la sélection (`onSelect`). */
