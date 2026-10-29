@@ -1,6 +1,7 @@
 /**
- * Atheris — schéma Drizzle (PostgreSQL / Neon) : 16 tables (T02 · PLAN.md §1.2 ;
- * enrichi Lot recrutement : `job_applications` + `recruitment_templates`).
+ * Atheris — schéma Drizzle (PostgreSQL / Neon) : 17 tables (T02 · PLAN.md §1.2 ;
+ * enrichi Lot recrutement : `job_applications` + `recruitment_templates` ;
+ * enrichi Lot 4 CRM : `notifications`).
  *
  * Conventions retenues (à confirmer par le Reviewer) :
  *
@@ -729,5 +730,54 @@ export const recruitmentTemplates = pgTable(
   },
   (t) => [
     uniqueIndex("recruitment_templates_kind_locale_idx").on(t.kind, t.locale),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// 17. notifications — notifications IN-APP par destinataire (Lot 4 · CRM).
+//     Écrites par `src/lib/notify.ts` (appel « non fatal » : un échec d'écriture
+//     ne casse jamais l'action métier qui la déclenche).
+//
+//     • `link`   — chemin SANS locale (ex. `/crm/prospects/<id>`), la locale est
+//                  ajoutée au rendu côté client.
+//     • `meta`   — UNIQUEMENT le contexte de rendu (ids, noms, statuts…), JAMAIS
+//                  de phrase pré-traduite : la phrase est construite côté UI à
+//                  partir de `type` + `meta` (i18n).
+//     • `type`   — code stable du type d'événement (ex. « status.changed »).
+//     • `dedupeKey` — clé d'idempotence optionnelle : l'index unique partiel
+//                  ci-dessous empêche le double-posting pour un même
+//                  (destinataire, événement métier) — NULL autorise plusieurs
+//                  lignes.
+// ---------------------------------------------------------------------------
+
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    // cascade : pas de notification survivant à la suppression du compte.
+    recipientId: uuid("recipient_id")
+      .references((): PgColumn => users.id, { onDelete: "cascade" })
+      .notNull(),
+    // Code stable du type d'événement (text brut, pas d'enum : Zod applicatif).
+    type: text("type").notNull(),
+    // Lien SANS locale — la locale est ajoutée au rendu côté client.
+    link: text("link").notNull(),
+    // Contexte de rendu (ids, noms, statuts…) — JAMAIS de phrase traduite
+    // (i18n côté UI à partir de `type` + `meta`).
+    meta: jsonb("meta").$type<Record<string, string>>().notNull().default({}),
+    // Clé d'idempotence optionnelle (anti double-posting, index unique partiel).
+    dedupeKey: text("dedupe_key"),
+    // NULL = non lue.
+    readAt: tstz("read_at"),
+    createdAt: tstz("created_at").defaultNow().notNull(),
+  },
+  (t) => [
+    index("notifications_recipient_created_idx").on(t.recipientId, t.createdAt),
+    index("notifications_recipient_unread_idx")
+      .on(t.recipientId)
+      .where(sql`read_at IS NULL`),
+    uniqueIndex("notifications_recipient_dedupe_uq")
+      .on(t.recipientId, t.dedupeKey)
+      .where(sql`dedupe_key IS NOT NULL`),
   ],
 );
