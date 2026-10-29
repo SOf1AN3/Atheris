@@ -61,9 +61,11 @@ import { z } from "zod";
 
 import { auth } from "@/auth";
 import { locales, type Locale } from "@/i18n/config";
+import { getDictionary } from "@/i18n/dictionaries";
 import { getDb } from "@/lib/db";
 import { activities, interviewStatus, interviews, jobApplications } from "@/lib/db/schema";
 import { sendMail } from "@/lib/mail";
+import { getMeetLink } from "@/lib/meet";
 import { activeUserIdsByRoles, notify } from "@/lib/notify";
 import { normalizeEmail } from "@/lib/prospect-dedup";
 import { getSlotsForWindowDates, isValidSlot, toRecruiterTime } from "@/lib/slots";
@@ -309,8 +311,17 @@ function hourFr(localHour: string): string {
  * `Africa/Algiers` (via `toRecruiterTime`), aucune donnée secrète : le
  * jeton du lien n'y figure jamais. Mentionne aussi la consigne métier
  * « présent 5 min avant · ~30 min » (PLAN §5 · clé `interview.meetNote`).
+ *
+ * LOT 5 (D1) : si `getMeetLink()` renvoie l'URL du salon, un **dernier
+ * paragraphe** ajoute la clé `interview.meetLink` (dict FR, placeholder
+ * `{{link}}` remplacé par l'URL). Env `MEET_LINK` absente ou de forme
+ * invalide → `null` → corps **strictement identique** à l'antérieur (règle
+ * « jamais bloquant » : le dict n'est même pas chargé dans ce cas). Cette
+ * variante ne touche ni l'écriture de la réservation, ni `sendMail`, ni
+ * `notifiedAt` — la règle du Lot 2 (échec mail jamais fatal) est préservée
+ * par l'enveloppe try/catch de l'appelant.
  */
-function buildRecapText(args: {
+async function buildRecapText(args: {
   firstName: string;
   lastName: string;
   email: string;
@@ -318,9 +329,9 @@ function buildRecapText(args: {
   timezone: string;
   localDate: string;
   localHour: string;
-}): string {
+}): Promise<string> {
   const { firstName, lastName, email, instant, timezone, localDate, localHour } = args;
-  return [
+  const lines = [
     "Bonjour,",
     "",
     "Une nouvelle réservation d'entretien a été effectuée via le lien public Atheris Labs.",
@@ -333,7 +344,18 @@ function buildRecapText(args: {
     "Rappel entretien : présent 5 min avant · ~30 min (Google Meet)",
     "",
     "Récapitulatif interne — aucun jeton ni donnée confidentielle ne figure dans ce message.",
-  ].join("\n");
+  ];
+
+  // D1 — lien Meet permanent : paragraphe FINAL uniquement si la variable
+  // est présente et valide ; sinon aucune ligne ajoutée (corps identique).
+  const meetLink = getMeetLink();
+  if (meetLink !== null) {
+    // Récapitulatif interne toujours en français → dict FR.
+    const dict = await getDictionary(DEFAULT_LOCALE);
+    lines.push("", dict.interview.meetLink.replace("{{link}}", meetLink));
+  }
+
+  return lines.join("\n");
 }
 
 // ---------------------------------------------------------------------------
@@ -645,12 +667,18 @@ async function processSubmission(input: SubmitInterviewInput): Promise<SubmitInt
     //    l'invariant local : MÊME une exception inattendue ici (il ne peut y
     //    en avoir — `sendMail` est un module total) laisserait la réponse en
     //    `{ ok: true }`, la écriture étant déjà confirmée.
+    //    LOT 5 (D1) : `buildRecapText` complète le corps d'un paragraphe
+    //    « Rejoindre l'entretien Google Meet » **uniquement** si la variable
+    //    `MEET_LINK` est présente et valide (voir `@/lib/meet`) ; env
+    //    absente/invalidée → corps identique à l'antérieur, warning serveur
+    //    unique, aucun impact sur `sendMail` ni `notified_at` (fallback
+    //    « jamais bloquant » du Lot 5 — règle du Lot 2 inchangée).
     try {
       const subject = `Nouvelle réservation d'entretien — ${firstName} ${lastName} — ${formatDateFr(localDate)} ${hourFr(localHour)}`;
       const mail = await sendMail({
         to: RECRUITER_EMAIL,
         subject,
-        text: buildRecapText({ firstName, lastName, email, instant, timezone, localDate, localHour }),
+        text: await buildRecapText({ firstName, lastName, email, instant, timezone, localDate, localHour }),
       });
 
       if (mail.ok) {
