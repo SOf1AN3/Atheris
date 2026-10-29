@@ -553,6 +553,36 @@ export const en: SiteContent = {
     },
   },
 
+  sdrKit: {
+    eyebrow: "Internal documentation",
+    title: "The SDR *Onboarding* Kit",
+    description:
+      "Everything a Sales Development Representative needs to represent Atheris Labs, qualify the right buyers and start earning commission - available as a single downloadable PDF.",
+    meta: ["12 pages", "English", "PDF \u00B7 1.5 MB", "Version 1.0"],
+    intro:
+      "This is the working reference for commission-based SDRs joining Atheris Labs. It covers who we are, who to target, how the progressive commission works, how outreach is run end to end, and the standards that protect your access to the studio.",
+    downloadLabel: "Download the kit (PDF)",
+    fileName: "SDR-Onboarding-Kit.pdf",
+    languageNote: "The document is written entirely in English.",
+    includesTitle: "What the kit covers",
+    includes: [
+      "Introduction and the Atheris Labs mission",
+      "Buyer persona and target profiles",
+      "Progressive commission structure (10% to 20%)",
+      "Operational process and autonomy",
+      "Golden rules and getting started",
+    ],
+    confidentialTitle: "Internal - Confidential",
+    confidentialDescription:
+      "This document is for authorised Atheris Labs sales partners. Do not redistribute it outside the studio or publish it publicly.",
+    facts: [
+      { label: "Commission", value: "10% - 20%" },
+      { label: "Project value", value: "$500 - $4,500" },
+      { label: "Engagement", value: "Independent contractor" },
+      { label: "Earnings", value: "Uncapped" },
+    ],
+  },
+
   notFound: {
     code: "404 \u00B7 Not found",
     title: "This page does not *exist*",

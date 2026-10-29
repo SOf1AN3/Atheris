@@ -1,0 +1,1594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SDR Onboarding Kit — ATHERIS LABS</title>
+<link rel="stylesheet" href="./fonts.css" />
+<style>
+/* ============================================================
+   ATHERIS LABS — SDR Onboarding Kit
+   Visual system: "OBSIDIAN INSTRUMENT" (DESIGN.md PARTIE 2)
+   Obsidian body · hairline edges · a single volt signal ·
+   three typographic voices (Inter Tight / Instrument Serif /
+   JetBrains Mono).
+   ============================================================ */
+
+:root {
+  /* Obsidian ground */
+  --ink:      #06070A;
+  --ink-2:    #0A0C11;
+  --ink-3:    #0E1117;
+  --surface:  #101319;
+  --surface-2:#161A22;
+  --surface-3:#1D222C;
+
+  /* Hairlines */
+  --line:   rgba(255,255,255,0.07);
+  --line-2: rgba(255,255,255,0.14);
+  --line-3: rgba(255,255,255,0.22);
+
+  /* Text — warm white */
+  --fg:     #F4F2ED;
+  --fg-2:   #C9CDD6;
+  --muted:  #8A909E;
+  --faint:  #757D8F;
+
+  /* The single signal */
+  --volt:      #CCFF4A;
+  --volt-2:    #B8E63C;
+  --volt-ink:  #06070A;
+  --volt-dim:  rgba(204,255,74,0.12);
+  --volt-line: rgba(204,255,74,0.28);
+
+  /* Semantic */
+  --success:#4ADE80;
+  --warn:   #F5C451;
+  --danger: #FF6B5A;
+
+  --sans:  'Inter Tight', 'Segoe UI', system-ui, sans-serif;
+  --serif: 'Instrument Serif', Georgia, serif;
+  --mono:  'JetBrains Mono', 'Cascadia Mono', Consolas, monospace;
+}
+
+/* ---------- Page geometry ----------------------------------
+   `@page { margin: 20mm 15mm; }` gives the strict, consistent safe area the
+   document needs, and painting the background ON the `@page` box itself is
+   what lets the obsidian ground bleed all the way to the paper edges.
+
+   This combination matters: a repeating `@page` margin normally renders as
+   unpaintable white paper (page content and header/footer templates cannot
+   carry a background into the margin box), which on a dark identity reads as
+   a printing fault rather than as design. Setting the ground on the `@page`
+   box instead paints the margin band obsidian on every page, so text is
+   inset by the margin AND the ground still bleeds. */
+@page {
+  size: A4;
+  margin: 20mm 15mm;
+  background: #06070A;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--ink);
+  color: var(--fg-2);
+  font-family: var(--sans);
+  font-size: 9.5pt;
+  line-height: 1.62;
+  letter-spacing: -0.003em;
+  -webkit-font-smoothing: antialiased;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+/* ---------- Typographic primitives -------------------------- */
+
+.mono {
+  font-family: var(--mono);
+  font-size: 7pt;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+em, .voix {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 400;
+  color: var(--fg);
+  letter-spacing: 0;
+}
+
+h1, h2, h3, h4 { margin: 0; font-weight: 600; color: var(--fg); letter-spacing: -0.03em; }
+
+p { margin: 0 0 8pt 0; }
+p:last-child { margin-bottom: 0; }
+
+strong { color: var(--fg); font-weight: 600; }
+
+a { color: var(--fg); text-decoration: none; border-bottom: 1px solid var(--line-3); }
+
+/* ============================================================
+   COVER
+   ============================================================ */
+
+.cover {
+  position: relative;
+  min-height: 248mm;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  page-break-after: auto;
+}
+
+/* Cool desaturated "source" glow, anchored to the top-right —
+   the temperature of the hero, never a saturated template gradient. */
+.cover::before {
+  content: "";
+  position: absolute;
+  top: -46mm;
+  right: -34mm;
+  width: 150mm;
+  height: 128mm;
+  background: radial-gradient(
+    50% 50% at 50% 50%,
+    rgba(170,198,246,0.13) 0%,
+    rgba(84,112,178,0.055) 46%,
+    transparent 82%
+  );
+  pointer-events: none;
+}
+
+/* Floor grid, dissolving upward into the light. */
+.cover::after {
+  content: "";
+  position: absolute;
+  left: -20mm;
+  right: -20mm;
+  bottom: -6mm;
+  height: 74mm;
+  background-image:
+    linear-gradient(to right, rgba(255,255,255,0.055) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255,255,255,0.055) 1px, transparent 1px);
+  background-size: 13mm 13mm;
+  -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,0.85), transparent 88%);
+          mask-image: linear-gradient(to top, rgba(0,0,0,0.85), transparent 88%);
+  pointer-events: none;
+}
+
+.cover > * { position: relative; z-index: 1; }
+
+/* Brand lockup — glyph + two-voice wordmark */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 7pt;
+}
+.brand svg { display: block; }
+.brand .wm {
+  font-size: 12.5pt;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--fg);
+}
+.brand .wm span {
+  font-family: var(--mono);
+  font-size: 7pt;
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  color: var(--faint);
+  margin-left: 5pt;
+  position: relative;
+  top: -1px;
+}
+
+/* Badge */
+.badge {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 7pt;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  padding: 5pt 13pt;
+  background: rgba(255,255,255,0.02);
+}
+
+.cover h1 {
+  font-size: 43pt;
+  line-height: 0.96;
+  letter-spacing: -0.045em;
+  font-weight: 600;
+  color: var(--fg);
+}
+.cover h1 em { font-size: 45pt; line-height: 0.96; letter-spacing: -0.01em; }
+
+.cover .subtitle {
+  font-size: 13.5pt;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  color: var(--fg-2);
+  line-height: 1.4;
+}
+
+.cover .blurb {
+  font-size: 10pt;
+  line-height: 1.68;
+  color: var(--muted);
+  max-width: 118mm;
+}
+
+/* Key figures band */
+.figures {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid var(--line-2);
+  border-bottom: 1px solid var(--line-2);
+}
+.figures .fig { padding: 13pt 0 12pt 0; }
+.figures .fig + .fig { border-left: 1px solid var(--line); padding-left: 16pt; }
+.figures .fig:not(:last-child) { padding-right: 16pt; }
+.figures .n {
+  font-size: 21pt;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  color: var(--fg);
+  line-height: 1;
+}
+.figures .n.sig { color: var(--volt); }
+.figures .l {
+  margin-top: 6pt;
+  font-family: var(--mono);
+  font-size: 6.5pt;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--faint);
+  line-height: 1.5;
+}
+
+/* Document control */
+.doccontrol {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0 24pt;
+  border-top: 1px solid var(--line);
+  padding-top: 11pt;
+}
+.doccontrol dl { margin: 0; }
+.doccontrol .row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12pt;
+  padding: 3.5pt 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 8.5pt;
+}
+.doccontrol dt {
+  font-family: var(--mono);
+  font-size: 6.5pt;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--faint);
+  padding-top: 2px;
+}
+.doccontrol dd { margin: 0; color: var(--fg-2); text-align: right; }
+
+.classification {
+  font-family: var(--mono);
+  font-size: 6.5pt;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+/* ============================================================
+   CHAPTERS
+   ============================================================ */
+
+/* Main section headings always open a fresh page — never an
+   orphaned or cut heading at the foot of the previous one. */
+h2.chapter {
+  page-break-before: always;
+  page-break-inside: avoid;
+  break-before: page;
+  break-inside: avoid;
+}
+
+h2.chapter .idx {
+  display: block;
+  font-family: var(--mono);
+  font-size: 7pt;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--faint);
+  padding-bottom: 8pt;
+  margin-bottom: 12pt;
+  border-bottom: 1px solid var(--line-2);
+}
+h2.chapter .idx b { color: var(--volt); font-weight: 500; margin-right: 8pt; }
+
+h2.chapter .ttl {
+  display: block;
+  font-size: 25pt;
+  line-height: 1.04;
+  letter-spacing: -0.035em;
+  font-weight: 600;
+  color: var(--fg);
+}
+h2.chapter .ttl em { font-size: 27pt; letter-spacing: -0.005em; }
+
+h2.chapter .lead {
+  display: block;
+  margin-top: 10pt;
+  font-size: 10.5pt;
+  line-height: 1.6;
+  color: var(--muted);
+  max-width: 148mm;
+}
+
+h3 {
+  font-size: 11.5pt;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  font-weight: 600;
+  color: var(--fg);
+  margin: 0 0 7pt 0;
+  /* Never strand a heading at the foot of a page — pull it on with
+     whatever follows (a table, a card, a list). */
+  page-break-after: avoid;
+  break-after: avoid;
+}
+h3 em { font-size: 12.5pt; }
+
+h4 {
+  font-family: var(--mono);
+  font-size: 7pt;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 8pt 0;
+}
+
+.block { margin-top: 20pt; }
+.block-lg { margin-top: 28pt; }
+
+/* ---------- Cards ------------------------------------------ */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-top-color: var(--line-2);
+  border-radius: 12px;
+  padding: 15pt 16pt;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 11pt; }
+.grid-2u { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+.grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 11pt; }
+
+.card .cap {
+  font-family: var(--mono);
+  font-size: 6.5pt;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin-bottom: 7pt;
+}
+.card h3 { font-size: 11pt; margin-bottom: 6pt; }
+.card p { font-size: 9pt; line-height: 1.6; color: var(--muted); }
+
+.tags { margin-top: 9pt; display: flex; flex-wrap: wrap; gap: 4pt; }
+.tag {
+  font-family: var(--mono);
+  font-size: 6pt;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--faint);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 2.5pt 7pt;
+}
+
+/* ---------- Callout ---------------------------------------- */
+
+.callout {
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--volt-line);
+  border-radius: 0 10px 10px 0;
+  background: linear-gradient(90deg, var(--volt-dim), rgba(204,255,74,0.015) 55%, transparent);
+  padding: 13pt 16pt;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+.callout .k {
+  font-family: var(--mono);
+  font-size: 6.5pt;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--volt);
+  margin-bottom: 6pt;
+}
+.callout p { font-size: 9.25pt; line-height: 1.62; color: var(--fg-2); }
+
+.callout.neutral {
+  border-left-color: var(--line-3);
+  background: linear-gradient(90deg, rgba(255,255,255,0.035), transparent 60%);
+}
+.callout.neutral .k { color: var(--muted); }
+
+.callout.warn {
+  border-left-color: rgba(245,196,81,0.4);
+  background: linear-gradient(90deg, rgba(245,196,81,0.08), transparent 60%);
+}
+.callout.warn .k { color: var(--warn); }
+
+/* ---------- Lists ------------------------------------------ */
+
+ul.rules, ol.rules { margin: 0; padding: 0; list-style: none; counter-reset: r; }
+ul.rules > li, ol.rules > li {
+  position: relative;
+  padding: 8pt 0 8pt 22pt;
+  border-bottom: 1px solid var(--line);
+  font-size: 9.25pt;
+  line-height: 1.6;
+  color: var(--muted);
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+ul.rules > li:last-child, ol.rules > li:last-child { border-bottom: 0; }
+ul.rules > li::before {
+  content: "";
+  position: absolute;
+  left: 4pt; top: 15pt;
+  width: 5px; height: 5px;
+  border: 1px solid var(--line-3);
+  border-radius: 1px;
+  transform: rotate(45deg);
+}
+ol.rules > li { counter-increment: r; }
+ol.rules > li::before {
+  content: counter(r, decimal-leading-zero);
+  position: absolute;
+  left: 0; top: 8.5pt;
+  font-family: var(--mono);
+  font-size: 7pt;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--volt);
+}
+ul.rules b, ol.rules b { color: var(--fg); font-weight: 600; }
+
+ul.check { margin: 0; padding: 0; list-style: none; }
+ul.check > li {
+  position: relative;
+  padding: 6pt 0 6pt 20pt;
+  font-size: 9pt;
+  line-height: 1.58;
+  color: var(--muted);
+  border-bottom: 1px solid var(--line);
+}
+ul.check > li:last-child { border-bottom: 0; }
+ul.check > li::before {
+  content: "";
+  position: absolute;
+  left: 1pt; top: 11pt;
+  width: 8px; height: 8px;
+  border: 1px solid var(--line-3);
+  border-radius: 2px;
+}
+
+/* ---------- Tables ----------------------------------------- */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 8.75pt;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+thead th {
+  font-family: var(--mono);
+  font-size: 6.5pt;
+  font-weight: 500;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--faint);
+  text-align: left;
+  padding: 0 10pt 7pt 0;
+  border-bottom: 1px solid var(--line-2);
+  vertical-align: bottom;
+}
+tbody td {
+  padding: 8pt 10pt 8pt 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  vertical-align: top;
+  line-height: 1.5;
+}
+tbody tr:last-child td { border-bottom: 0; }
+td:last-child, th:last-child { padding-right: 0; }
+td.k { color: var(--fg); font-weight: 500; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.mono-cell { font-family: var(--mono); font-size: 8pt; letter-spacing: 0.02em; }
+
+th.alt, td.alt { background: var(--surface); }
+th.alt { padding-left: 10pt; }
+td.alt:first-child { padding-left: 10pt; border-radius: 8px 0 0 0; }
+td.alt:last-child { border-radius: 0 8px 0 0; }
+
+/* The tier table — the single volt moment of its chapter */
+tr.tier-top td { color: var(--fg-2); background: var(--volt-dim); }
+tr.tier-top td.k, tr.tier-top td.rate { color: var(--volt); }
+td.rate {
+  font-family: var(--mono);
+  font-size: 9.5pt;
+  font-weight: 500;
+  color: var(--fg);
+  letter-spacing: 0.01em;
+}
+td.rate .u { font-size: 7pt; color: var(--faint); }
+.pill {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 6pt;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--faint);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 2pt 7pt;
+}
+.pill.on { color: var(--volt); border-color: var(--volt-line); background: var(--volt-dim); }
+
+/* ---------- Split "who owns what" --------------------------- */
+
+.split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+.split > div { padding: 14pt 16pt; }
+.split > div + div { border-left: 1px solid var(--line); background: var(--ink-2); }
+.split h4 { margin-bottom: 9pt; }
+.split .yours h4 { color: var(--volt); }
+.split li {
+  font-size: 8.75pt;
+  line-height: 1.5;
+  color: var(--muted);
+  padding: 4.5pt 0 4.5pt 13pt;
+  position: relative;
+  border-bottom: 1px solid var(--line);
+  list-style: none;
+}
+.split ul { margin: 0; padding: 0; }
+.split li:last-child { border-bottom: 0; }
+.split .yours li::before {
+  content: "+"; position: absolute; left: 0; top: 4pt;
+  color: var(--volt); font-family: var(--mono); font-size: 8pt;
+}
+.split .ours li::before {
+  content: "→"; position: absolute; left: 0; top: 4.5pt;
+  color: var(--faint); font-family: var(--mono); font-size: 7pt;
+}
+
+/* ---------- Process steps ---------------------------------- */
+
+ol.flow { margin: 0; padding: 0; list-style: none; counter-reset: f; }
+ol.flow > li {
+  counter-increment: f;
+  position: relative;
+  padding: 11pt 0 11pt 34pt;
+  border-bottom: 1px solid var(--line);
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+ol.flow > li:last-child { border-bottom: 0; }
+ol.flow > li::before {
+  content: counter(f, decimal-leading-zero);
+  position: absolute;
+  left: 0; top: 12pt;
+  font-family: var(--mono);
+  font-size: 12pt;
+  font-weight: 400;
+  color: var(--surface-3);
+  letter-spacing: 0;
+}
+ol.flow b { display: block; color: var(--fg); font-weight: 600; font-size: 9.75pt; margin-bottom: 2pt; }
+ol.flow span { color: var(--muted); font-size: 9pt; line-height: 1.58; display: block; }
+
+/* ---------- Yes / No --------------------------------------- */
+
+.yesno { display: grid; grid-template-columns: 1fr 1fr; gap: 11pt; }
+.yesno .card { padding: 13pt 15pt; }
+.yesno h4.ok { color: var(--success); }
+.yesno h4.no { color: var(--danger); }
+.yesno ul { margin: 0; padding: 0; list-style: none; }
+.yesno li {
+  position: relative;
+  padding: 5pt 0 5pt 15pt;
+  font-size: 8.75pt;
+  line-height: 1.5;
+  color: var(--muted);
+  border-bottom: 1px solid var(--line);
+}
+.yesno li:last-child { border-bottom: 0; }
+.yesno .ok li::before { content: "✓"; position: absolute; left: 0; top: 4.5pt; color: var(--success); font-size: 8pt; }
+.yesno .no li::before { content: "✕"; position: absolute; left: 0; top: 4.5pt; color: var(--danger); font-size: 8pt; }
+
+/* ---------- 7-day plan ------------------------------------- */
+
+.plan { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0 18pt; }
+.plan .d {
+  display: flex;
+  gap: 11pt;
+  padding: 8.5pt 0;
+  border-bottom: 1px solid var(--line);
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+.plan .d .day {
+  font-family: var(--mono);
+  font-size: 6.5pt;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--volt);
+  padding-top: 2pt;
+  white-space: nowrap;
+  min-width: 27pt;
+}
+.plan .d .what { font-size: 8.75pt; line-height: 1.5; color: var(--muted); }
+.plan .d .what b { color: var(--fg); font-weight: 600; }
+
+/* ---------- Closing ---------------------------------------- */
+
+.closing {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background:
+    radial-gradient(120% 140% at 92% 0%, rgba(204,255,74,0.07), transparent 58%),
+    var(--surface);
+  padding: 18pt 22pt;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+.closing .k {
+  font-family: var(--mono);
+  font-size: 6.5pt;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--volt);
+  margin-bottom: 10pt;
+}
+.closing h3 {
+  font-size: 17pt;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  margin-bottom: 9pt;
+}
+.closing h3 em { font-size: 18.5pt; }
+.closing p { font-size: 9.5pt; line-height: 1.65; color: var(--muted); max-width: 140mm; }
+
+/* ---------- Quick reference -------------------------------- */
+
+.qr { display: grid; grid-template-columns: 1fr 1fr; gap: 11pt; }
+.qr .card { padding: 11pt 13pt; }
+.qr h4 { margin-bottom: 7pt; }
+.qr .kv {
+  display: flex;
+  justify-content: space-between;
+  gap: 10pt;
+  padding: 4.5pt 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 8.5pt;
+}
+.qr .kv:last-child { border-bottom: 0; }
+.qr .kv span { color: var(--muted); }
+.qr .kv b { color: var(--fg); font-weight: 600; font-family: var(--mono); font-size: 8pt; letter-spacing: 0.02em; }
+
+/* ---------- Glossary --------------------------------------- */
+
+.gloss { display: grid; grid-template-columns: 1fr 1fr; gap: 0 22pt; }
+.gloss .t {
+  padding: 5.5pt 0;
+  border-bottom: 1px solid var(--line);
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+.gloss .t b {
+  display: block;
+  font-family: var(--mono);
+  font-size: 7pt;
+  font-weight: 500;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--fg);
+  margin-bottom: 2pt;
+}
+.gloss .t span { font-size: 8.5pt; line-height: 1.5; color: var(--muted); }
+
+.note {
+  font-size: 8pt;
+  line-height: 1.55;
+  color: var(--faint);
+  border-top: 1px solid var(--line);
+  padding-top: 8pt;
+  margin-top: 14pt;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+.note b { color: var(--muted); font-weight: 500; }
+
+/* ---------- Motion / print hygiene ------------------------- */
+@media print {
+  * { animation: none !important; transition: none !important; }
+  .card, .callout, table, .split, .closing { page-break-inside: avoid; break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+
+<!-- ================= COVER ================= -->
+<section class="cover">
+
+  <div class="brand">
+    <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="#F4F2ED" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M4.5 19.5 12 4.5l7.5 15" />
+      <path d="M8.25 14.25h7.5" />
+    </svg>
+    <span class="wm">ATHERIS<span>LABS</span></span>
+  </div>
+
+  <div style="margin-top:34mm">
+    <span class="badge">Atheris LABS — Internal Documentation</span>
+  </div>
+
+  <h1 style="margin-top:16mm">SDR <em>Onboarding</em> Kit</h1>
+
+  <div class="subtitle" style="margin-top:14mm">
+    100% Commission-Based Outbound Sales
+  </div>
+
+  <p class="blurb" style="margin-top:11mm">
+    Everything you need to represent ATHERIS LABS in the market, qualify the right
+    buyers, and start earning commission on every closed project — from your very
+    first conversation.
+  </p>
+
+  <div class="figures" style="margin-top:22mm">
+    <div class="fig">
+      <div class="n sig">10–20<span style="font-size:12pt">%</span></div>
+      <div class="l">Progressive commission<br />on every closed deal</div>
+    </div>
+    <div class="fig">
+      <div class="n">$500–$4,500</div>
+      <div class="l">Typical project<br />value range</div>
+    </div>
+    <div class="fig">
+      <div class="n">Uncapped</div>
+      <div class="l">No ceiling on<br />volume or earnings</div>
+    </div>
+  </div>
+
+  <div style="flex:1"></div>
+
+  <div class="doccontrol">
+    <dl>
+      <div class="row"><dt>Document</dt><dd>SDR Onboarding Kit</dd></div>
+      <div class="row"><dt>Audience</dt><dd>Commission-based SDRs</dd></div>
+      <div class="row"><dt>Engagement</dt><dd>Independent contractor</dd></div>
+    </dl>
+    <dl>
+      <div class="row"><dt>Version</dt><dd>1.0</dd></div>
+      <div class="row"><dt>Classification</dt><dd>Internal — Confidential</dd></div>
+      <div class="row"><dt>Owner</dt><dd>Atheris LABS · Sales</dd></div>
+    </dl>
+  </div>
+
+  <div class="classification" style="margin-top:12pt">
+    Confidential — for authorised Atheris LABS sales partners only · Do not distribute
+  </div>
+
+</section>
+
+
+<!-- ================= 01 · INTRODUCTION ================= -->
+<h2 class="chapter">
+  <span class="idx"><b>01</b> — Introduction</span>
+  <span class="ttl">Who we are &amp; <em>what we sell</em></span>
+  <span class="lead">
+    Before you can sell Atheris LABS, you need to be able to describe it in one
+    breath — accurately, confidently, without hype. This chapter gives you that.
+  </span>
+</h2>
+
+<div class="block">
+  <h3>The studio in one paragraph</h3>
+  <p>
+    Atheris LABS is a <strong>software engineering studio</strong>. We design, build and
+    ship custom digital products for businesses: high-performance web applications,
+    mobile apps, desktop software and the automation that ties them together. We are
+    not a template shop and we are not a staffing marketplace — every engagement is
+    scoped, engineered and delivered by our own team.
+  </p>
+  <p>
+    Our engineering core is deliberately modern and narrow: <strong>Next.js</strong> and
+    <strong>Node.js</strong> on the application layer, <strong>PostgreSQL</strong> as the
+    system of record, wrapped in a design practice that treats interface quality as a
+    engineering discipline rather than decoration.
+  </p>
+</div>
+
+<div class="callout block">
+  <div class="k">Mission</div>
+  <p>
+    We exist to give ambitious businesses the software that larger competitors already
+    have — engineered to their actual process, delivered at a size and price they can
+    act on. <strong>You sell that mission, one business at a time.</strong>
+  </p>
+</div>
+
+<div class="block-lg">
+  <h3>Areas of <em>expertise</em></h3>
+  <p style="color:var(--muted);font-size:9pt;max-width:148mm">
+    These are the four things you will be opening conversations about. Learn to name
+    them plainly — a prospect recognises a studio that knows its own work.
+  </p>
+
+  <div class="grid-2" style="margin-top:12pt">
+    <div class="card">
+      <div class="cap">01 · Web</div>
+      <h3>Web Applications &amp; SaaS Platforms</h3>
+      <p>
+        Multi-tenant platforms, business dashboards, customer portals and
+        business-critical internal tools — the products a company actually runs on.
+      </p>
+      <div class="tags">
+        <span class="tag">Next.js</span><span class="tag">React</span>
+        <span class="tag">Node.js</span><span class="tag">PostgreSQL</span>
+        <span class="tag">Multi-tenant</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="cap">02 · Mobile</div>
+      <h3>iOS &amp; Android Mobile Apps</h3>
+      <p>
+        Two native platforms built for everyday use: smooth interfaces, careful
+        performance, and guided publishing to the App Store and Google Play.
+      </p>
+      <div class="tags">
+        <span class="tag">Flutter</span><span class="tag">React Native</span>
+        <span class="tag">Mobile-first UI/UX</span><span class="tag">Store Publishing</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="cap">03 · Desktop</div>
+      <h3>Cross-Platform Business Software</h3>
+      <p>
+        Desktop software shaped around a company's internal process, running
+        consistently on Windows, macOS and Linux.
+      </p>
+      <div class="tags">
+        <span class="tag">Electron</span><span class="tag">Flutter Desktop</span>
+        <span class="tag">Windows</span><span class="tag">macOS</span><span class="tag">Linux</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="cap">04 · Modernization</div>
+      <h3>Modernization, Redesign &amp; Cloud</h3>
+      <p>
+        We modernise what a business already runs: performance audits, architecture
+        redesign, cloud migration and a launch that scales without drama.
+      </p>
+      <div class="tags">
+        <span class="tag">Performance Audit</span><span class="tag">Core Web Vitals</span>
+        <span class="tag">REST / GraphQL</span><span class="tag">Scaling</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="block">
+  <h3>Workflow <em>automation</em></h3>
+  <p>
+    Alongside products, we automate the manual work that quietly eats a team's week —
+    quoting, onboarding, reporting, data entry between tools, notifications. This is
+    often the <strong>easiest first conversation to have</strong>: the pain is concrete,
+    the budget is small, and the proof of value is immediate. Many of our largest
+    engagements started as a modest automation build.
+  </p>
+</div>
+
+<div class="split block">
+  <div class="yours">
+    <h4>What makes us easy to sell</h4>
+    <ul>
+      <li>A real, verifiable portfolio — not promises</li>
+      <li>Founder-led delivery, so answers come fast</li>
+      <li>A defined price band prospects can act on</li>
+      <li>Short engagements, so decision cycles stay short</li>
+    </ul>
+  </div>
+  <div class="ours">
+    <h4>What you are competing against</h4>
+    <ul>
+      <li>Freelancers who vanish mid-project</li>
+      <li>Agencies with agency pricing and agency delays</li>
+      <li>In-house hires a small business cannot justify</li>
+      <li>DIY website builders that hit a ceiling fast</li>
+    </ul>
+  </div>
+</div>
+
+<div class="note">
+  <b>Positioning in one line:</b> a business gets the engineering quality of a senior
+  product team, on a project it can actually approve — scoped, priced and delivered
+  without the overhead of an agency.
+</div>
+
+
+<!-- ================= 02 · BUYER PERSONA ================= -->
+<h2 class="chapter">
+  <span class="idx"><b>02</b> — Buyer Persona</span>
+  <span class="ttl">Who to target &amp; <em>why they buy</em></span>
+  <span class="lead">
+    Outbound only pays when the list is right. Spend your hours on the four profiles
+    below, and lead with the pain rather than the technology.
+  </span>
+</h2>
+
+<div class="block">
+  <h3>Four profiles <em>worth your time</em></h3>
+  <div class="grid-2" style="margin-top:12pt">
+
+    <div class="card">
+      <div class="cap">Profile A</div>
+      <h3>Growing SMBs</h3>
+      <p>
+        Established small and mid-sized businesses with real revenue and real customers
+        — but an online presence that no longer reflects their size. They feel the gap
+        between how professional they are and how professional they look.
+      </p>
+      <div class="tags">
+        <span class="tag">Outdated website</span><span class="tag">Manual back-office</span>
+        <span class="tag">Hiring stalled by tools</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="cap">Profile B</div>
+      <h3>Service Agencies</h3>
+      <p>
+        Marketing, consulting, logistics and creative agencies whose delivery depends on
+        spreadsheets and inboxes. Their margin leaks into coordination work that should
+        be software.
+      </p>
+      <div class="tags">
+        <span class="tag">No client portal</span><span class="tag">Manual reporting</span>
+        <span class="tag">Scaling headcount</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="cap">Profile C</div>
+      <h3>Startups</h3>
+      <p>
+        Founders with funding or traction and a product roadmap they cannot execute
+        alone. They need senior engineering now, without the cost and delay of building
+        a full team first.
+      </p>
+      <div class="tags">
+        <span class="tag">MVP to build</span><span class="tag">No CTO yet</span>
+        <span class="tag">Investor deadlines</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="cap">Profile D</div>
+      <h3>E-commerce Stores</h3>
+      <p>
+        Online retailers outgrowing their platform: slow storefronts, checkout friction,
+        inventory held together by hand. Every second of load time and every abandoned
+        cart is measurable money.
+      </p>
+      <div class="tags">
+        <span class="tag">Slow storefront</span><span class="tag">Checkout drop-off</span>
+        <span class="tag">Inventory by hand</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="block-lg">
+  <h3>Decision-makers to <em>reach</em></h3>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:20%">Role</th>
+        <th style="width:30%">What keeps them up</th>
+        <th style="width:30%">What lands</th>
+        <th style="width:20%">Avoid</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="k">CEO</td>
+        <td>Growth, margin, and looking credible to their own market</td>
+        <td>Business outcome first — revenue, credibility, time back</td>
+        <td>Technology deep-dives</td>
+      </tr>
+      <tr>
+        <td class="k">Founder</td>
+        <td>Speed to market and not wasting limited budget</td>
+        <td>Ship fast, prove it, iterate — a partner who moves at their pace</td>
+        <td>Long, rigid timelines</td>
+      </tr>
+      <tr>
+        <td class="k">COO</td>
+        <td>Operational drag and teams doing work software should do</td>
+        <td>Efficiency, reliability, fewer manual steps, clear ownership</td>
+        <td>Vague promises of "digital transformation"</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="block">
+  <h3>Key <em>pain points</em></h3>
+  <p style="color:var(--muted);font-size:9pt;max-width:148mm">
+    If a prospect describes any of these, you have a live conversation. Mirror their
+    words back before you ever mention a solution.
+  </p>
+  <ul class="rules" style="margin-top:6pt">
+    <li><b>An outdated or slow website</b> that undermines their credibility and loses them enquiries they never see.</li>
+    <li><b>Manual processes</b> — quoting, scheduling, reporting, data entry — that consume hours a day and invite errors.</li>
+    <li><b>Disconnected tools</b> that do not talk to each other, forcing staff to retype the same information.</li>
+    <li><b>No customer-facing portal</b>, so every request arrives by email and nothing has a status.</li>
+    <li><b>No mobile presence</b> for a business whose customers live on their phones.</li>
+    <li><b>Losing deals to better-presented competitors</b> with a stronger digital footprint.</li>
+    <li><b>Growth capped by headcount</b> — the only way to do more is to hire more, and that does not scale.</li>
+  </ul>
+</div>
+
+<div class="block">
+  <h3>Qualify before <em>you invest</em></h3>
+  <div class="yesno">
+    <div class="card">
+      <h4 class="ok">Green flags — pursue</h4>
+      <ul class="ok">
+        <li>You are speaking to the decision-maker, or can be referred to them</li>
+        <li>They describe a concrete problem, not a vague wish</li>
+        <li>There is a real consequence to doing nothing</li>
+        <li>They can approve a project in the $500–$4,500 band</li>
+        <li>They have launched — or are ready to launch — within weeks</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4 class="no">Red flags — disqualify</h4>
+      <ul class="no">
+        <li>"Just curious" with no problem, budget or timeline</li>
+        <li>Expecting a full internal team on retainer for a one-off fee</li>
+        <li>Insisting on unpaid spec work or free proposals</li>
+        <li>Requests that are illegal, deceptive or against platform policy</li>
+        <li>No authority and no route to anyone who has it</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="callout neutral block">
+  <div class="k">Discovery — five questions that do the work</div>
+  <p>
+    What is the business problem, and what is it costing you? · What happens today,
+    step by step? · What have you already tried? · If this were solved in six weeks,
+    what would change for the business? · What would a result be worth to you?
+    <br /><br />
+    Qualifying is not interrogation. Ask, listen, and write it down — a prospect who
+    feels heard is a prospect who agrees to a call with the team.
+  </p>
+</div>
+
+
+<!-- ================= 03 · COMMISSION ================= -->
+<h2 class="chapter">
+  <span class="idx"><b>03</b> — Commission Structure</span>
+  <span class="ttl">Progressive &amp; <em>uncapped</em></span>
+  <span class="lead">
+    You are engaged as a commission-based independent contractor. The more you close,
+    the higher your rate — with no ceiling on volume and no cap on earnings.
+  </span>
+</h2>
+
+<div class="block">
+  <h3>The <em>barème</em></h3>
+  <p style="color:var(--muted);font-size:9pt;max-width:148mm">
+    Your rate is set by your cumulative number of <strong>paid clients</strong>. It rises
+    as you deliver, and it never falls.
+  </p>
+
+  <table style="margin-top:12pt">
+    <thead>
+      <tr>
+        <th style="width:14%">Tier</th>
+        <th style="width:26%">Paid clients</th>
+        <th class="num" style="width:22%">Your commission</th>
+        <th style="width:38%">Standing</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="k mono-cell">T1</td>
+        <td>0 – 4</td>
+        <td class="num rate">10.0<span class="u"> %</span></td>
+        <td><span class="pill">Entry</span></td>
+      </tr>
+      <tr>
+        <td class="k mono-cell">T2</td>
+        <td>5 – 9</td>
+        <td class="num rate">12.5<span class="u"> %</span></td>
+        <td><span class="pill">Accelerator</span></td>
+      </tr>
+      <tr>
+        <td class="k mono-cell">T3</td>
+        <td>10 – 19</td>
+        <td class="num rate">15.0<span class="u"> %</span></td>
+        <td><span class="pill">Senior</span></td>
+      </tr>
+      <tr class="tier-top">
+        <td class="k mono-cell">T4</td>
+        <td>20 and above</td>
+        <td class="num rate">20.0<span class="u"> %</span></td>
+        <td><span class="pill on">Elite</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="callout block">
+  <div class="k">The three commitments that matter</div>
+  <p>
+    <strong>Immediate payout</strong> — your commission is released as soon as the client's
+    down payment is received. You do not wait for delivery to finish.<br />
+    <strong>Uncapped</strong> — there is no maximum deal value and no maximum number of
+    deals. Tier 4 applies to every deal from your twentieth onward.<br />
+    <strong>Non-retroactive</strong> — your rate is locked in at the moment a deal is
+    triggered. Climbing a tier can only ever increase what you earn going forward.
+  </p>
+</div>
+
+<div class="block-lg">
+  <h3>What a deal is <em>worth</em></h3>
+  <p style="color:var(--muted);font-size:9pt;max-width:148mm">
+    Commission is calculated on the full project value. These figures show your earnings
+    at your entry rate and at the elite rate.
+  </p>
+  <table style="margin-top:12pt">
+    <thead>
+      <tr>
+        <th style="width:26%">Project value</th>
+        <th class="num" style="width:24%">At 10.0% (T1)</th>
+        <th class="num" style="width:24%">At 20.0% (T4)</th>
+        <th style="width:26%">Typical project</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="k mono-cell">$500</td>
+        <td class="num mono-cell">$50</td>
+        <td class="num mono-cell">$100</td>
+        <td>Landing page · small fix</td>
+      </tr>
+      <tr>
+        <td class="k mono-cell">$1,500</td>
+        <td class="num mono-cell">$150</td>
+        <td class="num mono-cell">$300</td>
+        <td>Business site · integration</td>
+      </tr>
+      <tr>
+        <td class="k mono-cell">$2,500</td>
+        <td class="num mono-cell">$250</td>
+        <td class="num mono-cell">$500</td>
+        <td>E-commerce · dashboard</td>
+      </tr>
+      <tr class="tier-top">
+        <td class="k mono-cell">$4,500</td>
+        <td class="num mono-cell">$450</td>
+        <td class="num mono-cell">$900</td>
+        <td>Web app · app MVP · modernization</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="card block">
+  <div class="cap">Scenario — steady state</div>
+  <p style="color:var(--fg-2);font-size:9.5pt">
+    Twenty clients at an average project value of <strong>$2,250</strong> is
+    <strong>$45,000</strong> written. Across a blended 15–20% rate that is
+    <strong>$6,750 – $9,000</strong> in commission — and everything above that is
+    yours to keep earning, with no ceiling above it.
+  </p>
+</div>
+
+<div class="block-lg">
+  <h3>How a commission is <em>triggered</em></h3>
+  <ol class="flow" style="margin-top:4pt">
+    <li>
+      <b>Quote accepted</b>
+      <span>The prospect you sourced and qualified receives a formal quote from Atheris LABS.</span>
+    </li>
+    <li>
+      <b>Down payment received</b>
+      <span>The client's deposit lands. This is the single event that generates commission — not the conversation, not the quote alone.</span>
+    </li>
+    <li>
+      <b>Rate snapshotted</b>
+      <span>Your tier is recorded permanently against that deal at the rate in force on that day.</span>
+    </li>
+    <li>
+      <b>Payout released</b>
+      <span>Your commission is settled immediately, and the client moves to active with the delivery team.</span>
+    </li>
+  </ol>
+</div>
+
+<div class="warn callout block">
+  <div class="k">Read this before your first deal</div>
+  <p>
+    Attribution follows the CRM. A deal counts for you when the prospect is recorded
+    under your name and reaches a signed quote with a down payment. Register every
+    prospect you approach on the day you approach them — an unregistered conversation
+    cannot be attributed to you later. Commission terms are fixed by your contractor
+    agreement with Atheris LABS; where this kit and your agreement differ, the
+    agreement governs.
+  </p>
+</div>
+
+<div class="note">
+  <b>Independent contractor status.</b> You are self-employed. Commission is paid to you
+  as a contractor, and you are responsible for your own tax filings and social
+  contributions in your jurisdiction.
+</div>
+
+
+<!-- ================= 04 · OPERATIONS ================= -->
+<h2 class="chapter">
+  <span class="idx"><b>04</b> — Operational Process</span>
+  <span class="ttl">Autonomy, with a <em>clear handoff</em></span>
+  <span class="lead">
+    We do not hand you a script. We hand you a market, a price envelope and a team that
+    closes behind you. How you get from zero to a qualified conversation is yours.
+  </span>
+</h2>
+
+<div class="callout block">
+  <div class="k">Full autonomy</div>
+  <p>
+    <strong>No rigid messaging templates are imposed on you.</strong> You choose your own
+    channels, write your own outreach and run your own follow-up cadence. You know your
+    market and your relationships better than any playbook could — we would rather have
+    your voice than a template. We ask for one thing: that everything you send is
+    accurate, professional and unmistakably on behalf of Atheris LABS.
+  </p>
+</div>
+
+<div class="block-lg">
+  <h3>Who owns <em>what</em></h3>
+  <div class="split" style="margin-top:12pt">
+    <div class="yours">
+      <h4>You own</h4>
+      <ul>
+        <li>Prospecting and building your own target list</li>
+        <li>First contact, in whatever channel you judge best</li>
+        <li>Qualification — fit, budget, authority, timing</li>
+        <li>Discovery and framing the business problem</li>
+        <li>Momentum, follow-up and CRM hygiene</li>
+        <li>The warm handoff to the closing team</li>
+      </ul>
+    </div>
+    <div class="ours">
+      <h4>Atheris owns</h4>
+      <ul>
+        <li>Final pricing and the formal commercial proposal</li>
+        <li>Technical scoping and delivery estimation</li>
+        <li>Contracts, terms and signature</li>
+        <li>Engineering, design and quality assurance</li>
+        <li>Client onboarding and the delivery portal</li>
+        <li>Post-sale support and future expansion</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="block">
+  <h3>Your operating <em>loop</em></h3>
+  <ol class="flow" style="margin-top:4pt">
+    <li>
+      <b>Source</b>
+      <span>Build and refresh your list. Your network, your market, your channels — the list is the work.</span>
+    </li>
+    <li>
+      <b>Qualify</b>
+      <span>Confirm need, authority, budget band and timing before you invest further. Disqualify quickly and without guilt.</span>
+    </li>
+    <li>
+      <b>Reach out</b>
+      <span>Your voice, your cadence. Lead with their problem, never with our technology.</span>
+    </li>
+    <li>
+      <b>Discover</b>
+      <span>Understand the business problem well enough that you could explain it to the delivery team yourself.</span>
+    </li>
+    <li>
+      <b>Hand off</b>
+      <span>Make a warm introduction to the internal closing team with your notes attached. Stay present, let them close.</span>
+    </li>
+    <li>
+      <b>Track &amp; iterate</b>
+      <span>Log every touchpoint. Double down on the angle that earned replies; retire the one that did not.</span>
+    </li>
+  </ol>
+</div>
+
+<div class="block-lg">
+  <h3>Project pricing <em>envelope</em></h3>
+  <p style="color:var(--muted);font-size:9pt;max-width:148mm">
+    Every Atheris LABS engagement falls between <strong>$500 and $4,500</strong>. Share
+    the range freely during qualification — it filters out mismatches early and builds
+    trust. Never quote a final figure; that is the closing team's role.
+  </p>
+
+  <table style="margin-top:12pt">
+    <thead>
+      <tr>
+        <th style="width:22%">Band</th>
+        <th style="width:44%">Typical engagements</th>
+        <th style="width:34%">Your commission at 10–20%</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="k mono-cell">$500 – $1,000</td>
+        <td>Landing pages, brochure sites, performance fixes, small integrations</td>
+        <td class="mono-cell">$50 – $200</td>
+      </tr>
+      <tr>
+        <td class="k mono-cell">$1,000 – $2,500</td>
+        <td>Multi-page business sites, e-commerce launches, dashboards, API work</td>
+        <td class="mono-cell">$100 – $500</td>
+      </tr>
+      <tr class="tier-top">
+        <td class="k mono-cell">$2,500 – $4,500</td>
+        <td>Web apps and SaaS MVPs, mobile app MVPs, modernization and cloud migration</td>
+        <td class="mono-cell">$250 – $900</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="card block">
+  <div class="cap">The handoff</div>
+  <p>
+    When a prospect is qualified and interested, you introduce them to the internal
+    closing team with your discovery notes attached. From that point the commercial
+    conversation — proposal, technical scoping, negotiation, contract — is handled
+    internally, and your attribution stays recorded against the deal. Your job at the
+    handoff is simple: <strong>make the introduction warm, specific and timely</strong>,
+    and keep the prospect warm until the first internal call happens.
+  </p>
+</div>
+
+<div class="warn callout block">
+  <div class="k">Boundaries — never cross these</div>
+  <p>
+    Never quote a final price, discount or payment schedule · Never commit to a delivery
+    date or scope on our behalf · Never sign, or imply you can sign, a contract · Never
+    promise a capability the studio has not confirmed · Never speak on behalf of an
+    existing client or reference confidential work without written approval. When in
+    doubt, say you will confirm internally — it costs you nothing and protects the
+    relationship.
+  </p>
+</div>
+
+
+<!-- ================= 05 · GOLDEN RULES ================= -->
+<h2 class="chapter">
+  <span class="idx"><b>05</b> — Golden Rules</span>
+  <span class="ttl">Standards, compliance &amp; <em>getting started</em></span>
+  <span class="lead">
+    Your rate is earned on results. Your reputation — and your access to Atheris LABS —
+    is earned on conduct. Both matter, and both are entirely in your hands.
+  </span>
+</h2>
+
+<div class="block">
+  <h3>Compliance <em>guidelines</em></h3>
+  <ol class="rules" style="margin-top:4pt">
+    <li><b>Never misrepresent.</b> You are introducing a real engineering studio. Never invent clients, case studies, capabilities, metrics or affiliations.</li>
+    <li><b>Never commit commercially.</b> Share the $500–$4,500 range, never a final figure. Pricing, scope and timelines are validated internally.</li>
+    <li><b>Honour opt-outs immediately.</b> If someone asks to stop hearing from you, stop — and record it so they are never contacted again.</li>
+    <li><b>Respect anti-spam and privacy law</b> in every market you prospect, including consent requirements, identification of sender and working opt-out.</li>
+    <li><b>Handle data responsibly.</b> Prospect data is used for outreach only. Never resell it, share it externally or repurpose it for unrelated campaigns.</li>
+    <li><b>Protect confidential information.</b> NDAs, client identities and internal material stay internal — including on social media.</li>
+    <li><b>Respect attribution.</b> Never claim, overwrite or poach another SDR's registered prospect. Disputes go to Atheris LABS, never head-to-head.</li>
+    <li><b>Acknowledge your status.</b> You act as an independent contractor, not as an employee, officer or authorised signatory of Atheris LABS.</li>
+  </ol>
+</div>
+
+<div class="block-lg">
+  <h3>Professionalism <em>standards</em></h3>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:26%">Standard</th>
+        <th style="width:74%">What good looks like</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="k">Responsiveness</td>
+        <td>Every reply within one business day — including a "let me confirm that internally" holding reply</td>
+      </tr>
+      <tr>
+        <td class="k">Tone</td>
+        <td>Plain, specific, respectful. No hype, no manufactured urgency, no pressure tactics</td>
+      </tr>
+      <tr>
+        <td class="k">Accuracy</td>
+        <td>Every claim you make about Atheris LABS is one you could substantiate in writing</td>
+      </tr>
+      <tr>
+        <td class="k">Record keeping</td>
+        <td>Every prospect and every touchpoint logged in the CRM on the day it happens</td>
+      </tr>
+      <tr>
+        <td class="k">Follow-up</td>
+        <td>Persistent and polite. Most conversions come from the fourth or fifth contact, not the first</td>
+      </tr>
+      <tr>
+        <td class="k">Discretion</td>
+        <td>No badmouthing competitors, no disclosing client names, no posting deal detail publicly</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="yesno block">
+  <div class="card">
+    <h4 class="ok">Do</h4>
+    <ul class="ok">
+      <li>Lead with the prospect's business problem</li>
+      <li>Qualify hard before you invest more time</li>
+      <li>Use the price range openly to self-qualify buyers</li>
+      <li>Write your own outreach in your own voice</li>
+      <li>Register every prospect the day you approach them</li>
+      <li>Ask the closing team for feedback after each handoff</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4 class="no">Don't</h4>
+    <ul class="no">
+      <li>Lead with frameworks, stacks or technical jargon</li>
+      <li>Quote a final price or a delivery date</li>
+      <li>Send unsolicited bulk blasts without an opt-out</li>
+      <li>Chase prospects who have asked you to stop</li>
+      <li>Overwrite or touch another SDR's prospects</li>
+      <li>Promise anything the studio has not confirmed</li>
+    </ul>
+  </div>
+</div>
+
+<div class="block-lg">
+  <h3>Your first <em>seven days</em></h3>
+  <div class="plan" style="margin-top:10pt">
+    <div class="d">
+      <div class="day">Day 01</div>
+      <div class="what"><b>Read this kit end to end.</b> Sign and return your contractor agreement, and confirm your commission terms.</div>
+    </div>
+    <div class="d">
+      <div class="day">Day 02</div>
+      <div class="what"><b>Get access.</b> Sign in to the CRM and learn how prospects move through the pipeline statuses.</div>
+    </div>
+    <div class="d">
+      <div class="day">Day 03</div>
+      <div class="what"><b>Build your first list.</b> Start with your own network and market — 50 targets, all decision-makers.</div>
+    </div>
+    <div class="d">
+      <div class="day">Day 04</div>
+      <div class="what"><b>Write your outreach.</b> Three angles, one per persona. Keep each under 90 words.</div>
+    </div>
+    <div class="d">
+      <div class="day">Day 05</div>
+      <div class="what"><b>Send your first 25.</b> Log every one. Notice which pain point earned the most replies.</div>
+    </div>
+    <div class="d">
+      <div class="day">Day 06</div>
+      <div class="what"><b>Run your first discovery.</b> Prepare five questions, listen twice as much as you speak.</div>
+    </div>
+    <div class="d">
+      <div class="day">Day 07</div>
+      <div class="what"><b>Review and iterate.</b> Keep the angle that worked, rewrite the one that did not, and double your volume.</div>
+    </div>
+    <div class="d">
+      <div class="day">Ongoing</div>
+      <div class="what"><b>Compound.</b> Every paid client moves you up the barème — the tenth deal pays half again as much as the first.</div>
+    </div>
+  </div>
+</div>
+
+<div class="qr block-lg">
+  <div class="card">
+    <h4>Quick reference — terms</h4>
+    <div class="kv"><span>Entry rate</span><b>10.0%</b></div>
+    <div class="kv"><span>Elite rate (20+ clients)</span><b>20.0%</b></div>
+    <div class="kv"><span>Project value band</span><b>$500–$4,500</b></div>
+    <div class="kv"><span>Payout trigger</span><b>Down payment</b></div>
+    <div class="kv"><span>Earnings ceiling</span><b>None</b></div>
+  </div>
+  <div class="card">
+    <h4>Quick reference — actions</h4>
+    <div class="kv"><span>Register a prospect</span><b>Day of contact</b></div>
+    <div class="kv"><span>Reply to an active lead</span><b>&lt; 1 business day</b></div>
+    <div class="kv"><span>Hand off a qualified lead</span><b>Warm intro + notes</b></div>
+    <div class="kv"><span>Opt-out received</span><b>Act &amp; log same day</b></div>
+    <div class="kv"><span>Anything uncertain</span><b>Ask internally</b></div>
+  </div>
+</div>
+
+<div class="closing block-lg">
+  <div class="k">Getting started</div>
+  <h3>Everything is in place.<br />Now go <em>earn</em>.</h3>
+  <p>
+    You have the product, the price band, the commission ladder and a team that closes
+    behind you. There is no territory to wait for and no permission to seek — the only
+    variable left is the number of conversations you start. Build your list, write in
+    your own voice, register every prospect, and hand off what you qualify.
+    <br /><br />
+    Every client you bring in pays you immediately, moves you up the barème, and stays
+    yours at the higher rate from then on. <strong>Start today.</strong>
+  </p>
+</div>
+
+<div class="block-lg">
+  <h3>Glossary</h3>
+  <div class="gloss" style="margin-top:8pt">
+    <div class="t"><b>SDR</b><span>Sales Development Representative — you. Outbound prospecting and qualification.</span></div>
+    <div class="t"><b>Outbound</b><span>Sales you initiate, as opposed to inbound enquiries that reach us.</span></div>
+    <div class="t"><b>Qualified lead</b><span>A prospect with a real problem, authority, budget band and timing.</span></div>
+    <div class="t"><b>Down payment</b><span>The client deposit that formally triggers commission.</span></div>
+    <div class="t"><b>Barème</b><span>The progressive commission ladder — 10% to 20% by paid client count.</span></div>
+    <div class="t"><b>Tier</b><span>Your current commission rate band, locked per deal at trigger time.</span></div>
+    <div class="t"><b>Warm handoff</b><span>Your introduction of a qualified prospect to the internal closing team.</span></div>
+    <div class="t"><b>Independent contractor</b><span>Your engagement status — self-employed, paid on commission.</span></div>
+  </div>
+</div>
+
+<div class="note">
+  <b>Document control.</b> SDR Onboarding Kit · Version 1.0 · Classification: Internal —
+  Confidential. This kit is a working guide for Atheris LABS sales partners. Where it
+  differs from your signed contractor agreement, the agreement governs. Report any
+  inconsistency to Atheris LABS · Sales.
+</div>
+
+</body>
+</html>

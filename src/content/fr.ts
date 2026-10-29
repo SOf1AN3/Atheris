@@ -554,6 +554,36 @@ export const fr: SiteContent = {
     },
   },
 
+  sdrKit: {
+    eyebrow: "Documentation interne",
+    title: "Le kit d'onboarding *SDR*",
+    description:
+      "Tout ce dont un Sales Development Representative a besoin pour repr\u00E9senter Atheris LABS, qualifier les bons prospects et commencer \u00E0 gagner des commissions \u2014 disponible en PDF \u00E0 t\u00E9l\u00E9charger.",
+    meta: ["12 pages", "Anglais", "PDF \u00B7 1,5 Mo", "Version 1.0"],
+    intro:
+      "Cette documentation est la r\u00E9f\u00E9rence de travail des SDR \u00E0 commission qui rejoignent Atheris LABS. Elle d\u00E9crit qui nous sommes, \u00E0 qui s'adresser, comment fonctionne la commission progressive, comment se d\u00E9roule la prospection de bout en bout, et les standards qui prot\u00E8gent votre acc\u00E8s au studio.",
+    downloadLabel: "T\u00E9l\u00E9charger le kit (PDF)",
+    fileName: "SDR-Onboarding-Kit.pdf",
+    languageNote: "Le document est \u00E9crit enti\u00E8rement en anglais.",
+    includesTitle: "Ce que contient le kit",
+    includes: [
+      "Introduction et mission d'Atheris LABS",
+      "Persona acheteur et profils cibles",
+      "Structure de commission progressive (10 % \u00E0 20 %)",
+      "Processus op\u00E9rationnel et autonomie",
+      "R\u00E8gles d'or et prise de poste",
+    ],
+    confidentialTitle: "Interne - confidentiel",
+    confidentialDescription:
+      "Ce document est destin\u00E9 aux partenaires commerciaux autoris\u00E9s d'Atheris LABS. Ne le redistribuez pas en dehors du studio et ne le publiez pas.",
+    facts: [
+      { label: "Commission", value: "10 % \u2013 20 %" },
+      { label: "Valeur du projet", value: "500 $ \u2013 4 500 $" },
+      { label: "Statut", value: "Entrepreneur ind\u00E9pendant" },
+      { label: "Gains", value: "Sans plafond" },
+    ],
+  },
+
   notFound: {
     code: "404 \u00B7 Page introuvable",
     title: "Cette page n'existe *pas*",

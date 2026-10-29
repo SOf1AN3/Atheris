@@ -42,10 +42,15 @@ next-env.d.ts
 
 # Artefacts de test & captures E2E
 /.playwright-mcp/
+/.playwright-cli/
 /atheris-*.png
 /hero*.png
 /nappe-*.png
 /page_fr.html
+
+# QA du SDR Onboarding Kit : rendus page par page (jamais poussés)
+# - docs/sdr-onboarding-kit/proof/ : captures de contrôle du PDF + de la page
+/docs/sdr-onboarding-kit/proof/
 
 # Asset de travail pr�existant (maquette landing)
 /hero.png

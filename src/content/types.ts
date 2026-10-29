@@ -332,6 +332,44 @@ export interface CareersContent {
   form: CareersFormStrings;
 }
 
+/** Une fiche d'information du kit SDR (document, audience, format…). */
+export interface SdrKitFact {
+  label: string;
+  value: string;
+}
+
+/**
+ * Contenu de la page `/[locale]/sdr-onboarding-kit` (téléchargement du PDF).
+ *
+ * Le document lui-même est **intégralement en anglais** et n'est pas traduit :
+ * ce bloc ne porte que le chrome de la page (titre, description, actions).
+ * `languageNote` rend cette limite explicite côté UI, pour ne jamais laisser
+ * croire qu'une version FR existe.
+ */
+export interface SdrKitContent {
+  /** Porte un accent `*…*` rendu en voix serif (convention §2.2.1). */
+  eyebrow: string;
+  title: string;
+  description: string;
+  /** Pastilles mono du bandeau document (version, classification…). */
+  meta: string[];
+  intro: string;
+  /** Intitulé du bouton de téléchargement principal. */
+  downloadLabel: string;
+  /** Nom du fichier, affiché tel quel (identique dans les deux locales). */
+  fileName: string;
+  /** Note de langue : le PDF est en anglais. */
+  languageNote: string;
+  /** Titre du bloc « ce que contient le kit ». */
+  includesTitle: string;
+  /** Sections listées du PDF (libellés courts). */
+  includes: string[];
+  /** Encart final : rappel de diffusion. */
+  confidentialTitle: string;
+  confidentialDescription: string;
+  facts: SdrKitFact[];
+}
+
 /** Chaînes du formulaire d'entretien (créneaux). */
 export interface InterviewFormStrings {
   firstNameLabel: string;
@@ -428,6 +466,7 @@ export interface SiteContent {
   contact: ContactContent;
   about: AboutContent;
   careers: CareersContent;
+  sdrKit: SdrKitContent;
   notFound: NotFoundContent;
   interview: InterviewContent;
   footer: FooterContent;
