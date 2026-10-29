@@ -48,6 +48,13 @@
  * spring) — aucun `useReducedMotion` branché au premier rendu : la préférence
  * est neutralisée par `MotionConfig(reducedMotion="user")` du layout racine.
  *
+ * ─── BADGE MEET ────────────────────────────────────────────────────────────
+ * Quand la page server transmet un `meetLink` (env, jamais un secret côté
+ * client), chaque ligne **réservée et non annulée** affiche, à côté du
+ * créneau, un lien « Google Meet » (`labels.meetBadge`) ouvrant un nouvel
+ * onglet (`target="_blank"` + `rel="noopener noreferrer"`). Les lignes en
+ * attente et les lignes annulées restent strictement identiques.
+ *
  * ─── VOLT ──────────────────────────────────────────────────────────────────
  * Un SEUL aplat volt par écran : le bouton de création. Les statuts portent
  * les teintes sémantiques (acier / success / danger), les copie et les liens
@@ -142,6 +149,8 @@ export type InterviewLinksLabels = {
   linkNamePlaceholder: string;
   booked: string;
   notBooked: string;
+  /** Libellé du lien de visio (`dict.interviews.meetBadge`). */
+  meetBadge: string;
   timezoneNote: string;
   columns: {
     created: string;
@@ -159,6 +168,11 @@ export type InterviewLinksLabels = {
 export type InterviewLinksProps = {
   rows: InterviewRow[];
   labels: InterviewLinksLabels;
+  /**
+   * URL de visio (Google Meet) lue côté server (env), `null` si absente →
+   * aucun badge n'est rendu, les lignes restent strictement identiques.
+   */
+  meetLink: string | null;
 };
 
 /** Écrit dans le presse-papier — `false` si l'API est absente ou refusée. */
@@ -189,6 +203,7 @@ function handleFieldFocus(event: FocusEvent<HTMLInputElement>): void {
 export function InterviewLinks({
   rows,
   labels,
+  meetLink,
 }: InterviewLinksProps): React.JSX.Element {
   const router = useRouter();
   const params = useParams();
@@ -499,6 +514,10 @@ export function InterviewLinks({
               const fieldId = `interview-url-${row.id}`;
               const url = absoluteUrl(row.path);
               const hasCandidate = row.candidateName !== null;
+              // Lien de visio : UNIQUEMENT si configée ET ligne réservée
+              // non annulée (lignes « en attente » / annulées inchangées).
+              const showMeetBadge =
+                meetLink !== null && row.booked && row.status !== "cancelled";
 
               return (
                 <Reveal
@@ -540,8 +559,25 @@ export function InterviewLinks({
                   <dl className="grid gap-4 sm:grid-cols-2">
                     <div className="flex flex-col gap-1.5">
                       <dt className="micro text-faint">{labels.columns.slot}</dt>
-                      <dd className="text-[15px] text-fg">
-                        {row.slotLabel ?? labels.notBooked}
+                      <dd
+                        className={cn(
+                          "text-[15px] text-fg",
+                          // Flex uniquement quand le badge Meet s'ajoute :
+                          // les lignes sans badge gardent leur rendu exact.
+                          showMeetBadge && "flex flex-wrap items-center gap-2",
+                        )}
+                      >
+                        <span>{row.slotLabel ?? labels.notBooked}</span>
+                        {showMeetBadge ? (
+                          <a
+                            href={meetLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex h-11 items-center gap-1.5 rounded-full border border-line-2 px-4 text-[14px] font-semibold text-fg hover:bg-white/[0.04] focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
+                          >
+                            {labels.meetBadge}
+                          </a>
+                        ) : null}
                       </dd>
                     </div>
                     <div className="flex flex-col gap-1.5">

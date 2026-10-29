@@ -11,6 +11,7 @@ import {
 import type { InterviewStatusLabels } from "@/content/platform/types";
 import { isValidLocale, type Locale } from "@/i18n/config";
 import { getPlatformDictionary } from "@/i18n/platform-dictionaries";
+import { getMeetLink } from "@/lib/meet";
 import { isRole } from "@/lib/permissions";
 
 // Session + lecture DB au rendu : jamais statique (voir `getDb()` — la page
@@ -140,6 +141,8 @@ export default async function EntretienPage({
     interviews.title;
 
   const listResult = await listInterviews();
+  // Lien de visio (env, résolu serveur — jamais de secret côté client).
+  const meetLink = getMeetLink();
 
   let content: React.JSX.Element;
   if (!listResult.ok) {
@@ -169,6 +172,7 @@ export default async function EntretienPage({
       emptyHint: interviews.emptyHint,
       booked: interviews.booked,
       notBooked: interviews.notBooked,
+      meetBadge: interviews.meetBadge,
       timezoneNote: interviews.timezoneNote,
       columns: interviews.columns,
       errors: interviews.errors,
@@ -178,7 +182,9 @@ export default async function EntretienPage({
       toRow(item, locale, interviews.status),
     );
 
-    content = <InterviewLinks rows={rows} labels={labels} />;
+    content = (
+      <InterviewLinks rows={rows} labels={labels} meetLink={meetLink} />
+    );
   }
 
   return (
