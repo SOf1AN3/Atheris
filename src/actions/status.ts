@@ -41,8 +41,9 @@ import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { getDb } from "@/lib/db";
-import { activities, prospects, prospectStatusEnum, roleEnum } from "@/lib/db/schema";
+import { activities, prospects, prospectStatusEnum, roleEnum, users } from "@/lib/db/schema";
 import { canChangeStatus, isTerminalStatus, type Role } from "@/lib/permissions";
+import { activeUserIdsByRoles, notify } from "@/lib/notify";
 
 // ---------------------------------------------------------------------------
 // Schémas Zod (v4) — validation systématique AVANT tout traitement.
@@ -181,6 +182,55 @@ export async function changeProspectStatus(
     });
   } catch (error) {
     console.error("[status] activité `status.changed` non journalisée (transition appliquée)", error);
+  }
+
+  // 8. Notification (NON FATALE — notify() ne throw jamais) — écrite APRÈS
+  //    la transition confirmée. UNE SEULE notification par action :
+  //    - `to === "signe"` → `quote_signed` (REMPLACE le type suivant sur cette
+  //      transition) : owner + ceo + manager actifs (commercial exclus — D4) ;
+  //    - sinon → `prospect_status_changed` : `sourceUserId` (si non nul) +
+  //      ceo actifs.
+  //    Règle d'or : l'acteur n'est JAMAIS destinataire (filtre `!== viewer.id`).
+  try {
+    const [prospectRows, actorRows] = await Promise.all([
+      db
+        .select({ fullName: prospects.fullName, sourceUserId: prospects.sourceUserId })
+        .from(prospects)
+        .where(eq(prospects.id, id))
+        .limit(1),
+      db.select({ name: users.name }).from(users).where(eq(users.id, viewer.id)).limit(1),
+    ]);
+    const prospect = prospectRows[0];
+    const actorName = actorRows[0]?.name ?? viewer.id;
+
+    if (prospect !== undefined) {
+      const link = `/espace/prospects/${id}`;
+      let recipientIds: string[];
+      let meta: Record<string, string>;
+
+      if (to === "signe") {
+        recipientIds = [
+          ...(prospect.sourceUserId !== null ? [prospect.sourceUserId] : []),
+          ...(await activeUserIdsByRoles(["ceo", "manager"])),
+        ].filter((recipientId) => recipientId !== viewer.id);
+        meta = { actor: actorName, entity: prospect.fullName, to: "signe" };
+        await notify({ type: "quote_signed", link, meta, recipientIds });
+      } else {
+        recipientIds = [
+          ...(prospect.sourceUserId !== null ? [prospect.sourceUserId] : []),
+          ...(await activeUserIdsByRoles(["ceo"])),
+        ].filter((recipientId) => recipientId !== viewer.id);
+        meta = {
+          actor: actorName,
+          entity: prospect.fullName,
+          from: expectedFrom,
+          to,
+        };
+        await notify({ type: "prospect_status_changed", link, meta, recipientIds });
+      }
+    }
+  } catch (error) {
+    console.error("[status] notification de transition non émise (transition appliquée)", error);
   }
 
   return { ok: true };

@@ -73,6 +73,7 @@ import { createContactSchema } from "@/lib/form-schema";
 import type { ContactFormValues } from "@/lib/form-schema";
 import { getDb } from "@/lib/db";
 import { activities, prospects } from "@/lib/db/schema";
+import { activeUserIdsByRoles, notify } from "@/lib/notify";
 import { dedupKey } from "@/lib/prospect-dedup";
 import type { ContactFormStrings } from "@/content/types";
 
@@ -375,6 +376,19 @@ export async function submitContact(
     } catch (error) {
       console.error("[contact] activité `contact.received` non journalisée (prospect créé)", error);
     }
+
+    // 7. Notification `contact_received` — NON FATALE (notify() ne throw
+    //    jamais) et écrite APRÈS la réussite de l'insert. Destinataires :
+    //    comptes **actifs** `ceo` + `manager` (commercial exclus — D4) ; pas
+    //    d'acteur à exclure (visiteur anonyme, `actorId: NULL`). Aucun
+    //    destinataire → notify() n'écrit rien (retour silencieux).
+    const recipientIds = await activeUserIdsByRoles(["ceo", "manager"]);
+    await notify({
+      type: "contact_received",
+      link: `/espace/prospects/${prospectId}`,
+      meta: { entity: name },
+      recipientIds,
+    });
 
     return { ok: true };
   } catch (error) {

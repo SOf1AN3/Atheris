@@ -45,6 +45,7 @@ import { z } from "zod";
 
 import { getDb } from "@/lib/db";
 import { jobApplications } from "@/lib/db/schema";
+import { activeUserIdsByRoles, notify } from "@/lib/notify";
 import { sendMail } from "@/lib/mail";
 import { normalizeEmail } from "@/lib/prospect-dedup";
 
@@ -357,6 +358,17 @@ async function processApplication(formData: FormData): Promise<ApplyToJobResult>
     console.error("[careers] candidature non enregistrée en base", error);
     return { ok: false, code: "failed" };
   }
+
+  // 5-bis. Notification `application_created` — NON FATALE, écrite APRÈS
+  // l'INSERT réussi (notify() ne throw jamais : la candidature est déjà en
+  // base, un échec d'écriture ne change rien). Destinataires : comptes
+  // **actifs** `ceo` (aucun acteur à exclure : dépôt public anonyme).
+  await notify({
+    type: "application_created",
+    link: "/espace/recrutement",
+    meta: { entity: `${firstName} ${lastName}`.trim() },
+    recipientIds: await activeUserIdsByRoles(["ceo"]),
+  });
 
   // 6. E-mail admin — BEST EFFORT (PLAN-RECRUTEMENT-CEO, D8) : la
   //    candidature est en base, c'est la source de vérité. Un échec

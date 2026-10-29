@@ -71,6 +71,7 @@ import {
   users,
 } from "@/lib/db/schema";
 import { isRole, type Role } from "@/lib/permissions";
+import { activeUserIdsByRoles, notify } from "@/lib/notify";
 
 // ---------------------------------------------------------------------------
 // Schémas Zod (v4) — validation systématique AVANT tout accès DB.
@@ -342,6 +343,33 @@ export async function validateMilestone(
     } catch (error) {
       console.error(
         "[project] activité `milestone.validated` non journalisée (validation appliquée)",
+        error,
+      );
+    }
+
+    // 7. Notification `milestone_validated` — NON FATALE (notify() ne throw
+    //    jamais), écrite APRÈS la validation confirmée (batch réussi + audit).
+    //    Destinataires : comptes **actifs** `ceo` + `manager` (commercial
+    //    exclu — D4), moins l'acteur (règle d'or : client ou CEO validateur).
+    try {
+      const actorRows = await db
+        .select({ name: users.name })
+        .from(users)
+        .where(eq(users.id, viewerId))
+        .limit(1);
+      const recipientIds = (await activeUserIdsByRoles(["ceo", "manager"])).filter(
+        (recipientId) => recipientId !== viewerId,
+      );
+      await notify({
+        type: "milestone_validated",
+        link: "/espace/projet",
+        // `entity` = libellé du jalon validé (clé brute du dict `milestones.*`).
+        meta: { actor: actorRows[0]?.name ?? viewerId, entity: milestoneKey },
+        recipientIds,
+      });
+    } catch (error) {
+      console.error(
+        "[project] notification `milestone_validated` non émise (validation appliquée)",
         error,
       );
     }

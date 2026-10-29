@@ -64,6 +64,7 @@ import { locales, type Locale } from "@/i18n/config";
 import { getDb } from "@/lib/db";
 import { activities, interviewStatus, interviews, jobApplications } from "@/lib/db/schema";
 import { sendMail } from "@/lib/mail";
+import { activeUserIdsByRoles, notify } from "@/lib/notify";
 import { normalizeEmail } from "@/lib/prospect-dedup";
 import { getSlotsForWindowDates, isValidSlot, toRecruiterTime } from "@/lib/slots";
 import type { Role } from "@/lib/permissions";
@@ -668,6 +669,17 @@ async function processSubmission(input: SubmitInterviewInput): Promise<SubmitInt
     } catch (error) {
       console.error("[interviews] récapitulatif interrompu (réservation conservée)", error);
     }
+
+    // 7. Notification `interview_booked` — NON FATALE (notify() ne throw
+    //    jamais), écrite UNIQUEMENT après la réservation confirmée (écriture
+    //    + tentative d'e-mail ci-dessus). Destinataires : comptes **actifs**
+    //    `ceo` ; réservation publique anonyme → aucun acteur à exclure.
+    await notify({
+      type: "interview_booked",
+      link: "/espace/entretien",
+      meta: { entity: `${firstName} ${lastName}`.trim() },
+      recipientIds: await activeUserIdsByRoles(["ceo"]),
+    });
 
     return { ok: true };
   } catch (error) {

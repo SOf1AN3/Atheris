@@ -54,6 +54,7 @@ import { getPlatformDictionary } from "@/i18n/platform-dictionaries";
 import { getDb } from "@/lib/db";
 import { activities, clientProjects, invitations, prospects, quotes, users } from "@/lib/db/schema";
 import { sendMail } from "@/lib/mail";
+import { activeUserIdsByRoles, notify } from "@/lib/notify";
 import { hashPassword } from "@/lib/password";
 import { absoluteInterviewUrl } from "@/lib/recruitment-templates";
 import type { ProspectStatus, Role } from "@/lib/permissions";
@@ -314,6 +315,23 @@ export async function createClientInvitation(
       );
     }
 
+    // 8. Notification `mail_failed` (NON FATALE) — uniquement si l'e-mail
+    //    n'est PAS parti (`mailSent: false`) : action elle-même réussie
+    //    (`ok: true`), le jeton reste copiable manuellement. Destinataires :
+    //    comptes **actifs** `ceo` moins l'acteur (règle d'or) — si l'acteur
+    //    EST l'unique CEO, aucun destinataire → notify() n'écrit rien.
+    if (!mailSent) {
+      const recipientIds = (await activeUserIdsByRoles(["ceo"])).filter(
+        (recipientId) => recipientId !== actorId,
+      );
+      await notify({
+        type: "mail_failed",
+        link: `/espace/prospects/${prospectId}`,
+        meta: { entity: email },
+        recipientIds,
+      });
+    }
+
     // Jeton renvoyé EN CLAIR une fois (copie manuelle par le CEO) +
     // échéance en millisecondes Unix + succès d'envoi de l'e-mail.
     return { ok: true, token, expiresAt: expiresAtMs, mailSent };
@@ -476,6 +494,17 @@ export async function activateAccount(
         error,
       );
     }
+
+    // 10. Notification `account_activated` — NON FATALE (notify() ne throw
+    //     jamais), écrite APRÈS le `db.batch` réussi (compte + invitation
+    //     consommée) : action publique anonyme → aucun acteur à exclure.
+    //     Destinataires : comptes **actifs** `ceo` (D4 : aucun commercial).
+    await notify({
+      type: "account_activated",
+      link: "/espace/tableau-de-bord",
+      meta: { entity: name },
+      recipientIds: await activeUserIdsByRoles(["ceo"]),
+    });
 
     return { ok: true };
   } catch (error) {

@@ -56,6 +56,7 @@ import {
   roleEnum,
 } from "@/lib/db/schema";
 import { sendMail } from "@/lib/mail";
+import { activeUserIdsByRoles, notify } from "@/lib/notify";
 import {
   absoluteInterviewUrl,
   DEFAULT_EMAIL_TEMPLATES,
@@ -577,6 +578,17 @@ export async function inviteToInterview(
     const mail = await sendMail({ to: recipient.email, subject, text });
     if (!mail.ok) {
       console.error("[recrutement] invitation non envoyée (candidature inchangée)", mail.error);
+      // Notification `mail_failed` — NON FATALE (notify() ne throw jamais) :
+      // l'action renvoie son code métier `mail_failed` quoi qu'il arrive.
+      // Destinataires : comptes **actifs** `ceo` moins l'acteur (règle d'or).
+      await notify({
+        type: "mail_failed",
+        link: "/espace/recrutement",
+        meta: { entity: recipient.email },
+        recipientIds: (await activeUserIdsByRoles(["ceo"])).filter(
+          (recipientId) => recipientId !== actor.id,
+        ),
+      });
       return { ok: false, code: "mail_failed" };
     }
 
@@ -852,6 +864,16 @@ export async function recruitCandidate(
         "[recrutement] invitation sdr non envoyée (candidature inchangée)",
         mail.error,
       );
+      // Notification `mail_failed` — NON FATALE, même motif que
+      // `inviteToInterview` : comptes **actifs** `ceo` moins l'acteur.
+      await notify({
+        type: "mail_failed",
+        link: "/espace/recrutement",
+        meta: { entity: application.email },
+        recipientIds: (await activeUserIdsByRoles(["ceo"])).filter(
+          (recipientId) => recipientId !== actorId,
+        ),
+      });
       return { ok: false, code: "mail_failed" };
     }
 

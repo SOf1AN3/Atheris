@@ -39,6 +39,7 @@ import { z } from "zod";
 import { getDb } from "@/lib/db";
 import {
   activities,
+  notifications,
   prospectBriefs,
   prospectSourceEnum,
   prospects,
@@ -46,6 +47,7 @@ import {
   roleEnum,
 } from "@/lib/db/schema";
 import { canViewAllProspects, type ProspectStatus, type Role } from "@/lib/permissions";
+import { activeUserIdsByRoles, notify } from "@/lib/notify";
 import { dedupKey, normalizePhone } from "@/lib/prospect-dedup";
 
 // ---------------------------------------------------------------------------
@@ -184,6 +186,99 @@ function parseViewerRole(viewer: ProspectViewer): Role | null {
   // pas lever de TypeError mais être refusé proprement.
   const parsed = roleSchema.safeParse(viewer?.role);
   return parsed.success ? parsed.data : null;
+}
+
+// ---------------------------------------------------------------------------
+// 1-bis. emitReminderNotifications — relances DUES déclenchées à l'accès
+//        (PLAN §2.2 n°12 : pas de cron serverless, le listing fait foi).
+// ---------------------------------------------------------------------------
+
+/** Ligne du périmètre déjà chargée portant une relance due (`Date` non nul). */
+type DueReminderRow = ProspectListItem & { nextReminderAt: Date };
+
+/**
+ * Émet les notifications `reminder_due` pour les prospects **du périmètre
+ * déjà chargé** dont `nextReminderAt <= now()` — appelée par `listProspects`
+ * via `void` (ASYNCHRONE NON ATTENDU : zéro attente ajoutée au listing).
+ *
+ * SÉQUENCE (tout est NON FATAL — le filtre try/catch couvre la fonction
+ * entière, `notify()` ne throw jamais de son côté) :
+ * 1. filtrage JS des lignes dues (le SELECT est déjà fait, aucun accès
+ *    supplémentaire pour les repérer) ;
+ * 2. destinataires par prospect : `sourceUserId` s'il existe, **sinon** les
+ *    comptes `ceo` actifs (résolus UNE fois, en lazy) ; l'acteur est retiré
+ *    (règle d'or) — aucun destinataire restant → prospect ignoré ;
+ * 3. existence : UN SELECT `dedupe_key IN (…)` → paires
+ *    `(recipient_id, dedupe_key)` déjà présentes, filtrées en mémoire (la
+ *    clé encode le prospect + l'instant de relance : elle est propre au
+ *    couple visé) ;
+ * 4. `notify()` par prospect avec
+ *    `dedupeKey = "reminder:{prospectId}:{nextReminderAt ISO}"` — l'index
+ *    unique partiel `(recipient_id, dedupe_key) WHERE dedupe_key IS NOT
+ *    NULL` reste le filet final contre la double écriture (cas concurrent).
+ *
+ * @param rows Périmètre DÉJÀ chargé par le SELECT du listing (aucun balayage).
+ * @param actorId uuid du visiteur (acteur jamais destinataire).
+ */
+async function emitReminderNotifications(
+  rows: readonly ProspectListItem[],
+  actorId: string,
+): Promise<void> {
+  try {
+    const now = Date.now();
+    const due = rows.filter(
+      (row): row is DueReminderRow =>
+        row.nextReminderAt !== null && row.nextReminderAt.getTime() <= now,
+    );
+    if (due.length === 0) return;
+
+    // 2. Destinataires par prospect — comptes `ceo` actifs résolus UNE fois
+    //    (uniquement si au moins un prospect orphelin est dû).
+    let activeCeos: string[] | null = null;
+
+    // 3. Existence — UN seul SELECT sur l'ensemble des clés candidates.
+    const keys = due.map(
+      (row) => `reminder:${row.id}:${row.nextReminderAt.toISOString()}`,
+    );
+    const db = getDb();
+    const existingRows = await db
+      .select({ recipientId: notifications.recipientId, dedupeKey: notifications.dedupeKey })
+      .from(notifications)
+      .where(inArray(notifications.dedupeKey, keys));
+    const existing = new Set(
+      existingRows.flatMap((row) =>
+        row.dedupeKey === null ? [] : [`${row.recipientId}|${row.dedupeKey}`],
+      ),
+    );
+
+    // 4. Écriture par prospect — séquentielle et silencieuse en cas d'échec.
+    for (const row of due) {
+      let candidates: string[];
+      if (row.sourceUserId !== null) {
+        candidates = [row.sourceUserId];
+      } else {
+        activeCeos ??= await activeUserIdsByRoles(["ceo"]);
+        candidates = activeCeos;
+      }
+      const recipientIds = candidates.filter(
+        (recipientId) =>
+          recipientId !== actorId &&
+          !existing.has(`${recipientId}|reminder:${row.id}:${row.nextReminderAt.toISOString()}`),
+      );
+      if (recipientIds.length === 0) continue;
+
+      await notify({
+        type: "reminder_due",
+        link: `/espace/prospects/${row.id}`,
+        meta: { entity: row.fullName },
+        recipientIds,
+        dedupeKey: `reminder:${row.id}:${row.nextReminderAt.toISOString()}`,
+      });
+    }
+  } catch (error) {
+    // Non fatal : un échec de relance ne doit JAMAIS casser le listing.
+    console.error("[prospects] relances dues non émises (non fatal)", error);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -403,6 +498,11 @@ export async function listProspects(
     // `count(*)` revient parfois en string (int8) selon le driver : `Number()`
     // normalise sans jamais produire NaN ici (valeur absente → 0).
     const total = Number(totalRows[0]?.total ?? 0);
+
+    // Relances DUES à l'accès (pas de cron serverless — PLAN §2.2 n°12) :
+    // déclenchement ASYNCHRONE NON ATTENDU (`void`) pour ne jamais alourdir
+    // le listing (aucune attente sur résolution ni écriture).
+    void emitReminderNotifications(rows, viewerId);
 
     return { items: rows, total };
   } catch (error) {

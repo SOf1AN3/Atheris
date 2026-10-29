@@ -51,8 +51,9 @@ import { and, asc, eq, isNull, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { getDb } from "@/lib/db";
-import { messages, users } from "@/lib/db/schema";
+import { clientProjects, messages, prospects, quotes, users } from "@/lib/db/schema";
 import { isRole, type Role } from "@/lib/permissions";
+import { activeUserIdsByRoles, notify } from "@/lib/notify";
 
 import { resolveProjectAccess, type ProjectViewer } from "@/actions/project";
 
@@ -178,6 +179,71 @@ export async function postMessage(
       .returning({ id: messages.id });
     const id = inserted[0]?.id;
     if (id === undefined) throw new Error("insert messages sans retour");
+
+    // 4. Notification `project_message` — NON FATALE (notify() ne throw
+    //    jamais), écrite APRÈS l'insert. Règle d'or : l'acteur n'est JAMAIS
+    //    destinataire (filtre `!== viewerId`). Matrice §2.2 n°6 :
+    //    - acteur CLIENT  → comptes **actifs** `ceo` + `manager`
+    //      (commercial exclu — D4), link fiche prospect du projet ;
+    //    - acteur INTERNE → comptes **actifs** `default_project_id = projet`
+    //      (les comptes clients), link `/espace/projet`.
+    try {
+      const actorRows = await db
+        .select({ name: users.name })
+        .from(users)
+        .where(eq(users.id, viewerId))
+        .limit(1);
+      const actorName = actorRows[0]?.name ?? viewerId;
+
+      let recipientIds: string[];
+      let link: string;
+      let entity: string;
+
+      if (viewer.role === "client") {
+        // Destinataires internes : ceo + manager actifs (D4 : pas de commercial).
+        recipientIds = await activeUserIdsByRoles(["ceo", "manager"]);
+        // Cible du lien = fiche prospect d'origine du projet (JOIN en cascade).
+        const targetRows = await db
+          .select({
+            projectName: clientProjects.name,
+            prospectId: prospects.id,
+            clientName: prospects.fullName,
+          })
+          .from(clientProjects)
+          .innerJoin(quotes, eq(clientProjects.quoteId, quotes.id))
+          .innerJoin(prospects, eq(quotes.prospectId, prospects.id))
+          .where(eq(clientProjects.id, projectId))
+          .limit(1);
+        const target = targetRows[0];
+        link = target === undefined ? "/espace/prospects" : `/espace/prospects/${target.prospectId}`;
+        entity = target === undefined ? "" : target.projectName || target.clientName;
+      } else {
+        // Destinataires = les comptes clients rattachés à ce projet, actifs.
+        const clientRows = await db
+          .select({ id: users.id })
+          .from(users)
+          .where(
+            and(eq(users.defaultProjectId, projectId), eq(users.status, "active")),
+          );
+        recipientIds = clientRows.map((row) => row.id);
+        const projectRows = await db
+          .select({ name: clientProjects.name })
+          .from(clientProjects)
+          .where(eq(clientProjects.id, projectId))
+          .limit(1);
+        link = "/espace/projet";
+        entity = projectRows[0]?.name ?? "";
+      }
+
+      await notify({
+        type: "project_message",
+        link,
+        meta: { actor: actorName, entity },
+        recipientIds: recipientIds.filter((recipientId) => recipientId !== viewerId),
+      });
+    } catch (error) {
+      console.error("[messages] notification du message non émise (message enregistré)", error);
+    }
 
     return { ok: true, id };
   } catch (error) {

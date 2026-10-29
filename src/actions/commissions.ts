@@ -45,6 +45,7 @@ import { z } from "zod";
 import { computeDealShares, getTier, type GeneratedCommission } from "@/lib/commission";
 import { getDb } from "@/lib/db";
 import { activities, commissions, prospects, quotes, roleEnum, users } from "@/lib/db/schema";
+import { activeUserIdsByRoles, notify } from "@/lib/notify";
 import { type Role } from "@/lib/permissions";
 
 // ---------------------------------------------------------------------------
@@ -327,6 +328,53 @@ export async function generateCommissionsForQuote(
       throw error;
     }
 
+    // 7. Notification `commission_due` — NON FATALE (notify() ne throw
+    //    jamais), écrite APRÈS le batch réussi. Destinataires : les
+    //    `beneficiaryId` des lignes générées (si non nuls) + les comptes
+    //    **actifs** `ceo` (D4 : aucun commercial), moins l'acteur (règle
+    //    d'or). Aucun destinataire → notify() n'écrit rien.
+    try {
+      const beneficiaryIds = [
+        ...new Set(
+          rows
+            .map((row) => row.beneficiaryId)
+            .filter((beneficiaryId): beneficiaryId is string => beneficiaryId !== null),
+        ),
+      ].filter((beneficiaryId) => beneficiaryId !== actorId);
+
+      let beneficiaryName = "—";
+      if (beneficiaryIds.length > 0) {
+        const nameRows = await db
+          .select({ id: users.id, name: users.name })
+          .from(users)
+          .where(inArray(users.id, beneficiaryIds));
+        const byId = new Map(nameRows.map((row) => [row.id, row.name]));
+        beneficiaryName = beneficiaryIds
+          .map((beneficiaryId) => byId.get(beneficiaryId) ?? "—")
+          .join(", ");
+      }
+
+      const totalCents = rows.reduce((sum, row) => sum + row.amountCents, 0);
+      // `entity` = bénéficiaire(s) (ou « — ») + montant total des lignes
+      // générées en USD lisible (le dict `commissionDue` n'utilise que `{{entity}}`).
+      const entity =
+        totalCents > 0
+          ? `${beneficiaryName} · ${(totalCents / 100).toFixed(2)} USD`
+          : beneficiaryName;
+      const recipientIds = [
+        ...beneficiaryIds,
+        ...(await activeUserIdsByRoles(["ceo"])),
+      ].filter((recipientId) => recipientId !== actorId);
+      await notify({
+        type: "commission_due",
+        link: "/espace/commissions",
+        meta: { entity },
+        recipientIds,
+      });
+    } catch (error) {
+      console.error("[commissions] notification `commission_due` non émise (génération appliquée)", error);
+    }
+
     return { ok: true, created: rows.length };
   } catch (error) {
     // Erreur d'infra (DB, réseau…) : journalisée puis propagée → 500,
@@ -450,6 +498,45 @@ export async function markCommissionsPaid(
       } catch (error) {
         console.error(
           "[commissions] activité `commissions.paid` non journalisée (versement appliqué)",
+          error,
+        );
+      }
+
+      // 6. Notification `commission_paid` — NON FATALE, écrite APRÈS le
+      //    versement confirmé. Destinataires : les bénéficiaires des lignes
+      //    réellement versées (≠ acteur, règle d'or), aucun autre rôle (D4).
+      try {
+        const paidIds = new Set(updated.map((row) => row.id));
+        const beneficiaryIds = [
+          ...new Set(
+            payableRows
+              .filter((row) => paidIds.has(row.id))
+              .map((row) => row.beneficiaryId)
+              .filter((beneficiaryId): beneficiaryId is string => beneficiaryId !== null),
+          ),
+        ].filter((beneficiaryId) => beneficiaryId !== actorId);
+
+        let entity = "—";
+        if (beneficiaryIds.length > 0) {
+          const nameRows = await db
+            .select({ id: users.id, name: users.name })
+            .from(users)
+            .where(inArray(users.id, beneficiaryIds));
+          const byId = new Map(nameRows.map((row) => [row.id, row.name]));
+          entity = beneficiaryIds
+            .map((beneficiaryId) => byId.get(beneficiaryId) ?? "—")
+            .join(", ");
+        }
+
+        await notify({
+          type: "commission_paid",
+          link: "/espace/commissions",
+          meta: { entity },
+          recipientIds: beneficiaryIds,
+        });
+      } catch (error) {
+        console.error(
+          "[commissions] notification `commission_paid` non émise (versement appliqué)",
           error,
         );
       }
