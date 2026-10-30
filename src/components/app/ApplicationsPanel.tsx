@@ -125,6 +125,12 @@ export type ApplicationsPanelProps = {
  * Pastille de statut de candidature — teintes §12.2 (accent pour `nouveau`,
  * acier sobre pour `invite`, danger pour `refuse`). Le libellé est toujours
  * rendu (la couleur ne porte jamais le sens seule).
+ *
+ * Pipeline zero-interview (§2.1.1) — AUCUN volt ajouté, déjà consommé par
+ * `nouveau` ; on reste dans la palette des statuts :
+ * - `exam_pending`   → acier désaturé : en cours, à lire comme une information ;
+ * - `exam_submitted` → ambre : engagement requis (file de revue CEO « < 24 h ») ;
+ * - `exam_failed`    → danger, cohérent avec `refuse` (issue négative).
  */
 const STATUS_TONE_CLASSES: Record<JobApplicationStatus, string> = {
   nouveau:
@@ -135,6 +141,12 @@ const STATUS_TONE_CLASSES: Record<JobApplicationStatus, string> = {
     "border-[rgba(255,107,90,0.25)] bg-[rgba(255,107,90,0.12)] text-danger",
   recrute:
     "border-[rgba(52,211,153,0.30)] bg-[rgba(52,211,153,0.10)] text-success",
+  exam_pending:
+    "border-[rgba(143,166,200,0.30)] bg-[rgba(143,166,200,0.14)] text-[#B8C7DF]",
+  exam_submitted:
+    "border-[rgba(245,158,11,0.30)] bg-[rgba(245,158,11,0.12)] text-[#F59E0B]",
+  exam_failed:
+    "border-[rgba(255,107,90,0.25)] bg-[rgba(255,107,90,0.12)] text-danger",
 };
 
 /** Nombre de colonnes du tableau — `<td colSpan>` de la ligne de détail. */

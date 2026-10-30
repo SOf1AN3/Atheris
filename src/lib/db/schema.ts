@@ -1,7 +1,8 @@
 /**
- * Atheris — schéma Drizzle (PostgreSQL / Neon) : 17 tables (T02 · PLAN.md §1.2 ;
+ * Atheris — schéma Drizzle (PostgreSQL / Neon) : 19 tables (T02 · PLAN.md §1.2 ;
  * enrichi Lot recrutement : `job_applications` + `recruitment_templates` ;
- * enrichi Lot 4 CRM : `notifications`).
+ * enrichi Lot 4 CRM : `notifications` ;
+ * enrichi pipeline zero-interview : `exam_sessions` + `exam_answers`).
  *
  * Conventions retenues (à confirmer par le Reviewer) :
  *
@@ -184,6 +185,31 @@ export const applicationStatusEnum = pgEnum("application_status", [
   "invite",
   "refuse",
   "recrute",
+  // ── Pipeline zero-interview (examen en ligne) ─────────────────────────────
+  // AJOUT PUR : aucun UPDATE de reprise n'est généré — les candidatures
+  // antérieures conservent leurs statuts `nouveau`/`invite` et leur parcours
+  // par entretien restent intacts (`interviewId`, `inviteToInterview`).
+  // `exam_pending`  = lien d'examen généré, non encore soumis.
+  // `exam_submitted`= soumis, en attente de revue CEO (file « < 24 h »).
+  // `exam_failed`   = section 4 (modèle de commission) refusée → éliminatoire,
+  //                   rejet automatique sans revue (un « non » ne s'améliore
+  //                   pas en relisant).
+  "exam_pending",
+  "exam_submitted",
+  "exam_failed",
+]);
+
+/**
+ * Cycle de vie d'une session d'examen.
+ *
+ * `in_progress` = ouverte, réponses en cours d'écriture (autosauvegarde par
+ * section, cf. Lot 2) ; `submitted` = verrouillée, en attente de décision CEO.
+ * Il n'existe pas d'état « expired » : une session non soumise reste relisible
+ * par son jeton tant que le CEO n'a pas tranché la candidature.
+ */
+export const examStatusEnum = pgEnum("exam_status", [
+  "in_progress",
+  "submitted",
 ]);
 
 // ---------------------------------------------------------------------------
@@ -779,5 +805,111 @@ export const notifications = pgTable(
     uniqueIndex("notifications_recipient_dedupe_uq")
       .on(t.recipientId, t.dedupeKey)
       .where(sql`dedupe_key IS NOT NULL`),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// 18. exam_sessions — session d'examen en ligne d'une candidature
+//     (pipeline zero-interview). Table AUTOPOPORTE côté utilisateur : le jeton
+//     est PUBLIC et ouvert par un candidat anonyme, exactement comme
+//     `interviews` (table 14) — aucun compte, aucune session.
+//
+//     Le rattachement à la candidature se fait par `applicationId` (FK), mais
+//     l'accès ne passe JAMAIS par cette FK côté public : la route
+//     `/[locale]/examen/[token]` ne connaît QUE le jeton, d'où l'UNIQUE.
+// ---------------------------------------------------------------------------
+
+/**
+ * Une session d'examen par candidature, créée automatiquement au dépôt du
+ * formulaire (`applyToJob`) — pas d'intervention CEO, c'est tout l'intérêt du
+ * zero-interview.
+ *
+ * - **Jeton** : 32 bytes hex (`randomBytes(32).toString("hex")`), même gabarit
+ *   que `interviews.token` — `UNIQUE` ⇒ 404 générique, aucune énumération
+ *   possible d'identifiants valides.
+ * - **Autosauvegarde par section** : le candidat ne soumet PAS tout à la fin.
+ *   Chaque section est persistée à sa validation (Lot 2), donc `in_progress`
+ *   est un état LONG et fréquent — un coup de réseau n'efface rien. Sur mobile
+ *   avec réseau instable, c'est la différence entre « candidature perdue » et
+ *   « candidature conservée ».
+ * - **Pas d'expiration verrouillée en DB** : une session non soumise reste
+ *   relisible par son jeton. La fermeture du parcours relève d'une décision
+ *   CEO (statut candidature), pas d'un cron — évite un état « zombie » où le
+ *   candidat ne peut plus reprendre et le CEO ne sait pas pourquoi.
+ */
+export const examSessions = pgTable(
+  "exam_sessions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    // Jeton d'accès public (32 bytes hex) — UNIQUE ⇒ 404 générique.
+    token: text("token").notNull().unique(),
+    // Lien vers la candidature. `no action` (défaut) : supprimer une session
+    // ne doit jamais pouvoir détruire une candidature, et l'inverse non plus.
+    applicationId: uuid("application_id").references(
+      (): PgColumn => jobApplications.id,
+    ),
+    status: examStatusEnum("status").notNull().default("in_progress"),
+    // Variante linguistique du parcours ('fr' | 'en', Zod) — détermine la
+    // langue des questions ET de l'e-mail de décision (miroir de
+    // `jobApplications.locale`, recopiée pour éviter un JOIN sur le jeton).
+    locale: text("locale").notNull().default("fr"),
+    // Instant d'ouverture. `submittedAt` nullable = jamais soumis.
+    startedAt: tstz("started_at").defaultNow().notNull(),
+    submittedAt: tstz("submitted_at"),
+    // Durée mesurée en secondes (indicatif, jamais bloquant) : sert au CEO à
+    // repérer un examen anormalement rapide (copier-coller) ou interminable.
+    // Entier, jamais de flottant (convention n° 3).
+    elapsedSeconds: integer("elapsed_seconds"),
+    createdAt: tstz("created_at").defaultNow().notNull(),
+    updatedAt: tstz("updated_at").defaultNow().$onUpdate(() => new Date()),
+  },
+  (t) => [
+    index("exam_sessions_application_id_idx").on(t.applicationId),
+    index("exam_sessions_status_idx").on(t.status),
+    // File de revue CEO : les examens à traiter, triés par heure de soumission.
+    // PARTIEL — ne indexe que les sessions réellement en attente ; une session
+    // déjà tranchée ne pollue pas la file.
+    index("exam_sessions_submitted_pending_idx")
+      .on(t.submittedAt)
+      .where(sql`status = 'submitted'`),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// 19. exam_answers — réponses à l'examen, une ligne par question.
+//     `cascade` : une réponse ne survivant PAS à sa session (objet dépendant,
+//     convention n° 6).
+// ---------------------------------------------------------------------------
+
+/**
+ * Une réponse par `(sessionId, questionId)` — l'index unique ci-dessous rend
+ * l'autosauvegarde **idempotente** : re-sauvegarder la même question écrase
+ * sa propre ligne au lieu d'en empiler une deuxième.
+ *
+ * - `section` — 1 à 4 (Zod applicatif, pas de CHECK en DB, convention n° 5).
+ * - `questionId` — **clé stable de la question dans le barème**, pas un
+ *   index de position : si une question est réordonnée ou injectée plus tard,
+ *   les réponses déjà stockées restent interprétables. C'est ce qui rend la
+ *   question 4 (éliminatoire) retrouvable même si le formulaire évolue.
+ * - `answer` — texte libre pour les sections 1–3 ; pour la section 4 binaire,
+ *   la valeur normalisée `"yes"` / `"no"` (décision d'élimination en Lot 2).
+ */
+export const examAnswers = pgTable(
+  "exam_answers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    sessionId: uuid("session_id")
+      .references((): PgColumn => examSessions.id, { onDelete: "cascade" })
+      .notNull(),
+    section: integer("section").notNull(),
+    questionId: text("question_id").notNull(),
+    answer: text("answer").notNull(),
+    createdAt: tstz("created_at").defaultNow().notNull(),
+    updatedAt: tstz("updated_at").defaultNow().$onUpdate(() => new Date()),
+  },
+  (t) => [
+    // Idempotence de l'autosauvegarde par section.
+    uniqueIndex("exam_answers_session_question_uq").on(t.sessionId, t.questionId),
+    index("exam_answers_session_id_idx").on(t.sessionId),
   ],
 );

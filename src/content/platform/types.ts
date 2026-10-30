@@ -745,8 +745,16 @@ export interface RecruitmentErrors {
   failed: string;
 }
 
-/** Statuts d'une candidature, dérivés de l'enum `job_application_status`. */
-export type JobApplicationStatus = "nouveau" | "invite" | "refuse" | "recrute";
+/** Statuts d'une candidature, dérivés de l'enum `job_application_status`.
+
+Le type est dérivé de l'enum Drizzle (`import type` entièrement effacé à la
+compilation — ce module reste type-only). Source de vérité UNIQUE : la
+précédente union ré-enumerée en dur ici désynchronisait cette page des 3
+statuts du pipeline zero-interview et cassait `tsc`. */
+import type { applicationStatusEnum } from "@/lib/db/schema";
+
+export type JobApplicationStatus =
+  (typeof applicationStatusEnum.enumValues)[number];
 
 /** Contenu de la page « Recrutement » (/espace/recrutement, CEO seul). */
 export interface RecruitmentContent {

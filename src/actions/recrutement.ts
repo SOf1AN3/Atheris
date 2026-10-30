@@ -71,8 +71,16 @@ import type { Role } from "@/lib/permissions";
 // d'un fichier `"use server"`).
 // ---------------------------------------------------------------------------
 
+// `import type` + `typeof` : le type est dérivé de l'enum Drizzle lui-même et
+// entièrement effacé à la compilation — un fichier `"use server"` ne peut
+// exporter que des fonctions async. AVANTAGE : impossible de désynchroniser
+// cette union de `application_status` (c'était le cas : les 3 statuts du
+// pipeline zero-interview cassaient `tsc`).
+import type { applicationStatusEnum } from "@/lib/db/schema";
+
 /** Statut d'une candidature, dérivé de l'enum Drizzle `application_status`. */
-export type JobApplicationStatus = "nouveau" | "invite" | "refuse" | "recrute";
+export type JobApplicationStatus =
+  (typeof applicationStatusEnum.enumValues)[number];
 
 /** Ligne de la liste `/espace/recrutement` — dates ISO 8601 (sérialisables). */
 export type JobApplicationListItem = {

@@ -43,6 +43,13 @@
       "when": 1793253175019,
       "tag": "0005_worthless_wildside",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793355491123,
+      "tag": "0006_breezy_wild_child",
+      "breakpoints": true
     }
   ]
 }
