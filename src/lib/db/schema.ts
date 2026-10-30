@@ -1,8 +1,10 @@
 /**
- * Atheris — schéma Drizzle (PostgreSQL / Neon) : 19 tables (T02 · PLAN.md §1.2 ;
+ * Atheris — schéma Drizzle (PostgreSQL / Neon) : 22 tables (T02 · PLAN.md §1.2 ;
  * enrichi Lot recrutement : `job_applications` + `recruitment_templates` ;
  * enrichi Lot 4 CRM : `notifications` ;
- * enrichi pipeline zero-interview : `exam_sessions` + `exam_answers`).
+ * enrichi pipeline zero-interview : `exam_sessions` + `exam_answers` ;
+ * enrichi refonte plateforme : `payout_details` + `identity_docs` +
+ * `contract_consents`, colonnes KYC sur `users`, `exam_sessions.expires_at`).
  *
  * Conventions retenues (à confirmer par le Reviewer) :
  *
@@ -212,6 +214,37 @@ export const examStatusEnum = pgEnum("exam_status", [
   "submitted",
 ]);
 
+/**
+ * Mode de paiement choisi par le SDR (page Profil, section « Moyens de
+ * paiement »).
+ *
+ * Trois variantes, chacune avec SON jeu de champs dans `payout_details` —
+ * c'est pourquoi il n'y a pas d'enum « un champ par variante tous
+ * nullable » sans arbitrage : les colonnes sont regroupées par bloc et
+ * l'atomicité (un bloc rempli, les autres vides) est assurée en Zod, pas
+ * par une contrainte CHECK (convention n° 5 de l'en-tête).
+ */
+export const payoutMethodEnum = pgEnum("payout_method", [
+  "wise",
+  "paypal",
+  "bank",
+]);
+
+/**
+ * État du dossier de vérification d'identité (KYC).
+ *
+ * `pending`  = pièce déposée, en attente du CEO ;
+ * `approved` = pièce validée (`users.verified_at` posé à ce moment) ;
+ * `rejected` = refusée — le SDR est notifié avec le motif
+ *              (`users.identity_rejection_reason`) et peut re-uploader,
+ *              ce qui repasse la ligne en `pending`.
+ */
+export const identityStatusEnum = pgEnum("identity_status", [
+  "pending",
+  "approved",
+  "rejected",
+]);
+
 // ---------------------------------------------------------------------------
 // Types colonnes utilitaires.
 // ---------------------------------------------------------------------------
@@ -251,6 +284,19 @@ export const users = pgTable(
     phone: text("phone"),
     role: roleEnum("role").notNull(),
     status: userStatusEnum("status").notNull().default("pending"),
+    // ── Vérification d'identité (KYC, pipeline SDR) ─────────────────────────
+    // `verifiedAt` : instant où le CEO a validé la pièce, `null` = non
+    // vérifié. C'est LE signal unique de vérification, et il sert à la fois à :
+    //   1. bloquer le versement des commissions — une ligne `commissions`
+    //      n'est versable que si cette colonne est renseignée ;
+    //   2. verrouiller le nom du profil — pas de second booléen : un seul
+    //      signal, une seule source de vérité.
+    verifiedAt: tstz("verified_at"),
+    // Raison du dernier refus de pièce, affichée dans la notification du SDR
+    // (il peut re-uploader). Écrasée à chaque nouveau refus ; `NULL` = jamais
+    // refusé. Stockée sur le compte plutôt que dans l'historique : le SDR ne
+    // consulte que sa DERNIÈRE situation.
+    identityRejectionReason: text("identity_rejection_reason"),
     // Compte « porteur » du projet : renseigné côté client après invitation.
     // (La FK est déclarée en extraConfig ci-dessous.)
     defaultProjectId: uuid("default_project_id"),
@@ -862,8 +908,21 @@ export const examSessions = pgTable(
     // `jobApplications.locale`, recopiée pour éviter un JOIN sur le jeton).
     locale: text("locale").notNull().default("fr"),
     // Instant d'ouverture. `submittedAt` nullable = jamais soumis.
+    //
+    // ⚠ Le Start du candidat REPOSE cette valeur (UPDATE conditionnel) :
+    // la colonne est renseignée à la création pour satisfaire le
+    // `defaultNow()`, mais le CHRONO affiché doit compter depuis le clic
+    // Start, pas depuis le dépôt de la candidature — sinon un candidat qui
+    // attend 2 jours avant de commencer afficherait « 48 h d'examen ».
+    // `expiresAt` (ci-dessous) est indépendant : il court depuis la
+    // candidature (H1).
     startedAt: tstz("started_at").defaultNow().notNull(),
     submittedAt: tstz("submitted_at"),
+    // Fin de validité du lien, calculée à la CREATION (candidature + 3 j,
+    // H1). Une session dont `now() > expires_at` n'est plus ouvrable : le
+    // jeton renvoie un 404 dédié et le CEO peut en régénérer un via
+    // `generateExamLink`. `NULL` = sans limite (sessions héritées).
+    expiresAt: tstz("expires_at"),
     // Durée mesurée en secondes (indicatif, jamais bloquant) : sert au CEO à
     // repérer un examen anormalement rapide (copier-coller) ou interminable.
     // Entier, jamais de flottant (convention n° 3).
@@ -919,5 +978,139 @@ export const examAnswers = pgTable(
     // Idempotence de l'autosauvegarde par section.
     uniqueIndex("exam_answers_session_question_uq").on(t.sessionId, t.questionId),
     index("exam_answers_session_id_idx").on(t.sessionId),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// 20. payout_details — moyen de paiement du SDR (page Profil, §« Payout »).
+//     UNE ligne par compte, `user_id` UNIQUE : un SDR a UN mode principal.
+// ---------------------------------------------------------------------------
+
+/**
+ * Coordonnées de versement d'un SDR, pour trois variantes :
+ *
+ * - `wise`   → `accountEmail` + `currency` (USD / EUR / GBP…) ;
+ * - `paypal` → `accountEmail` ;
+ * - `bank`   → `holderName` + `bankName` + `iban` + `swiftBic`.
+ *
+ * ─── Arbitrage stockage (D4 du plan) ────────────────────────────────────────
+ * Les valeurs sont stockées **en clair** en base et **masquées à l'affichage**
+ * (`*** 4821`, `a***o@gmail.com`). Le masquage est de l'AFFICHAGE, pas une
+ * protection : un accès direct à la base donne les coordonnées lisibles.
+ * C'est assumé et documenté — à réévaluer si le volume de SDR croît.
+ *
+ * L'atomicité « un seul bloc rempli » est assurée en Zod applicatif (motif
+ * `client_projects.status`) : aucune contrainte CHECK en DB (convention n° 5).
+ *
+ * Pas de chiffrement au repos : requêtes de tri et d'affichage simplifiées,
+ * et le destinataire légitime (CEO) doit pouvoir lire l'IBAN pour virer.
+ */
+export const payoutDetails = pgTable(
+  "payout_details",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .references((): PgColumn => users.id, { onDelete: "cascade" })
+      .notNull()
+      .unique(),
+    method: payoutMethodEnum("method").notNull(),
+    // ── Wise / PayPal ────────────────────────────────────────────────────
+    accountEmail: text("account_email"),
+    // Devise de réception préférée (Wise) — code ISO 4217 en majuscules.
+    currency: text("currency"),
+    // ── Virement bancaire (SWIFT / IBAN) ─────────────────────────────────
+    // Doit correspondre à la pièce d'identité (contrôle applicatif).
+    holderName: text("holder_name"),
+    bankName: text("bank_name"),
+    iban: text("iban"),
+    swiftBic: text("swift_bic"),
+    createdAt: tstz("created_at").defaultNow().notNull(),
+    updatedAt: tstz("updated_at").defaultNow().$onUpdate(() => new Date()),
+  },
+  (t) => [index("payout_details_user_id_idx").on(t.userId)],
+);
+
+// ---------------------------------------------------------------------------
+// 21. identity_docs — pièce d'identité (KYC, §Vérification d'identité).
+//     UNE ligne par compte, `user_id` UNIQUE : un re-upload ÉCRASE le
+//     dossier (D7 — le SDR peut recommencer après un refus).
+// ---------------------------------------------------------------------------
+
+/**
+ * Dossier de vérification d'identité d'un SDR.
+ *
+ * - Les octets suivent le motif `documents`/`jobApplications` (bytea ≤ 5 Mo,
+ *   métadonnées en colonnes, aucune écriture disque).
+ * - `status` pilote le cycle : `pending` → (`approved` | `rejected`). Un
+ *   re-upload repasse la ligne en `pending` et vide `rejectionReason`.
+ * - `users.verifiedAt` est posé UNIQUEMENT à l'approbation — c'est lui qui
+ *   débloque les versements, pas ce statut. Ce statut n'est qu'un repère de
+ *   file d'attente pour le CEO.
+ *
+ * ⚠ PII SENSIBLE : pièce d'identité en clair en base (D3/D3-bis). Assumé,
+ * à réévaluer en cas de volume.
+ */
+export const identityDocs = pgTable(
+  "identity_docs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .references((): PgColumn => users.id, { onDelete: "cascade" })
+      .notNull()
+      .unique(),
+    filename: text("filename").notNull(),
+    mimeType: text("mime_type").notNull(),
+    byteSize: integer("byte_size").notNull(),
+    bytes: bytea("bytes").notNull(),
+    status: identityStatusEnum("status").notNull().default("pending"),
+    // Instant de la décision du CEO — `NULL` tant que non examiné.
+    reviewedAt: tstz("reviewed_at"),
+    // CEO ayant tranché (l'audience est restreinte à `ceo`, mais l'acte est
+    // journalisé : la colonne n'est jamais déduite du contexte).
+    reviewedBy: uuid("reviewed_by").references((): PgColumn => users.id),
+    createdAt: tstz("created_at").defaultNow().notNull(),
+    updatedAt: tstz("updated_at").defaultNow().$onUpdate(() => new Date()),
+  },
+  (t) => [index("identity_docs_user_id_idx").on(t.userId)],
+);
+
+// ---------------------------------------------------------------------------
+// 22. contract_consents — preuve de consentement au contrat de partenariat.
+// ---------------------------------------------------------------------------
+
+/**
+ * Acceptation d'une VERSION du contrat de partenariat.
+ *
+ * Une ligne par (compte, version) — `unique(userId, contractVersion)`. Si le
+ * contrat évolue, la version suivante produit une NOUVELLE ligne : l'ancien
+ * consentement reste intact comme preuve de ce qui avait été accepté, et le
+ * premier virement exige une ligne à jour.
+ *
+ * Colonnes exigées par le contrat (D5) : horodatage, adresse IP, envoi
+ * automatique d'une copie. `emailSentAt` est `NULL` si l'envoi a échoué —
+ * le consentement reste valable (il est prouvé par `acceptedAt` + `ipAddress`),
+ * la copie est un service, pas une condition de validité.
+ */
+export const contractConsents = pgTable(
+  "contract_consents",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .references((): PgColumn => users.id, { onDelete: "cascade" })
+      .notNull(),
+    // Version figée du texte accepté (ex. `2026-10-v1`) — jamais « latest » :
+    // la preuve doit pouvoir dire QUEL texte a été coché.
+    contractVersion: text("contract_version").notNull(),
+    acceptedAt: tstz("accepted_at").defaultNow().notNull(),
+    // Adresse IP au moment du clic — saisie côté SERVEUR (jamais depuis le
+    // payload : un champ envoyé par le client ne prouve rien).
+    ipAddress: text("ip_address"),
+    emailSentAt: tstz("email_sent_at"),
+    createdAt: tstz("created_at").defaultNow().notNull(),
+  },
+  (t) => [
+    // Un seul consentement par version et par compte.
+    uniqueIndex("contract_consents_user_version_uq").on(t.userId, t.contractVersion),
+    index("contract_consents_user_id_idx").on(t.userId),
   ],
 );
