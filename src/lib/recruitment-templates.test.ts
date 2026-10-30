@@ -114,3 +114,67 @@ describe("absoluteInterviewUrl", () => {
     );
   });
 });
+
+/**
+ * Modèles d'examen (zero-interview) — envoyés AUTOMATIQUEMENT à la
+ * soumission, sans intervention CEO. Ils portent la décision au candidat :
+ * un texte manquant ou un placeholder non résolu s'y lit comme un défaut.
+ */
+describe("modèles d'examen (exam_passed / exam_failed)", () => {
+  const KINDS = ["exam_passed", "exam_failed"] as const;
+  const LOCALES = ["fr", "en"] as const;
+
+  it("4 modèles présents (2 kinds × 2 locales), sujet + corps non vides", () => {
+    for (const kind of KINDS) {
+      for (const locale of LOCALES) {
+        const tpl = DEFAULT_EMAIL_TEMPLATES[kind][locale];
+        expect(tpl.subject.length, `${kind}/${locale} subject`).toBeGreaterThan(0);
+        expect(tpl.body.length, `${kind}/${locale} body`).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it("aucun `{{lien}}` : l'e-mail part SANS lien (l'écran de confirmation suffit)", () => {
+    for (const kind of KINDS) {
+      for (const locale of LOCALES) {
+        expect(DEFAULT_EMAIL_TEMPLATES[kind][locale].body, `${kind}/${locale}`).not.toContain(
+          "{{lien}}",
+        );
+      }
+    }
+  });
+
+  it("`{{prenom}}` est présent et se résout sans laisser de placeholder", () => {
+    for (const kind of KINDS) {
+      const body = DEFAULT_EMAIL_TEMPLATES[kind].fr.body;
+      expect(body).toContain("{{prenom}}");
+      const rendered = renderTemplate(body, { prenom: "Ada", nom: "Lovelace" });
+      expect(rendered).toContain("Ada");
+      expect(rendered).not.toContain("{{prenom}}");
+    }
+  });
+
+  it("succès et échec portent des messages DISTINCTS", () => {
+    expect(DEFAULT_EMAIL_TEMPLATES.exam_passed.fr.subject).not.toBe(
+      DEFAULT_EMAIL_TEMPLATES.exam_failed.fr.subject,
+    );
+    expect(DEFAULT_EMAIL_TEMPLATES.exam_passed.en.subject).not.toBe(
+      DEFAULT_EMAIL_TEMPLATES.exam_failed.en.subject,
+    );
+    expect(DEFAULT_EMAIL_TEMPLATES.exam_failed.fr.body).toContain("commission");
+  });
+
+  it("le succès annonce la revue sous 24 h (engagement du parcours)", () => {
+    for (const locale of LOCALES) {
+      expect(DEFAULT_EMAIL_TEMPLATES.exam_passed[locale].body, locale).toMatch(
+        /24 h|24 hours/,
+      );
+    }
+  });
+
+  it("4 kinds × 2 locales = 8 modèles au total", () => {
+    expect(Object.keys(DEFAULT_EMAIL_TEMPLATES).sort()).toEqual(
+      ["exam_failed", "exam_passed", "invite", "reject"].sort(),
+    );
+  });
+});

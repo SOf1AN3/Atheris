@@ -177,6 +177,15 @@ export async function sendMail(opts: SendMailOptions): Promise<SendMailResult> {
       return { ok: false, error: "invalid_body" };
     }
 
+    // 0. Coupe générale d'envoi — opt-in par env, AUCUN effet par défaut.
+    //    Sert aux environnements de test/E2E : un envoi réel vers une adresse
+    //    de test génère un BOUNCE, et l'accumulation de rebonds durcit la
+    //    réputation d'envoi du domaine légitime. Refus silencieux, exactement
+    //    comme une clé absente : jamais d'exception, jamais de crash d'action.
+    if (process.env.MAIL_DISABLED === "1") {
+      return { ok: false, error: "disabled" };
+    }
+
     // 1. Clé absente → refus silencieux (aucun crash d'action publique).
     const apiKey = process.env.RESEND_API_KEY;
     if (typeof apiKey !== "string" || apiKey.trim().length === 0) {

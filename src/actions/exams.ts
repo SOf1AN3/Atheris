@@ -34,7 +34,15 @@ import {
   examAnswers,
   examSessions,
   jobApplications,
+  recruitmentTemplates,
 } from "@/lib/db/schema";
+import { sendMail } from "@/lib/mail";
+import { activeUserIdsByRoles, notify } from "@/lib/notify";
+import {
+  DEFAULT_EMAIL_TEMPLATES,
+  renderTemplate,
+  type EmailTemplateKind,
+} from "@/lib/recruitment-templates";
 import {
   EXAM_MAX_ANSWER_CHARS,
   EXAM_QUESTIONS,
@@ -309,11 +317,110 @@ export async function submitExam(input: {
       })
       .where(eq(jobApplications.id, session.applicationId));
 
+    // 6. Suite post-soumission — NON FATALE : la soumission est DÉJÀ faite et
+    //    le verrou posé. Un échec mail/notification ne la fait jamais échouer
+    //    (le candidat a son écran de confirmation, le CEO verra la ligne dans
+    //    la liste) — on journalise seulement.
+    await notify({
+      type: "exam_submitted",
+      link: "/espace/recrutement",
+      meta: { entity: session.applicationId },
+      recipientIds: await activeUserIdsByRoles(["ceo"]),
+    });
+
+    const mailResult = await sendExamResultEmail({
+      applicationId: session.applicationId,
+      locale: session.locale === "en" ? "en" : "fr",
+      failed,
+    });
+    if (!mailResult.ok) {
+      console.error("[exams] soumission OK mais e-mail de résultat non envoyé", mailResult.error);
+    }
+
     recordRateSend(key, now);
     return { ok: true, failed };
   } catch (error) {
     console.error("[exams] échec de soumission", error);
     return { ok: false, code: "failed" };
+  }
+}
+
+/**
+ * Résout un modèle d'e-mail : personnalisation en base d'abord, sinon défaut.
+ *
+ * Même logique que `getEmailTemplate` de `src/actions/recrutement.ts`, SANS la
+ * garde d'acteur — ce helper est appelé depuis `submitExam`, action PUBLIQUE
+ * exécutée par un candidat anonyme (aucune session CEO à revérifier : seuls
+ * des `kind`/`locale` validés par le type atteignent la requête).
+ *
+ * Les kinds `exam_*` sont absents de `emailKindSchema` (modal CEO) — c'est
+ * volontaire : ce modal n'envoie que `invite`/`reject`, pilotés à la main.
+ */
+async function resolveEmailTemplate(
+  kind: EmailTemplateKind,
+  locale: "fr" | "en",
+): Promise<{ subject: string; body: string }> {
+  const db = getDb();
+  const rows = await db
+    .select({
+      subject: recruitmentTemplates.subject,
+      body: recruitmentTemplates.body,
+    })
+    .from(recruitmentTemplates)
+    .where(
+      and(eq(recruitmentTemplates.kind, kind), eq(recruitmentTemplates.locale, locale)),
+    )
+    .limit(1);
+
+  const row = rows[0];
+  if (row !== undefined) return row;
+  return DEFAULT_EMAIL_TEMPLATES[kind][locale];
+}
+
+/**
+ * Envoie l'e-mail de résultat au candidat (kind `exam_passed` / `exam_failed`).
+ *
+ * **Jamais fatal** : renvoie `{ ok: false, error }` au lieu de throw, motif
+ * exact de `sendMail` — un échec Resend n'annule jamais une soumission déjà
+ * verrouillée. Le destinataire est lu EN BASE (jamais issu du jeton public).
+ *
+ * @param args Identifiant de candidature, locale du parcours, éliminatoire.
+ */
+async function sendExamResultEmail(args: {
+  applicationId: string;
+  locale: "fr" | "en";
+  failed: boolean;
+}): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const db = getDb();
+    const rows = await db
+      .select({
+        firstName: jobApplications.firstName,
+        lastName: jobApplications.lastName,
+        email: jobApplications.email,
+      })
+      .from(jobApplications)
+      .where(eq(jobApplications.id, args.applicationId))
+      .limit(1);
+    const candidate = rows[0];
+    // Candidature disparue entre-temps : rien à envoyer, pas une erreur.
+    if (candidate === undefined) return { ok: true };
+
+    const kind: EmailTemplateKind = args.failed ? "exam_failed" : "exam_passed";
+    const template = await resolveEmailTemplate(kind, args.locale);
+    const body = renderTemplate(template.body, {
+      prenom: candidate.firstName,
+      nom: candidate.lastName,
+    });
+
+    return await sendMail({
+      to: candidate.email,
+      subject: template.subject,
+      text: body,
+    });
+  } catch (error) {
+    console.error("[exams] e-mail de résultat non envoyé", error);
+    return { ok: false, error: "exception" };
   }
 }
 

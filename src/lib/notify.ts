@@ -71,6 +71,7 @@ const NOTIFICATION_TYPES = [
   "contact_received",
   "application_created",
   "interview_booked",
+  "exam_submitted",
   "prospect_status_changed",
   "quote_signed",
   "project_message",

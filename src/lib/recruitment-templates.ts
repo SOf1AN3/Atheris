@@ -1,12 +1,14 @@
 /**
- * Atheris — modèles d'e-mail de recrutement (invite / reject) —
+ * Atheris — modèles d'e-mail de recrutement —
  * **module 100 % pur** : aucun import DB ni auth → testable unitairement
  * (`recruitment-templates.test.ts`, zéro connexion) et utilisable tel quel
- * par `src/actions/recrutement.ts`.
+ * par `src/actions/recrutement.ts` et `src/actions/exams.ts`.
  *
  * CONTRAT :
- * - `DEFAULT_EMAIL_TEMPLATES` — 4 textes figés (invite/reject × fr/en) avec
- *   les placeholders `{{prenom}}`, `{{nom}}` et `{{lien}}` ;
+ * - `DEFAULT_EMAIL_TEMPLATES` — 8 textes figés (4 kinds × fr/en) avec
+ *   les placeholders `{{prenom}}`, `{{nom}}` et `{{lien}}` :
+ *   `invite` / `reject` envoyés manuellement par le CEO,
+ *   `exam_passed` / `exam_failed` envoyés automatiquement à la soumission ;
  * - `renderTemplate(body, vars)` — remplacement des placeholders ; le lien
  *   est **toujours** présent dans l'e-mail final (exigence métier : s'il a
  *   disparu du corps, il est réinjecté en fin de message) ;
@@ -18,8 +20,14 @@
  * de repli quand aucune personnalisation n'existe.
  */
 
-/** Nature d'un e-mail de recrutement : invitation à un entretien, ou refus. */
-export type EmailTemplateKind = "invite" | "reject";
+/** Nature d'un e-mail de recrutement.
+
+`invite` / `reject` sont envoyés MANUELLEMENT par le CEO (modal
+`ApplicationEmailModal`). `exam_passed` / `exam_failed` sont envoyés
+AUTOMATIQUEMENT à la soumission de l'examen (`src/actions/exams.ts`) — le
+candidat a déjà son écran de confirmation, l'e-mail est le double formel qui
+lui parvient par écrit. */
+export type EmailTemplateKind = "invite" | "reject" | "exam_passed" | "exam_failed";
 
 /** Locales admises (aligné sur `@/i18n/config`). */
 export type TemplateLocale = "fr" | "en";
@@ -104,6 +112,72 @@ competitive.
 
 We are keeping your application on file and will get back to you if a more
 suitable opportunity arises.
+
+Best regards,
+The Atheris Labs team`,
+    },
+  },
+
+  // ── Examen zero-interview : envoyés AUTOMATIQUEMENT à la soumission ────────
+  // Pas de `{{lien}}` : le candidat a déjà vu son écran de confirmation,
+  // l'e-mail est le double ECRIT de ce qu'il vient de recevoir.
+  exam_passed: {
+    fr: {
+      subject: "Votre test est bien arrivé — Atheris Labs",
+      body: `Bonjour {{prenom}},
+
+Votre test de recrutement a bien été reçu. Merci pour le temps que vous y
+avez consacré.
+
+Il sera examiné personnellement par notre CEO sous 24 heures. Vous recevrez
+la décision finale par e-mail — aucune action n'est nécessaire de votre côté
+d'ici là.
+
+Bien à vous,
+Sofiane — Atheris Labs`,
+    },
+    en: {
+      subject: "Your assessment has been received — Atheris Labs",
+      body: `Bonjour {{prenom}},
+
+Your assessment has been received. Thank you for the time you put into it.
+
+It will be reviewed personally by our CEO within 24 hours. You will receive
+the final decision by e-mail — nothing is required from you in the meantime.
+
+Best regards,
+The Atheris Labs team`,
+    },
+  },
+  exam_failed: {
+    fr: {
+      subject: "Résultat de votre test — Atheris Labs",
+      body: `Bonjour {{prenom}},
+
+Nous vous remercions pour le temps consacré à votre test de recrutement.
+
+Malheureusement, vos réponses ne correspondent pas au modèle de commission
+exigé pour ce poste de Sales Development Representative. Le test est donc
+clôturé et nous ne poursuivrons pas votre candidature.
+
+Cette décision est propre à ce modèle particulier et ne remet pas en cause
+la qualité de votre profil.
+
+Bien à vous,
+Sofiane — Atheris Labs`,
+    },
+    en: {
+      subject: "Assessment result — Atheris Labs",
+      body: `Bonjour {{prenom}},
+
+Thank you for the time you spent on your assessment.
+
+Unfortunately, your answers do not match the commission model required for
+this Sales Development Representative position. The assessment is therefore
+closed and we will not be moving forward with your application.
+
+This decision relates specifically to that model and does not reflect on the
+quality of your profile.
 
 Best regards,
 The Atheris Labs team`,
