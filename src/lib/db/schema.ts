@@ -710,10 +710,18 @@ export const jobApplications = pgTable(
     status: applicationStatusEnum("status").notNull().default("nouveau"),
     // CV stocké en bytea ≤ 5 Mo (validation Zod applicative, motif
     // `documents`) : métadonnées en colonnes, flux brut en `cvBytes`.
-    cvFilename: text("cv_filename").notNull(),
-    cvMimeType: text("cv_mime_type").notNull(),
-    cvByteSize: integer("cv_byte_size").notNull(),
-    cvBytes: bytea("cv_bytes").notNull(),
+    //
+    // FACULTATIF (décision business) : les 4 colonnes sont `nullable` et
+    // binaire — soit le quartet est TOUS renseigné, soit aucun ne l'est.
+    // Un CV à 5 Mo imposé était un frein à la conversion dès lors que la
+    // qualification passe par l'examen en ligne ; le CV redevient une
+    // pièce d'appui, pas un sésame. Le contrat applicatif (Zod, dans
+    // `src/actions/careers.ts`) fait respecter cette atomicité : aucune
+    // contrainte CHECK en DB (convention n° 5 de l'en-tête).
+    cvFilename: text("cv_filename"),
+    cvMimeType: text("cv_mime_type"),
+    cvByteSize: integer("cv_byte_size"),
+    cvBytes: bytea("cv_bytes"),
     // `interview_id` nullable = lien d'entretien créé à l'invitation.
     // `no action` (défaut, comme les colonnes « auteur ») : supprimer un
     // entretien ne détruit pas la candidature.

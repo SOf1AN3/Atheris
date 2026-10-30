@@ -248,19 +248,28 @@ function sanitizeFilename(rawName: string, extension: string): string {
   return `${cleaned.length > 0 ? cleaned : "cv"}${suffix}`;
 }
 
-/** Récapitulatif interne en français — CV en pièce jointe côté `sendMail`. */
+/**
+ * Récapitulatif interne en français — CV en pièce jointe côté `sendMail`.
+ *
+ * CV facultatif : les champs CV sont `null` quand la candidature est déposée
+ * sans pièce jointe, auquel cas la ligne récap est remplacée par une mention
+ * explicite (le CEO doit savoir que c'est volontaire, pas une erreur d'envoi).
+ */
 function buildApplicationText(args: {
   firstName: string;
   lastName: string;
   email: string;
   message: string | undefined;
-  filename: string;
-  mimeType: string;
-  sizeBytes: number;
+  filename: string | null;
+  mimeType: string | null;
+  sizeBytes: number | null;
 }): string {
   const message =
     args.message !== undefined && args.message.length > 0 ? args.message : "(aucun message)";
-  const sizeKo = Math.max(1, Math.round(args.sizeBytes / 1024));
+  const cvLine =
+    args.filename !== null && args.mimeType !== null && args.sizeBytes !== null
+      ? `CV en pièce jointe : ${args.filename} (${args.mimeType} · ${Math.max(1, Math.round(args.sizeBytes / 1024))} Ko)`
+      : "CV : aucune pièce jointe fournie (candidature sans CV)";
   return [
     "Bonjour,",
     "",
@@ -270,7 +279,7 @@ function buildApplicationText(args: {
     `Nom : ${args.lastName}`,
     `Email : ${args.email}`,
     `Message : ${message}`,
-    `CV en pièce jointe : ${args.filename} (${args.mimeType} · ${sizeKo} Ko)`,
+    cvLine,
     `Déposée le : ${new Date().toISOString()}`,
   ].join("\n");
 }
@@ -302,35 +311,44 @@ async function processApplication(formData: FormData): Promise<ApplyToJobResult>
   });
   if (!parsed.success) return { ok: false, code: "invalid" };
 
-  // 3. Fichier : présence, taille, puis type (ordre = coût croissant : le
-  //    buffer n'est lu qu'une fois tous les contrôles passés).
-  const file = readUpload(formData.get(FIELD_CV));
-  if (file === null) return { ok: false, code: "invalid" };
-  if (file.size > MAX_CV_BYTES) return { ok: false, code: "too_large" };
+  // 3. CV — FACULTATIF, mais un fichier PARTIELLEMENT transmis reste refusé :
+  //    l'absence d'entrée `cv` est légitime (candidature sans pièce jointe),
+  //    une entrée présente mais malformée ne l'est pas (payload forgé).
+  const cvEntry = formData.get(FIELD_CV);
+  const cvAbsent = cvEntry === null || (typeof cvEntry === "string" && cvEntry.trim() === "");
 
-  const extension = extensionOf(file.name);
-  const declaredMime = CV_EXTENSIONS[extension];
-  if (declaredMime === undefined) return { ok: false, code: "bad_type" };
+  let bytes: Buffer | null = null;
+  let filename: string | null = null;
+  let mimeType: string | null = null;
 
-  const providedMime = file.type.split(";")[0].trim().toLowerCase();
-  if (providedMime.length > 0 && !CV_MIME_TYPES.has(providedMime)) {
-    return { ok: false, code: "bad_type" };
+  if (!cvAbsent) {
+    const file = readUpload(cvEntry);
+    if (file === null) return { ok: false, code: "invalid" };
+    if (file.size > MAX_CV_BYTES) return { ok: false, code: "too_large" };
+
+    const extension = extensionOf(file.name);
+    const declaredMime = CV_EXTENSIONS[extension];
+    if (declaredMime === undefined) return { ok: false, code: "bad_type" };
+
+    const providedMime = file.type.split(";")[0].trim().toLowerCase();
+    if (providedMime.length > 0 && !CV_MIME_TYPES.has(providedMime)) {
+      return { ok: false, code: "bad_type" };
+    }
+
+    // 4. Lecture en MÉMOIRE (aucune écriture disque, aucun chemin).
+    try {
+      bytes = Buffer.from(await file.arrayBuffer());
+    } catch (error) {
+      console.error("[careers] lecture du CV impossible", error);
+      return { ok: false, code: "failed" };
+    }
+    if (bytes.length === 0) return { ok: false, code: "invalid" };
+    // Re-contrôle sur les octets réellement lus (taille déclarée non foiable).
+    if (bytes.length > MAX_CV_BYTES) return { ok: false, code: "too_large" };
+
+    filename = sanitizeFilename(file.name, extension);
+    mimeType = CV_MIME_TYPES.has(providedMime) ? providedMime : declaredMime;
   }
-
-  // 4. Lecture en MÉMOIRE (aucune écriture disque, aucun chemin).
-  let bytes: Buffer;
-  try {
-    bytes = Buffer.from(await file.arrayBuffer());
-  } catch (error) {
-    console.error("[careers] lecture du CV impossible", error);
-    return { ok: false, code: "failed" };
-  }
-  if (bytes.length === 0) return { ok: false, code: "invalid" };
-  // Re-contrôle sur les octets réellement lus (taille déclarée non foiable).
-  if (bytes.length > MAX_CV_BYTES) return { ok: false, code: "too_large" };
-
-  const filename = sanitizeFilename(file.name, extension);
-  const mimeType = CV_MIME_TYPES.has(providedMime) ? providedMime : declaredMime;
 
   // 5. Persistance — INSERT dans `jobApplications` (source de vérité pour
   //    l'espace CEO). L'INSERT est placé AVANT l'e-mail admin : une
@@ -347,9 +365,11 @@ async function processApplication(formData: FormData): Promise<ApplyToJobResult>
       locale: locale ?? "fr",
       message: message !== undefined && message.length > 0 ? message : null,
       status: "nouveau",
+      // CV facultatif : les 4 colonnes sont renseignées ENSEMBLE ou pas du
+      // tout (contrat d'atomicité commenté dans le schema).
       cvFilename: filename,
       cvMimeType: mimeType,
-      cvByteSize: bytes.length,
+      cvByteSize: bytes === null ? null : bytes.length,
       cvBytes: bytes,
     });
   } catch (error) {
@@ -373,6 +393,7 @@ async function processApplication(formData: FormData): Promise<ApplyToJobResult>
   // 6. E-mail admin — BEST EFFORT (PLAN-RECRUTEMENT-CEO, D8) : la
   //    candidature est en base, c'est la source de vérité. Un échec
   //    Resend est journalisé mais ne fait PAS échouer la candidature.
+  //    Sans CV, la ligne récap et la pièce jointe sont simplement omises.
   const mail = await sendMail({
     to: RECRUITER_EMAIL,
     subject: `Candidature Sales Development Representative — ${firstName} ${lastName}`,
@@ -383,9 +404,11 @@ async function processApplication(formData: FormData): Promise<ApplyToJobResult>
       message,
       filename,
       mimeType,
-      sizeBytes: bytes.length,
+      sizeBytes: bytes === null ? null : bytes.length,
     }),
-    attachments: [{ filename, content: bytes }],
+    ...(bytes !== null && filename !== null
+      ? { attachments: [{ filename, content: bytes }] }
+      : {}),
   });
 
   if (!mail.ok) {

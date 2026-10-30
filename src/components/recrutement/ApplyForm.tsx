@@ -41,11 +41,13 @@ const TEXTAREA_BASE =
 const FIELD_IDLE_CLASS = "border-line-2";
 const FIELD_ERROR_CLASS = "border-danger";
 
-/** États de refus d'un fichier — traduits par `FILE_ISSUE_KEYS` (aucun message en dur). */
-type FileIssue = "required" | "badType" | "tooLarge";
+/** États de refus d'un fichier — traduits par `FILE_ISSUE_KEYS` (aucun message en dur).
+
+CV FACULTATIF : il n'existe plus d'état `required` — l'absence de fichier est
+légitime. Seul un fichier réellement transmis peut être refusé (type / taille). */
+type FileIssue = "badType" | "tooLarge";
 
 const FILE_ISSUE_KEYS = {
-  required: "fileRequired",
   badType: "fileBadType",
   tooLarge: "fileTooLarge",
 } as const satisfies Record<FileIssue, keyof CareersFormStrings["errors"]>;
@@ -75,9 +77,17 @@ function createApplySchema(errors: CareersFormStrings["errors"]) {
 
 type ApplyFormValues = z.infer<ReturnType<typeof createApplySchema>>;
 
-/** Contrôle COMPLET du fichier côté client : présence → type → taille (5 Mo). */
+/**
+ * Contrôle COMPLET du fichier côté client : type → taille (5 Mo).
+ *
+ * CV FACULTATIF : l'absence de fichier est légitime et ne produit aucune
+ * erreur. Seul un fichier RÉELLEMENT transmis est validé — un type ou une
+ * taille hors limites reste refusé (le serveur re-valide de toute façon).
+ *
+ * @returns `null` si pas de fichier ou si le fichier est valide.
+ */
 function validateFile(file: File | null): FileIssue | null {
-  if (file === null) return "required";
+  if (file === null) return null;
 
   const lowerName = file.name.toLowerCase();
   const hasExtension = ACCEPT_EXTENSIONS.some((extension) =>

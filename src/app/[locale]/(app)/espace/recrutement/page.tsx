@@ -60,9 +60,11 @@ export type ApplicationRow = {
   /** `dict.recruitment.status[status]`. */
   statusLabel: string;
   locale: Locale;
-  cvFilename: string;
-  /** Taille du CV formatée server (`Intl.NumberFormat`, motif `ApplyForm`). */
-  cvByteSizeLabel: string;
+  /** CV facultatif : `null` = déposé sans pièce jointe (CTA masqué en UI). */
+  cvFilename: string | null;
+  /** Taille du CV formatée server (`Intl.NumberFormat`, motif `ApplyForm`).
+   *  `null` sans CV. */
+  cvByteSizeLabel: string | null;
   /** Date de dépôt, formatée server. */
   appliedLabel: string;
   /** Date d'invitation, formatée server, `null` si jamais invitée. */
@@ -158,7 +160,10 @@ function toRow(
     statusLabel: statusLabels[item.status],
     locale: item.locale,
     cvFilename: item.cvFilename,
-    cvByteSizeLabel: formatFileSize(item.cvByteSize, locale),
+    // CV facultatif : sans pièce jointe, pas de taille à formater (le formatage
+    // server exige un nombre — `null` n'atteint jamais `formatFileSize`).
+    cvByteSizeLabel:
+      item.cvByteSize === null ? null : formatFileSize(item.cvByteSize, locale),
     appliedLabel: formatDateTime(item.createdAt, locale) ?? "—",
     invitedLabel:
       item.invitedAt !== null

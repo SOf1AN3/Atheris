@@ -358,22 +358,29 @@ export function ApplicationsPanel({
             </div>
           </dl>
 
-          <div className="flex flex-col gap-2 border-t border-line pt-4">
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              href={state.item.cvUrl}
-              target="_blank"
-              className="self-start"
-            >
-              {labels.cvDownload}
-            </Button>
-            <p className="micro text-faint">
-              {state.item.cvFilename}
-              {row !== undefined ? ` · ${row.cvByteSizeLabel}` : null}
-            </p>
-          </div>
+          {/* CV facultatif : sans pièce jointe, ni CTA ni métadonnées — le
+              bloc garde sa place dans la mise en page mais n'affiche rien,
+              plutôt qu'un bouton qui renverrait un 404. */}
+          {state.item.cvUrl !== null ? (
+            <div className="flex flex-col gap-2 border-t border-line pt-4">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                href={state.item.cvUrl}
+                target="_blank"
+                className="self-start"
+              >
+                {labels.cvDownload}
+              </Button>
+              <p className="micro text-faint">
+                {state.item.cvFilename}
+                {row !== undefined && row.cvByteSizeLabel !== null
+                  ? ` · ${row.cvByteSizeLabel}`
+                  : null}
+              </p>
+            </div>
+          ) : null}
         </div>
       );
     }

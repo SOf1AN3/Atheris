@@ -90,8 +90,9 @@ export type JobApplicationListItem = {
   email: string;
   status: JobApplicationStatus;
   locale: "fr" | "en";
-  cvFilename: string;
-  cvByteSize: number;
+  /** CV facultatif : `null` = déposé sans pièce jointe (contrat nullable). */
+  cvFilename: string | null;
+  cvByteSize: number | null;
   createdAt: string;
   invitedAt: string | null;
   rejectedAt: string | null;
@@ -102,9 +103,11 @@ export type JobApplicationListItem = {
 /** Détail d'une candidature (liste + message + CV servi par la route API). */
 export type JobApplicationDetail = JobApplicationListItem & {
   message: string | null;
-  cvMimeType: string;
-  /** URL relative du CV : `GET /api/applications/{id}/cv` (CEO seul, 404 muet). */
-  cvUrl: string;
+  /** `null` quand la candidature est sans CV — l'UI masque alors le CTA. */
+  cvMimeType: string | null;
+  /** URL relative du CV : `GET /api/applications/{id}/cv` (CEO seul, 404 muet).
+   *  `null` sans CV. */
+  cvUrl: string | null;
 };
 
 /** Entrée d'un envoi d'e-mail CEO (invitation ou refus). */
@@ -351,7 +354,9 @@ export async function getJobApplication(
         createdAt: row.createdAt.toISOString(),
         invitedAt: row.invitedAt === null ? null : row.invitedAt.toISOString(),
         rejectedAt: row.rejectedAt === null ? null : row.rejectedAt.toISOString(),
-        cvUrl: `/api/applications/${row.id}/cv`,
+        // CV facultatif : sans pièce jointe, aucune URL — l'UI masque le CTA
+        // au lieu de pointer vers une route qui renverrait 404.
+        cvUrl: row.cvFilename === null ? null : `/api/applications/${row.id}/cv`,
         interview: hasInterview
           ? {
               booked: true,

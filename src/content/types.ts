@@ -307,7 +307,6 @@ export interface CareersFormStrings {
     lastNameRequired: string;
     emailRequired: string;
     emailInvalid: string;
-    fileRequired: string;
     fileTooLarge: string;
     fileBadType: string;
     generic: string;

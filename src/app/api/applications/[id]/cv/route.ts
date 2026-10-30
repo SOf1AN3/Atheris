@@ -106,10 +106,10 @@ export async function GET(
   // Ligne absente (`undefined`) = candidature inexistante → 404.
   let row:
     | {
-        cvFilename: string;
-        cvMimeType: string;
-        cvByteSize: number;
-        cvBytes: Buffer;
+        cvFilename: string | null;
+        cvMimeType: string | null;
+        cvByteSize: number | null;
+        cvBytes: Buffer | null;
       }
     | undefined = undefined;
 
@@ -130,6 +130,18 @@ export async function GET(
     throw error;
   }
   if (row === undefined) return notFound();
+
+  // CV facultatif : candidature déposée SANS pièce jointe. Même réponse que
+  // pour une candidature inexistante (404 muet) — ne jamais confirmer qu'une
+  // candidature existe mais n'a pas de CV.
+  if (
+    row.cvBytes === null ||
+    row.cvFilename === null ||
+    row.cvMimeType === null ||
+    row.cvByteSize === null
+  ) {
+    return notFound();
+  }
 
   // -------------------------------------------------------------------------
   // 3. Réponse — octets bruts + en-têtes sûrs.
