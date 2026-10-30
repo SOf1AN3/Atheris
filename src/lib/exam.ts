@@ -304,6 +304,18 @@ export function questionsForSection(section: ExamSection): ExamQuestion[] {
   return EXAM_QUESTIONS.filter((question) => question.section === section);
 }
 
+/**
+ * URL relative du parcours d'examen (locale incluse).
+ *
+ * Vit ici (module pur) et non dans `src/actions/exams.ts` : un fichier
+ * `"use server"` n'autorise que des fonctions **async**, une constante ou un
+ * helper sync y ferait échouer le build RSC — alors même que `tsc` passe,
+ * puisque la contrainte n'est pas exprimée par les types.
+ */
+export function examRelativeUrl(token: string, locale: string): string {
+  return `/${locale}/examen/${token}`;
+}
+
 /** Titre court d'une section (libellé d'entête de page). */
 export const SECTION_TITLES: Record<ExamSection, Record<Locale, string>> = {
   1: { fr: "Ventes & gestion des objections", en: "Sales & objection handling" },

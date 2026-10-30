@@ -583,6 +583,37 @@ export const fr: SiteContent = {
     ],
   },
 
+  exam: {
+    badge: "Test en ligne",
+    title: "Votre test de recrutement *SDR*",
+    description:
+      "Quatre courtes sections, environ 20 à 25 minutes. Vos réponses sont enregistrées au fur et à une — rien n'est perdu si votre connexion coupe.",
+    notFoundTitle: "Ce lien n'est pas *valide*",
+    notFoundMessage:
+      "Le lien a peut-être expiré ou déjà été utilisé. Contactez Atheris LABS pour en obtenir un nouveau.",
+    submittedTitle: "Ce test est déjà *soumis*",
+    submittedMessage:
+      "Chaque lien ne sert qu'une fois. Vos réponses nous sont parvenues — vous recevrez la décision par email.",
+    durationNote: "Environ 20-25 minutes. Le chronomètre est indicatif et ne vous bloque jamais.",
+    autosaveNote: "Vos réponses sont enregistrées automatiquement à la fin de chaque section.",
+    progressLabel: "Section {{n}} sur {{total}}",
+    nextSectionLabel: "Section suivante",
+    previousSectionLabel: "Section précédente",
+    submitLabel: "Soumettre mon test",
+    submittingLabel: "Envoi en cours...",
+    savingLabel: "Enregistrement...",
+    savedLabel: "Enregistré",
+    saveFailedLabel: "Impossible d'enregistrer - vérifiez votre connexion",
+    errorLabel: "Une erreur est survenue. Merci de réessayer.",
+    successTitle: "Test *soumis*",
+    successMessage:
+      "Merci. Vos réponses ont bien été reçues et seront examinées personnellement par notre CEO sous 24 heures. Vous recevrez la décision par email.",
+    failedTitle: "Test non *validé*",
+    failedMessage:
+      "Malheureusement vos réponses ne correspondent pas au modèle de commission exigé pour ce poste : le test est donc clôturé. Merci pour votre temps.",
+    reviewNote: "Examiné personnellement par le CEO sous 24 heures — vous recevrez la décision par email.",
+  },
+
   notFound: {
     code: "404 \u00B7 Page introuvable",
     title: "Cette page n'existe *pas*",

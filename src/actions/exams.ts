@@ -1,3 +1,5 @@
+"use server";
+
 /**
  * Atheris — Server Actions du pipeline d'examen zero-interview (Lot 2b).
  *
@@ -36,10 +38,8 @@ import {
 import {
   EXAM_MAX_ANSWER_CHARS,
   EXAM_QUESTIONS,
-  EXAM_SECTIONS,
   EXAM_TOKEN_BYTES,
   EXAM_TOKEN_PATTERN,
-  SECTION_TITLES,
   isEliminatoryFailure,
   questionsForSection,
   sectionAnswersAreCoherent,
@@ -358,10 +358,8 @@ export async function startExam(
   }
 }
 
-/** URL relative du parcours d'examen (locale incluse). */
-export function examRelativeUrl(token: string, locale: string): string {
-  return `/${locale}/examen/${token}`;
-}
-
-/** Titre de section — réexporté pour le rendu (source de vérité unique). */
-export { SECTION_TITLES, EXAM_SECTIONS };
+// NOTE : aucun helper sync ici. Un fichier `"use server"` n'autorise que des
+// fonctions ASYNC (contrainte RSC — `examRelativeUrl` vit donc dans
+// `src/lib/exam.ts`). `SECTION_TITLES` / `EXAM_SECTIONS` sont également
+// importés depuis `@/lib/exam` : les réexporter ici casserait le build RSC
+// (tsc passe de toute façon, la contrainte n'est pas typée).

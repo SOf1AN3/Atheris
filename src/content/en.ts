@@ -582,6 +582,37 @@ export const en: SiteContent = {
     ],
   },
 
+  exam: {
+    badge: "Online assessment",
+    title: "Your SDR *assessment*",
+    description:
+      "Four short sections, around 20 to 25 minutes. Your answers are saved as you go - nothing is lost if your connection drops.",
+    notFoundTitle: "This link is not *valid*",
+    notFoundMessage:
+      "The link may have expired or already been used. Contact Atheris LABS to get a new one.",
+    submittedTitle: "This assessment is already *submitted*",
+    submittedMessage:
+      "Each link can be used once. Your answers are with our team - you will hear back by email.",
+    durationNote: "About 20-25 minutes. The timer is indicative and never blocks you.",
+    autosaveNote: "Your answers are saved automatically at the end of each section.",
+    progressLabel: "Section {{n}} of {{total}}",
+    nextSectionLabel: "Next section",
+    previousSectionLabel: "Previous section",
+    submitLabel: "Submit my assessment",
+    submittingLabel: "Submitting...",
+    savingLabel: "Saving...",
+    savedLabel: "Saved",
+    saveFailedLabel: "Could not save - check your connection",
+    errorLabel: "Something went wrong. Please try again.",
+    successTitle: "Assessment *submitted*",
+    successMessage:
+      "Thank you. Your answers have been received and will be reviewed personally by our CEO within 24 hours. You will receive an email with the decision.",
+    failedTitle: "Assessment *not passed*",
+    failedMessage:
+      "Unfortunately your answers do not match the commission model required for this role, so the assessment is closed. Thank you for your time.",
+    reviewNote: "Reviewed personally by the CEO within 24 hours - you will get the decision by email.",
+  },
+
   notFound: {
     code: "404 \u00B7 Not found",
     title: "This page does not *exist*",

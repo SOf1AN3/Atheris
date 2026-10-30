@@ -451,6 +451,49 @@ export interface AboutContent {
   guaranteeDescription: string;
 }
 
+/** Contenu de la page `/[locale]/examen/[token]` (parcours du candidat).
+
+Le CHROME est localisé (FR/EN) ; les questions elles-mêmes viennent du barème
+`src/lib/exam.ts` — source de vérité unique partagée serveur/client, jamais
+dupliquée ici. */
+export interface ExamContent {
+  /** Badge pill en tête de page. */
+  badge: string;
+  /** Peut porter un accent `*…*` rendu en voix serif. */
+  title: string;
+  description: string;
+  /** État « lien invalide » (jeton inconnu ou déjà soumis). */
+  notFoundTitle: string;
+  notFoundMessage: string;
+  /** État « déjà soumis » — distinct du 404 : le lien a servi, pas perdu. */
+  submittedTitle: string;
+  submittedMessage: string;
+  /** Rappel de durée et de caractère non bloquant du chrono. */
+  durationNote: string;
+  /** Consigne d'autosauvegarde affichée en tête de parcours. */
+  autosaveNote: string;
+  /** Progression : « Section 2 sur 4 ». */
+  progressLabel: string;
+  nextSectionLabel: string;
+  previousSectionLabel: string;
+  submitLabel: string;
+  submittingLabel: string;
+  /** Libellé d'état d'autosauvegarde (in-progress). */
+  savingLabel: string;
+  savedLabel: string;
+  saveFailedLabel: string;
+  /** Message d'erreur générique (code brut traduit côté client). */
+  errorLabel: string;
+  /** Écran de confirmation après soumission. */
+  successTitle: string;
+  successMessage: string;
+  /** Écran « section 4 refusée » — échec éliminatoire. */
+  failedTitle: string;
+  failedMessage: string;
+  /** Mention légale : réponse revue par le CEO sous 24 h. */
+  reviewNote: string;
+}
+
 /** Racine du contenu de la landing page (FR ou EN). */
 export interface SiteContent {
   a11y: A11yStrings;
@@ -466,6 +509,7 @@ export interface SiteContent {
   about: AboutContent;
   careers: CareersContent;
   sdrKit: SdrKitContent;
+  exam: ExamContent;
   notFound: NotFoundContent;
   interview: InterviewContent;
   footer: FooterContent;

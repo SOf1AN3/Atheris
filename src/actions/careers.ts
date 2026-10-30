@@ -44,8 +44,9 @@ import { headers } from "next/headers";
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
-import { examRelativeUrl, startExam } from "@/actions/exams";
+import { startExam } from "@/actions/exams";
 import { getDb } from "@/lib/db";
+import { examRelativeUrl } from "@/lib/exam";
 import { jobApplications } from "@/lib/db/schema";
 import { activeUserIdsByRoles, notify } from "@/lib/notify";
 import { sendMail } from "@/lib/mail";
