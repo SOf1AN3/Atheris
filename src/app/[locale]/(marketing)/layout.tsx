@@ -6,9 +6,9 @@ import { Header } from "@/components/layout/Header";
 import { getDictionary } from "@/i18n/dictionaries";
 import { isValidLocale, locales } from "@/i18n/config";
 
-// PLACEHOLDER: domaine à confirmer par le client
-/** Domaine placeholder documenté (tâche SEO dédiée : sitemap/canonical). */
-const SITE_URL = "https://atherislabs.com";
+/** Domaine de production — base des canonical, OpenGraph et JSON-LD.
+ *  Miroir de `SITE_URL` (.env.local) et du repli de `absoluteInterviewUrl`. */
+const SITE_URL = "https://atheris-labs.sofianeasma.me";
 /** Identifiant JSON-LD stable référencé par `Service.provider`. */
 const ORGANIZATION_ID = `${SITE_URL}/#organization`;
 /** Contact commercial affiché dans le JSON-LD (`ContactPoint.email`). */

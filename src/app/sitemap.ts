@@ -1,7 +1,8 @@
 import type { MetadataRoute } from "next";
 
-/** Domaine placeholder documenté (tâche SEO) : à remplacer dès le domaine définitif. */
-const SITE_URL = "https://atherislabs.com";
+/** Domaine de production — base des URL absolues du sitemap.
+ *  Miroir de `SITE_URL` (.env.local) et du repli de `absoluteInterviewUrl`. */
+const SITE_URL = "https://atheris-labs.sofianeasma.me";
 
 /**
  * Sitemap statique des 2 locales (`/fr`, `/en`, SSG via `src/app/[locale]/page.tsx`).

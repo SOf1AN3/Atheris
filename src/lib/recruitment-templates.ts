@@ -11,7 +11,7 @@
  *   est **toujours** présent dans l'e-mail final (exigence métier : s'il a
  *   disparu du corps, il est réinjecté en fin de message) ;
  * - `absoluteInterviewUrl(relativeUrl)` — absolutisation via `SITE_URL`
- *   (repli `https://atherislabs.com`).
+ *   (repli `https://atheris-labs.sofianeasma.me`).
  *
  * Le CEO peut personnaliser les textes (table `recruitmentTemplates`, upsert
  * via `src/actions/recrutement.ts`) ; ces valeurs par défaut ne servent que
@@ -154,6 +154,7 @@ export function renderTemplate(
  * // → "https://x.com/fr/entretien/abc"
  */
 export function absoluteInterviewUrl(relativeUrl: string): string {
-  const base = process.env.SITE_URL?.trim() || "https://atherislabs.com";
+  const base =
+    process.env.SITE_URL?.trim() || "https://atheris-labs.sofianeasma.me";
   return `${base.replace(/\/+$/, "")}${relativeUrl}`;
 }

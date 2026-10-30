@@ -103,14 +103,14 @@ describe("absoluteInterviewUrl", () => {
   it("replie sur le domaine de production sans SITE_URL", () => {
     vi.stubEnv("SITE_URL", "");
     expect(absoluteInterviewUrl("/fr/entretien/abc")).toBe(
-      "https://atherislabs.com/fr/entretien/abc",
+      "https://atheris-labs.sofianeasma.me/fr/entretien/abc",
     );
   });
 
   it("replie aussi si SITE_URL n'est qu'une chaîne d'espaces", () => {
     vi.stubEnv("SITE_URL", "   ");
     expect(absoluteInterviewUrl("/fr/entretien/abc")).toBe(
-      "https://atherislabs.com/fr/entretien/abc",
+      "https://atheris-labs.sofianeasma.me/fr/entretien/abc",
     );
   });
 });

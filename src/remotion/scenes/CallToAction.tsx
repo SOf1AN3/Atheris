@@ -7,8 +7,12 @@ import { TwoVoiceTitle } from "../components/Type";
 import { SceneShell } from "../components/SceneShell";
 import { SafeArea } from "../components/SafeArea";
 
-/** Coordonnées — source : `contact.channels` + domaine */
-const CONTACT = ["contact@atherislabs.com", "+213 551 79 73 13", "atherislabs.com"];
+/** Coordonnées — source : `contact.channels` + domaine de production */
+const CONTACT = [
+  "contact@atherislabs.com",
+  "+213 551 79 73 13",
+  "atheris-labs.sofianeasma.me",
+];
 
 /**
  * S5 — CTA FINAL
