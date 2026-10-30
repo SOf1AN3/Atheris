@@ -27,11 +27,10 @@ export const dynamic = "force-dynamic";
  * Atheris — page « Recrutement » (espace CEO).
  *
  * ─── RÔLE ──────────────────────────────────────────────────────────────────
- * **CEO seul** : `listJobApplications` / `inviteToInterview` / `rejectApplication`
- * sont réservés `ceo` côté serveur, la page applique la même garde (motif
- * identique à `espace/entretien/page.tsx` : le middleware ne couvre pas ce
- * suffixe, la garde de la page est LE premier filet, doublée de la
- * revalidation du rôle dans chaque action).
+ * **CEO seul** : `listJobApplications` / `rejectApplication` sont réservés
+ * `ceo` côté serveur, la page applique la même garde (le middleware ne
+ * couvre pas toujours ce suffixe : la garde de la page est LE premier filet,
+ * doublée de la revalidation du rôle dans chaque action).
  *
  * ─── DONNÉES ───────────────────────────────────────────────────────────────
  * Lecture via `listJobApplications()` (Server Action, acteur reconstruit en
@@ -51,10 +50,6 @@ export const dynamic = "force-dynamic";
 export type ApplicationRow = {
   id: string;
   candidateName: string;
-  /** Prénom seul — variables `{{prenom}}` du modèle d'e-mail. */
-  firstName: string;
-  /** Nom seul — variable `{{nom}}` du modèle d'e-mail. */
-  lastName: string;
   email: string;
   status: JobApplicationStatus;
   /** `dict.recruitment.status[status]`. */
@@ -71,12 +66,6 @@ export type ApplicationRow = {
   invitedLabel: string | null;
   /** Date de refus, formatée server, `null` si jamais refusée. */
   rejectedLabel: string | null;
-  /** Créneau réel formaté server en `Africa/Algiers`, `null` si non réservé. */
-  slotLabel: string | null;
-  /** Invitée et pas encore réservée → créneau « Pas encore réservé ». */
-  bookable: boolean;
-  inviteAllowed: boolean;
-  rejectAllowed: boolean;
 };
 
 /** Bloc d'erreur sobre — `common.retry`, aucun détail technique en UI. */
@@ -94,7 +83,7 @@ function errorBlock(retryLabel: string): React.JSX.Element {
  * Format de date/heure UNIQUE côté serveur : la DB stocke des ISO 8601 UTC,
  * l'affichage est demandé en `Africa/Algiers` (fuseau du recruteur, spec T02).
  *
- * @param value ISO 8601 (`created_at`, `invited_at`, `rejected_at`, `starts_at`).
+ * @param value ISO 8601 (`created_at`, `invited_at`, `rejected_at`).
  * @returns Date formatée, ou `null` si la valeur est illisible.
  */
 function formatDateTime(value: string, locale: Locale): string | null {
@@ -129,32 +118,20 @@ function formatFileSize(bytes: number, locale: Locale): string {
 /**
  * Projection `JobApplicationListItem` → `ApplicationRow` (tout sérialisable).
  *
- * `slotLabel` n'est renseigné QUE si le créneau est réellement réservé
- * (`interview.booked`) : une invitation sans réservation reste « Pas encore
- * réservé ». `invitedAt`/`rejectedAt` ne portent une date que si l'action
+ * `invitedAt`/`rejectedAt` ne portent une date que si l'action
  * correspondante a été exécutée.
  */
 function toRow(
   item: JobApplicationListItem,
   locale: Locale,
   statusLabels: RecruitmentContent["status"],
-  unavailableLabel: string,
 ): ApplicationRow {
   const firstName = item.firstName.trim();
   const lastName = item.lastName.trim();
-  const candidateName = `${firstName} ${lastName}`.trim();
-
-  const booked = item.interview !== null && item.interview.booked;
-  const slotDate =
-    booked && item.interview !== null && item.interview.startsAt !== null
-      ? formatDateTime(item.interview.startsAt, locale)
-      : null;
 
   return {
     id: item.id,
-    candidateName,
-    firstName,
-    lastName,
+    candidateName: `${firstName} ${lastName}`.trim(),
     email: item.email.trim(),
     status: item.status,
     statusLabel: statusLabels[item.status],
@@ -173,12 +150,6 @@ function toRow(
       item.rejectedAt !== null
         ? (formatDateTime(item.rejectedAt, locale) ?? "—")
         : null,
-    // Créneau réservé mais illisible → repli explicite, jamais une date fausse.
-    slotLabel: booked ? (slotDate ?? unavailableLabel) : null,
-    // Invitée et toujours sans réservation → le créneau reste « à prendre ».
-    bookable: item.status !== "refuse" && !booked,
-    inviteAllowed: item.status !== "refuse",
-    rejectAllowed: item.status !== "refuse",
   };
 }
 
@@ -239,8 +210,6 @@ export default async function RecrutementPage({
       filterLabel: recruitment.filterLabel,
       filterAll: recruitment.filterAll,
       timezoneNote: recruitment.timezoneNote,
-      booked: recruitment.booked,
-      notBooked: recruitment.notBooked,
       openDetail: recruitment.openDetail,
       closeDetail: recruitment.closeDetail,
       detailTitle: recruitment.detailTitle,
@@ -250,12 +219,6 @@ export default async function RecrutementPage({
       cvDownload: recruitment.cvDownload,
       invitedAtLabel: recruitment.invitedAtLabel,
       rejectedAtLabel: recruitment.rejectedAtLabel,
-      inviteAction: recruitment.inviteAction,
-      recruitAction: recruitment.recruitAction,
-      recruiting: recruitment.recruiting,
-      recruitSuccess: recruitment.recruitSuccess,
-      recruitError: recruitment.recruitError,
-      rejectAction: recruitment.rejectAction,
       unavailable: recruitment.unavailable,
       examTitle: recruitment.examTitle,
       examAbsent: recruitment.examAbsent,
@@ -281,19 +244,10 @@ export default async function RecrutementPage({
     };
 
     const rows = listResult.items.map((item) =>
-      toRow(item, locale, recruitment.status, recruitment.unavailable),
+      toRow(item, locale, recruitment.status),
     );
 
-    // `actor` : acteur revalidé côté serveur (la page est CEO-only ci-dessus),
-    // transmis sérialisable au panel pour `recruitCandidate` (contrat §2.3).
-    content = (
-      <ApplicationsPanel
-        rows={rows}
-        labels={labels}
-        locale={locale}
-        actor={{ id: session.user.id, role: session.user.role }}
-      />
-    );
+    content = <ApplicationsPanel rows={rows} labels={labels} locale={locale} />;
   }
 
   return (

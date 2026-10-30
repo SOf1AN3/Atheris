@@ -18,19 +18,15 @@
  * dans un nouvel onglet (`rel="noopener noreferrer"`).
  *
  * ─── DÉCISIONS ─────────────────────────────────────────────────────────────
- * « Inviter » / « Refuser » ouvrent `ApplicationEmailModal` ; après un envoi
- * réussi, `router.refresh()` revalide la page serveur (la liste est re-fetchée
- * avec les nouveaux statuts) et un `aria-live` annonce le toast de succès.
- * « Recruter » appelle `recruitCandidate({ applicationId, locale }, actor)`
- * (locale lue via `useParams()`, motif `InterviewLinks`) : succès → toast
- * `role="status"` + `router.refresh()` (statut `recrute`, bouton masqué) ;
- * échec → `role="alert"` (`mail_failed` = texte dédié, sinon `recruitError`).
- * Le bouton n'apparaît que si la candidature n'est ni `refuse` ni `recrute`.
+ * Seules deux actions vivent ici : « Dossier » (détail déplié) et
+ * « Générer le lien d'examen ». Les décisions **Recruter** / **Refuser**
+ * (e-mail de refus via `ApplicationEmailModal`) ont été déplacées sur la
+ * page `/espace/examen` (parcours zero-interview).
  *
  * ─── RESPONSIVE ────────────────────────────────────────────────────────────
  * ≥ md : tableau inchangé (`hidden md:block`). < md : chaque candidature
  * devient une carte empilée (libellé `.micro` + valeur : candidat, statut,
- * date, créneau, actions) — les actions et le détail sont partagés avec le
+ * date, actions) — les actions et le détail sont partagés avec le
  * tableau via `renderRowActions` / `renderDetailBody` (aucun double moteur).
  *
  * ─── A11Y ──────────────────────────────────────────────────────────────────
@@ -41,34 +37,30 @@
  * (`Button size="sm"` = `h-11`) ; une seule ligne dépliée à la fois.
  *
  * ─── VOLT ──────────────────────────────────────────────────────────────────
- * Aucun aplat volt ici : les actions de ligne sont en hairline ; le SEUL
- * aplat volt de l'écran est le bouton « Envoyer » du modal.
+ * Aucun aplat volt ici : les actions de ligne sont en hairline.
  */
 
 import { Inbox } from "lucide-react";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Fragment, useState } from "react";
 
 import {
   generateExamLink,
   getJobApplication,
-  recruitCandidate,
   type JobApplicationDetail,
 } from "@/actions/recrutement";
-import { ApplicationEmailModal } from "@/components/app/ApplicationEmailModal";
 import { Button } from "@/components/ui/Button";
 import type { ApplicationRow } from "@/app/[locale]/(app)/espace/recrutement/page";
 import type {
   JobApplicationStatus,
   RecruitmentContent,
 } from "@/content/platform/types";
-import { isValidLocale, type Locale } from "@/i18n/config";
+import type { Locale } from "@/i18n/config";
 import {
   EXAM_SECTIONS,
   SECTION_TITLES,
   questionsForSection,
 } from "@/lib/exam";
-import type { Role } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 
 /** Filtre actif — `"all"` = tous les statuts. */
@@ -106,8 +98,6 @@ export type ApplicationsPanelLabels = {
   filterLabel: string;
   filterAll: string;
   timezoneNote: string;
-  booked: string;
-  notBooked: string;
   openDetail: string;
   closeDetail: string;
   detailTitle: string;
@@ -117,16 +107,6 @@ export type ApplicationsPanelLabels = {
   cvDownload: string;
   invitedAtLabel: string;
   rejectedAtLabel: string;
-  inviteAction: string;
-  rejectAction: string;
-  /** CTA « Recruter » — `dict.recruitment.recruitAction`. */
-  recruitAction: string;
-  /** Libellé du bouton pendant l'appel `recruitCandidate` (`recruiting`). */
-  recruiting: string;
-  /** Toast de succès (`role="status"`) — `dict.recruitment.recruitSuccess`. */
-  recruitSuccess: string;
-  /** Erreur (`role="alert"`) — `dict.recruitment.recruitError`. */
-  recruitError: string;
   unavailable: string;
   /** ── Revue de l'examen (pipeline zero-interview) ─────────────────────── */
   examTitle: RecruitmentContent["examTitle"];
@@ -156,12 +136,6 @@ export type ApplicationsPanelProps = {
   rows: ApplicationRow[];
   labels: ApplicationsPanelLabels;
   locale: Locale;
-  /**
-   * Acteur CEO projeté depuis la session serveur (page `/espace/recrutement`)
-   * et revalidé côté serveur par `recruitCandidate` (Zod + garde rôle `ceo`,
-   * motif `invitations.ts`) : aucun rôle n'est inventé côté client.
-   */
-  actor: { id: string; role: Role };
 };
 
 /**
@@ -193,7 +167,7 @@ const STATUS_TONE_CLASSES: Record<JobApplicationStatus, string> = {
 };
 
 /** Nombre de colonnes du tableau — `<td colSpan>` de la ligne de détail. */
-const COLUMN_COUNT = 5;
+const COLUMN_COUNT = 4;
 
 /** Code brut du serveur → message localisé (jamais de string serveur). */
 function detailErrorText(
@@ -209,25 +183,12 @@ export function ApplicationsPanel({
   rows,
   labels,
   locale,
-  actor,
 }: ApplicationsPanelProps): React.JSX.Element {
   const router = useRouter();
-  const params = useParams();
-  // Locale de l'URL lue côté client (motif `InterviewLinks`) : jamais de code
-  // langue en dur ; repli sur la prop serveur si l'URL est illisible.
-  const rawLocale = params["locale"];
-  const urlLocale: Locale | undefined =
-    typeof rawLocale === "string" && isValidLocale(rawLocale) ? rawLocale : undefined;
 
   const [filter, setFilter] = useState<StatusFilter>("all");
   const [detail, setDetail] = useState<DetailState | null>(null);
-  const [modalKind, setModalKind] = useState<"invite" | "reject" | null>(null);
-  const [modalRow, setModalRow] = useState<ApplicationRow | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  /** Id de la candidature en cours de recrutement (`null` = aucun appel vol). */
-  const [recruitingId, setRecruitingId] = useState<string | null>(null);
-  /** Dernière erreur de recrutement (`role="alert"`, aucun détail technique). */
-  const [recruitError, setRecruitError] = useState<string | null>(null);
 
   // ── Génération de lien d'examen ──────────────────────────────────────────
   /** Id de la candidature en cours de génération (aucun appel vol en parallèle). */
@@ -276,28 +237,12 @@ export function ApplicationsPanel({
     }
   }
 
-  function handleOpenModal(row: ApplicationRow, kind: "invite" | "reject"): void {
-    setModalRow(row);
-    setModalKind(kind);
-  }
-
-  function handleCloseModal(): void {
-    setModalRow(null);
-    setModalKind(null);
-  }
-
-  /** Envoi réussi : toast persistant + re-fetch server de la liste. */
-  function handleSent(kind: "invite" | "reject"): void {
-    setNotice(kind === "invite" ? labels.modal.successInvite : labels.modal.successReject);
-    router.refresh();
-  }
-
   /**
    * Génère (ou réutilise) le lien d'examen de la candidature.
    *
-   * Remplace l'invitation à un entretien : le parcours zero-interview ne
-   * propose plus d'entretien. Un seul appel en vol à la fois, et l'erreur
-   * reste locale (aucun détail technique en UI, motif `detailErrorText`).
+   * Le parcours zero-interview ne propose plus d'entretien. Un seul appel en
+   * vol à la fois, et l'erreur reste locale (aucun détail technique en UI,
+   * motif `detailErrorText`).
    */
   async function handleGenerateExam(row: ApplicationRow): Promise<void> {
     if (generatingId !== null) return;
@@ -334,44 +279,6 @@ export function ApplicationsPanel({
     } catch {
       setCopied(false);
     }
-  }
-
-  /**
-   * « Recruter » : envoie le lien de création de compte au candidat, puis
-   * revalide la page serveur (statut `recrute` → le bouton disparaît au
-   * retour de la liste). Un seul appel en vol à la fois.
-   */
-  async function handleRecruit(row: ApplicationRow): Promise<void> {
-    if (recruitingId !== null) return;
-    setRecruitingId(row.id);
-    setRecruitError(null);
-    try {
-      const result = await recruitCandidate(
-        { applicationId: row.id, locale: urlLocale ?? locale },
-        actor,
-      );
-      if (result.ok) {
-        setNotice(labels.recruitSuccess);
-        router.refresh();
-      } else if (result.code === "mail_failed") {
-        // Le lien n'a pas pu être envoyé (le statut n'a pas bougé côté serveur).
-        setRecruitError(labels.modal.errors.mailFailed);
-      } else {
-        // Codes non traduits un par un ici : repli sur le message générique.
-        setRecruitError(labels.recruitError);
-      }
-    } catch {
-      // Erreur d'infra propagée par l'action : aucun détail technique en UI.
-      setRecruitError(labels.recruitError);
-    } finally {
-      setRecruitingId(null);
-    }
-  }
-
-  /** Texte de la colonne « Créneau ». */
-  function slotText(row: ApplicationRow): string {
-    if (row.slotLabel !== null) return row.slotLabel;
-    return row.bookable ? labels.notBooked : labels.unavailable;
   }
 
   /**
@@ -642,17 +549,15 @@ export function ApplicationsPanel({
   }
 
   /**
-   * Cellule « actions » — partagée par le tableau et la carte mobile.
-   * « Recruter » n'apparaît que si la candidature n'est ni `refuse` ni
-   * `recrute` (bouton désactivé + libellé `recruiting` pendant l'appel).
+   * Cellule « actions » — partagée par le tableau et la carte mobile :
+   * « Dossier » (détail) + « Générer le lien d'examen ». Les décisions
+   * Recruter / Refuser vivent sur `/espace/examen`.
    */
   function renderRowActions(
     row: ApplicationRow,
     className?: string,
   ): React.JSX.Element {
     const isDetailOpen = detail !== null && detail.id === row.id;
-    const isRecruiting = recruitingId === row.id;
-    const canRecruit = row.status !== "refuse" && row.status !== "recrute";
     // Statuts TERMINAUX : aucun lien d'examen possible. `exam_submitted` n'est
     // PAS désactivé ici — l'action renvoie alors `conflict` avec un message
     // explicite (masquer le bouton cacherait la raison au CEO).
@@ -683,32 +588,6 @@ export function ApplicationsPanel({
         >
           {generatingId === row.id ? labels.generatingExam : labels.generateExamAction}
         </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          disabled={!row.rejectAllowed}
-          aria-disabled={!row.rejectAllowed}
-          onClick={() => {
-            handleOpenModal(row, "reject");
-          }}
-        >
-          {labels.rejectAction}
-        </Button>
-        {canRecruit ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            disabled={isRecruiting}
-            aria-disabled={isRecruiting}
-            onClick={() => {
-              void handleRecruit(row);
-            }}
-          >
-            {isRecruiting ? labels.recruiting : labels.recruitAction}
-          </Button>
-        ) : null}
       </span>
     );
   }
@@ -764,13 +643,6 @@ export function ApplicationsPanel({
       >
         {notice}
       </p>
-
-      {/* Alerte « Recruter » (aucun détail technique, motif `LoginForm`). */}
-      {recruitError !== null ? (
-        <p role="alert" className="text-sm text-danger">
-          {recruitError}
-        </p>
-      ) : null}
 
       {/* Alerte de génération (conflit ou échec — aucun détail technique). */}
       {examLinkError !== null ? (
@@ -835,9 +707,6 @@ export function ApplicationsPanel({
                       {labels.columns.appliedAt}
                     </th>
                     <th scope="col" className="px-5 py-4 micro text-faint md:px-6">
-                      {labels.columns.slot}
-                    </th>
-                    <th scope="col" className="px-5 py-4 micro text-faint md:px-6">
                       {labels.columns.actions}
                     </th>
                   </tr>
@@ -867,9 +736,6 @@ export function ApplicationsPanel({
                           </td>
                           <td className="px-5 py-4 align-top text-[14px] tabular-nums text-muted md:px-6">
                             {row.appliedLabel}
-                          </td>
-                          <td className="px-5 py-4 align-top text-[14px] text-muted md:px-6">
-                            {slotText(row)}
                           </td>
                           <td className="px-5 py-4 align-top md:px-6">
                             {renderRowActions(row)}
@@ -928,10 +794,6 @@ export function ApplicationsPanel({
                           {row.appliedLabel}
                         </dd>
                       </div>
-                      <div className="flex flex-col gap-1.5">
-                        <dt className="micro text-faint">{labels.columns.slot}</dt>
-                        <dd className="text-sm text-muted">{slotText(row)}</dd>
-                      </div>
                     </dl>
                     <div className="flex flex-col gap-3 border-t border-line pt-4">
                       <span className="micro text-faint">
@@ -965,21 +827,6 @@ export function ApplicationsPanel({
           </div>
         )}
       </section>
-
-      {modalRow !== null && modalKind !== null ? (
-        <ApplicationEmailModal
-          kind={modalKind}
-          applicationId={modalRow.id}
-          candidateFirstName={modalRow.firstName}
-          candidateLastName={modalRow.lastName}
-          applicationLocale={modalRow.locale}
-          labels={{ modal: labels.modal }}
-          onClose={handleCloseModal}
-          onSent={() => {
-            handleSent(modalKind);
-          }}
-        />
-      ) : null}
     </div>
   );
 }

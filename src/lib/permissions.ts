@@ -78,14 +78,12 @@ export const ROUTE_ACCESS: ReadonlyArray<{ prefix: string; roles: readonly Role[
   { prefix: "/commissions", roles: ["ceo", "manager", "sdr"] },
   { prefix: "/equipe", roles: ["ceo", "manager"] },
   { prefix: "/projet", roles: ["client"] },
-  // Entretiens Sales Development Representative (PLAN Q3) : réservé CEO — miroir des contrôles de
-  // `createInterviewLink`/`listInterviews` et de la garde de la page. Sans
-  // cette entrée, le préfixe "/" (ALL_ROLES) gagne et le middleware laisse
-  // passer tous les rôles actifs : la sécurité reposerait sur un seul filet.
-  { prefix: "/entretien", roles: ["ceo"] },
   // Recrutement (candidatures CEO) : réservé CEO — miroir de la garde de la
   // page /espace/recrutement et des actions de src/actions/recrutement.ts.
   { prefix: "/recrutement", roles: ["ceo"] },
+  // Examen (revue des tests CEO) : réservé CEO — miroir de la garde de la
+  // page /espace/examen (parcours zero-interview).
+  { prefix: "/examen", roles: ["ceo"] },
 ];
 
 /** Retire la locale éventuelle et isole le suffixe sous `/espace`. */

@@ -1,14 +1,16 @@
 "use client";
 
 /**
- * Atheris — modal d'envoi d'e-mail de recrutement (invitation à l'entretien OU
- * refus) — espace CEO, `PLAN-RECRUTEMENT-CEO.md` §3.
+ * Atheris — modal d'envoi d'e-mail de recrutement (refus d'une candidature)
+ * — espace CEO, `PLAN-RECRUTEMENT-CEO.md` §3.
  *
  * ─── RÔLE ───────────────────────────────────────────────────────────────────
- * Un SEUL composant réutilisé pour les deux décisions (`kind`), rendu par
- * `ApplicationsPanel` : au montage, `getEmailTemplate(kind, localeCandidature)`
- * préremplit l'objet et le corps (modèle mémorisé en base, sinon défaut) ; le
- * CEO édite librement, puis envoie via `inviteToInterview` / `rejectApplication`.
+ * Un SEUL composant pour l'e-mail de refus (`kind: "reject"`), rendu par la
+ * page d'examen (parcours zero-interview : le modal d'invitation à
+ * l'entretien a été retiré avec le parcours entretien). Au montage,
+ * `getEmailTemplate(kind, localeCandidature)` préremplit l'objet et le corps
+ * (modèle mémorisé en base, sinon défaut) ; le CEO édite librement, puis
+ * envoie via `rejectApplication`.
  *
  * ─── CONTRAT ────────────────────────────────────────────────────────────────
  * - TOUTES les strings viennent de `labels.modal` (`dict.recruitment.modal`) :
@@ -35,18 +37,19 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 
-import {
-  getEmailTemplate,
-  inviteToInterview,
-  rejectApplication,
-} from "@/actions/recrutement";
+import { getEmailTemplate, rejectApplication } from "@/actions/recrutement";
 import { Button } from "@/components/ui/Button";
 import type { RecruitmentContent } from "@/content/platform/types";
 
 /** Courbe unique du projet (aucun easing concurrent). */
 const EASE = "ease-[cubic-bezier(0.16,1,0.3,1)]";
 
-type EmailKind = "invite" | "reject";
+/**
+ * Nature d'e-mail servie : **refus uniquement** (l'invitation à l'entretien
+ * a été retirée avec le parcours entretien). La prop `kind` est conservée
+ * pour le contrat d'appel stable.
+ */
+type EmailKind = "reject";
 
 export type ApplicationEmailModalProps = {
   kind: EmailKind;
@@ -207,8 +210,7 @@ export function ApplicationEmailModal({
     };
 
     try {
-      const result =
-        kind === "invite" ? await inviteToInterview(input) : await rejectApplication(input);
+      const result = await rejectApplication(input);
       if (result.ok) {
         onSent();
         onClose();
@@ -224,7 +226,7 @@ export function ApplicationEmailModal({
     }
   }
 
-  const title = kind === "invite" ? modal.inviteTitle : modal.rejectTitle;
+  const title = modal.rejectTitle;
 
   return (
     <div

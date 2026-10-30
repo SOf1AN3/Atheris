@@ -5,16 +5,18 @@
  * par `src/actions/recrutement.ts` et `src/actions/exams.ts`.
  *
  * CONTRAT :
- * - `DEFAULT_EMAIL_TEMPLATES` — 10 textes figés (5 kinds × fr/en) avec
+ * - `DEFAULT_EMAIL_TEMPLATES` — 8 textes figés (4 kinds × fr/en) avec
  *   les placeholders `{{prenom}}`, `{{nom}}` et `{{lien}}` :
- *   `invite` / `reject` envoyés manuellement par le CEO,
+ *   `reject` envoyé manuellement par le CEO (depuis la page d'examen),
  *   `exam_invite` envoyé au dépôt (porte le lien, fenêtre 3 j),
  *   `exam_passed` / `exam_failed` envoyés à la soumission ;
  * - `renderTemplate(body, vars)` — remplacement des placeholders ; le lien
  *   est **toujours** présent dans l'e-mail final (exigence métier : s'il a
  *   disparu du corps, il est réinjecté en fin de message) ;
  * - `absoluteInterviewUrl(relativeUrl)` — absolutisation via `SITE_URL`
- *   (repli `https://atheris-labs.sofianeasma.me`).
+ *   (repli `https://atheris-labs.sofianeasma.me`) — servie notamment aux
+ *   liens d'invitation de compte (`src/actions/invitations.ts`,
+ *   `recruitCandidate`).
  *
  * Le CEO peut personnaliser les textes (table `recruitmentTemplates`, upsert
  * via `src/actions/recrutement.ts`) ; ces valeurs par défaut ne servent que
@@ -23,14 +25,13 @@
 
 /** Nature d'un e-mail de recrutement.
 
-`invite` / `reject` sont envoyés MANUELLEMENT par le CEO (modal
-`ApplicationEmailModal`). `exam_passed` / `exam_failed` sont envoyés
+`reject` est envoyé MANUELLEMENT par le CEO (modal `ApplicationEmailModal`,
+depuis la page d'examen). `exam_passed` / `exam_failed` sont envoyés
 AUTOMATIQUEMENT à la soumission de l'examen (`src/actions/exams.ts`) — le
 candidat a déjà son écran de confirmation, l'e-mail est le double formel qui
 lui parvient par écrit. `exam_invite` porte le LIEN du test au candidat
 (la page « vous avez 3 jours pour commencer »), envoyé au dépôt. */
 export type EmailTemplateKind =
-  | "invite"
   | "reject"
   | "exam_passed"
   | "exam_failed"
@@ -51,42 +52,6 @@ export const DEFAULT_EMAIL_TEMPLATES: Record<
   EmailTemplateKind,
   Record<TemplateLocale, EmailTemplate>
 > = {
-  invite: {
-    fr: {
-      subject: "Invitation à un entretien — Atheris Labs",
-      body: `Bonjour {{prenom}},
-
-Merci pour votre candidature au poste de Sales Development Representative chez Atheris Labs.
-Nous avons étudié votre dossier avec attention et souhaitons échanger avec
-vous lors d'un entretien en visioconférence (Google Meet, environ 30 minutes).
-
-Choisissez le créneau qui vous convient le mieux — les horaires sont
-affichés dans votre fuseau horaire :
-{{lien}}
-
-Ce lien est valable pour les trois prochains jours.
-
-Bien à vous,
-Sofiane — Atheris Labs`,
-    },
-    en: {
-      subject: "Interview invitation — Atheris Labs",
-      body: `Bonjour {{prenom}},
-
-Thank you for your application for the Sales Development Representative position at Atheris
-Labs. We have reviewed your profile with care and would like to meet you
-during an online interview (Google Meet, about 30 minutes).
-
-Pick the slot that suits you best — the times are shown in your own time
-zone:
-{{lien}}
-
-This link is valid for the next three days.
-
-Best regards,
-The Atheris Labs team`,
-    },
-  },
   reject: {
     fr: {
       subject: "Votre candidature chez Atheris Labs",
@@ -278,11 +243,12 @@ export function renderTemplate(
 }
 
 /**
- * Absolutise l'URL relative d'un lien d'entretien (`/{locale}/entretien/…`)
- * à partir de `SITE_URL` (repli domaine production).
+ * Absolutise l'URL relative d'un lien (d'invitation de compte
+ * `/{locale}/invitation/…`) à partir de `SITE_URL` (repli domaine
+ * production).
  *
- * @example absoluteInterviewUrl("/fr/entretien/abc") // SITE_URL="https://x.com/"
- * // → "https://x.com/fr/entretien/abc"
+ * @example absoluteInterviewUrl("/fr/invitation/abc") // SITE_URL="https://x.com/"
+ * // → "https://x.com/fr/invitation/abc"
  */
 export function absoluteInterviewUrl(relativeUrl: string): string {
   const base =

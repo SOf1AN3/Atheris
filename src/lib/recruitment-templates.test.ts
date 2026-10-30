@@ -1,6 +1,5 @@
 /**
- * Atheris — tests unitaires des modèles d'e-mail de recrutement (invite /
- * reject).
+ * Atheris — tests unitaires des modèles d'e-mail de recrutement (refus CEO).
  *
  * 100 % pur : **aucun appel `getDb()`**, aucune DB (règle DB-PENDING).
  * Import relatif volontaire (pas d'alias `@/`) : le fichier tourne sous
@@ -12,27 +11,21 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { absoluteInterviewUrl, DEFAULT_EMAIL_TEMPLATES, renderTemplate } from "./recruitment-templates";
 
 describe("DEFAULT_EMAIL_TEMPLATES", () => {
-  it("existe pour les 2 kinds × 2 locales (sujets et corps non vides)", () => {
-    for (const kind of ["invite", "reject"] as const) {
-      for (const locale of ["fr", "en"] as const) {
-        const template = DEFAULT_EMAIL_TEMPLATES[kind][locale];
-        expect(template.subject.length).toBeGreaterThan(0);
-        expect(template.body.length).toBeGreaterThan(0);
-      }
+  it("existe pour le kind reject × 2 locales (sujets et corps non vides)", () => {
+    for (const locale of ["fr", "en"] as const) {
+      const template = DEFAULT_EMAIL_TEMPLATES.reject[locale];
+      expect(template.subject.length).toBeGreaterThan(0);
+      expect(template.body.length).toBeGreaterThan(0);
     }
   });
 
-  it("tous les modèles contiennent le placeholder {{prenom}}", () => {
-    for (const kind of ["invite", "reject"] as const) {
-      for (const locale of ["fr", "en"] as const) {
-        expect(DEFAULT_EMAIL_TEMPLATES[kind][locale].body).toContain("{{prenom}}");
-      }
+  it("le modèle reject contient le placeholder {{prenom}}", () => {
+    for (const locale of ["fr", "en"] as const) {
+      expect(DEFAULT_EMAIL_TEMPLATES.reject[locale].body).toContain("{{prenom}}");
     }
   });
 
-  it("le modèle invite contient {{lien}}, le modèle reject non", () => {
-    expect(DEFAULT_EMAIL_TEMPLATES.invite.fr.body).toContain("{{lien}}");
-    expect(DEFAULT_EMAIL_TEMPLATES.invite.en.body).toContain("{{lien}}");
+  it("le modèle reject ne contient PAS {{lien}} (aucun lien dans un refus)", () => {
     expect(DEFAULT_EMAIL_TEMPLATES.reject.fr.body).not.toContain("{{lien}}");
     expect(DEFAULT_EMAIL_TEMPLATES.reject.en.body).not.toContain("{{lien}}");
   });
@@ -92,25 +85,25 @@ describe("absoluteInterviewUrl", () => {
 
   it("retire les slashs finaux de SITE_URL avant concaténation", () => {
     vi.stubEnv("SITE_URL", "https://ex.com///");
-    expect(absoluteInterviewUrl("/fr/entretien/abc")).toBe("https://ex.com/fr/entretien/abc");
+    expect(absoluteInterviewUrl("/fr/invitation/abc")).toBe("https://ex.com/fr/invitation/abc");
   });
 
   it("concatène tel quel si SITE_URL n'a pas de slash final", () => {
     vi.stubEnv("SITE_URL", "https://ex.com");
-    expect(absoluteInterviewUrl("/en/entretien/abc")).toBe("https://ex.com/en/entretien/abc");
+    expect(absoluteInterviewUrl("/en/invitation/abc")).toBe("https://ex.com/en/invitation/abc");
   });
 
   it("replie sur le domaine de production sans SITE_URL", () => {
     vi.stubEnv("SITE_URL", "");
-    expect(absoluteInterviewUrl("/fr/entretien/abc")).toBe(
-      "https://atheris-labs.sofianeasma.me/fr/entretien/abc",
+    expect(absoluteInterviewUrl("/fr/invitation/abc")).toBe(
+      "https://atheris-labs.sofianeasma.me/fr/invitation/abc",
     );
   });
 
   it("replie aussi si SITE_URL n'est qu'une chaîne d'espaces", () => {
     vi.stubEnv("SITE_URL", "   ");
-    expect(absoluteInterviewUrl("/fr/entretien/abc")).toBe(
-      "https://atheris-labs.sofianeasma.me/fr/entretien/abc",
+    expect(absoluteInterviewUrl("/fr/invitation/abc")).toBe(
+      "https://atheris-labs.sofianeasma.me/fr/invitation/abc",
     );
   });
 });
@@ -172,9 +165,9 @@ describe("modèles d'examen (exam_passed / exam_failed)", () => {
     }
   });
 
-  it("5 kinds × 2 locales = 10 modèles au total", () => {
+  it("4 kinds × 2 locales = 8 modèles au total", () => {
     expect(Object.keys(DEFAULT_EMAIL_TEMPLATES).sort()).toEqual(
-      ["exam_failed", "exam_invite", "exam_passed", "invite", "reject"].sort(),
+      ["exam_failed", "exam_invite", "exam_passed", "reject"].sort(),
     );
   });
 });

@@ -2,7 +2,7 @@
 
 /**
  * Atheris — Server Actions **recrutement** (candidatures Sales Development Representative,
- * espace CEO) — miroir du gabarit `src/actions/interviews.ts`.
+ * espace CEO).
  *
  * CONTRAT PUBLIC (codes BRUTS uniquement — le client traduit, aucun message
  * serveur) :
@@ -10,28 +10,26 @@
  *   `{ ok: false; code: "forbidden" }` ;
  * - `getJobApplication(applicationId)` → `{ ok: true; item: JobApplicationDetail }` |
  *   `{ ok: false; code: "forbidden" | "not_found" }` ;
+ * - `generateExamLink(applicationId)` → `GenerateExamLinkResult` ;
  * - `getEmailTemplate(kind, locale)` → `{ ok: true; subject; body }` |
- *   `{ ok: false; code: "forbidden" }` ;
- * - `inviteToInterview(input)` / `rejectApplication(input)` →
- *   `{ ok: true; url }` | `{ ok: false; code: ApplicationEmailFailureCode }` ;
+ *   `{ ok: false; code: "forbidden" }` (le parcours zero-interview ne sert
+ *   plus que le modèle `"reject"`) ;
+ * - `rejectApplication(input)` → `{ ok: true; url: "" }` |
+ *   `{ ok: false; code: ApplicationEmailFailureCode }` ;
  * - `recruitCandidate(input, actor)` → `{ ok: true }` |
  *   `{ ok: false; code: "forbidden" | "not_found" | "invalid" | "mail_failed" |
  *   "failed" }`.
  *
- * RÈGLE INVARIABLE (miroir inversé de `submitInterview`) : **e-mail
- * d'abord, écriture ensuite** — un échec Resend (`mail_failed`) ne fige
- * JAMAIS un statut : le CEO peut réessayer (un nouveau lien est alors
- * généré). Le candidat refuse (`status = "refuse"`) est un état TERMINAL :
- * toute invitation/refus sur une telle ligne répond `conflict` (UPDATE
- * conditionnel `status <> 'refuse'` + `.returning()` : idempotence face au
- * double clic ou à une action concurrente du CEO).
+ * RÈGLE INVARIABLE : **e-mail d'abord, écriture ensuite** — un échec Resend
+ * (`mail_failed`) ne fige JAMAIS un statut : le CEO peut réessayer. Le
+ * candidat refuse (`status = "refuse"`) est un état TERMINAL : tout refus sur
+ * une telle ligne répond `conflict` (UPDATE conditionnel `status <>
+ * 'refuse'` + `.returning()` : idempotence face au double clic ou à une
+ * action concurrente du CEO).
  *
  * SÉCURITÉ : session Auth.js + compte `active` + rôle `ceo` relu côté
- * serveur sur CHAQUE action (miroir de `activeActor()` dans
- * `src/actions/interviews.ts`). L'e-mail du destinataire est toujours **lu
- * en base** (jamais issu du payload) ; le lien d'entretien n'est produit
- * que par `createInterviewLink` (jeton 32 bytes aléatoires) et n'est
- * transmis qu'au candidat dans son e-mail.
+ * serveur sur CHAQUE action (`activeActor()` ci-dessous). L'e-mail du
+ * destinataire est toujours **lu en base** (jamais issu du payload).
  *
  * DB-PENDING : `getDb()` n'est appelé qu'à l'intérieur des actions (lazy) →
  * `next build` ne lit jamais `DATABASE_URL`.
@@ -42,7 +40,6 @@ import { randomBytes } from "node:crypto";
 import { and, desc, eq, isNull, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 
-import { createInterviewLink } from "@/actions/interviews";
 import { startExam } from "@/actions/exams";
 import { auth } from "@/auth";
 import { locales, type Locale } from "@/i18n/config";
@@ -53,7 +50,6 @@ import {
   activities,
   examAnswers,
   examSessions,
-  interviews,
   invitations,
   jobApplications,
   recruitmentTemplates,
@@ -65,7 +61,6 @@ import {
   absoluteInterviewUrl,
   DEFAULT_EMAIL_TEMPLATES,
   renderTemplate,
-  type EmailTemplateKind,
 } from "@/lib/recruitment-templates";
 import type { Role } from "@/lib/permissions";
 
@@ -100,8 +95,6 @@ export type JobApplicationListItem = {
   createdAt: string;
   invitedAt: string | null;
   rejectedAt: string | null;
-  /** Entretien lié (`interviewId`) — `booked` = créneau réellement réservé. */
-  interview: null | { booked: boolean; startsAt: string | null };
   /**
    * Examen lié (pipeline zero-interview). `null` = pas de session (candidature
    * antérieure au pipeline, ou création de session échouée).
@@ -198,7 +191,13 @@ export type RecruitCandidateResult =
 
 const applicationIdSchema = z.uuid();
 
-const emailKindSchema = z.enum(["invite", "reject"]);
+/**
+ * Kind d'e-mail servis par `getEmailTemplate` (initialisation du formulaire
+ * du CEO). Le parcours zero-interview ne sert plus que le refus : les kinds
+ * d'examen (`exam_*`) sont émis automatiquement par `src/actions/exams.ts`,
+ * jamais par ce formulaire.
+ */
+const emailKindSchema = z.enum(["reject"]);
 
 const emailLocaleSchema = z.enum(["fr", "en"]);
 
@@ -230,8 +229,7 @@ const INVITATION_TTL_MS = 48 * 60 * 60 * 1000;
 
 /**
  * Session Auth.js reconstruite **côté serveur** (aucun identifiant ni rôle
- * ne transite par le client) — copie du helper privé de
- * `src/actions/interviews.ts` (fichier `"use server"` : non exportable).
+ * ne transite par le client).
  *
  * @returns `null` si aucune session, compte non `active`, ou rôle non `ceo`.
  */
@@ -262,10 +260,6 @@ function asLocale(value: string): "fr" | "en" {
  * `LIST_LIMIT`, SANS les octets du CV (`cvBytes` exclu de la projection :
  * un payload de plusieurs Mo ne transite jamais par une action).
  *
- * `interview` provient du LEFT JOIN sur `interviewId` : `booked` = ligne
- * d'entretien présente ET `email_norm` non vide (marqueur « réservé » du
- * JSDoc de `interviews`) ; `startsAt` n'est exposé qu'une fois réservé.
- *
  * SÉCURITÉ : session `active` + rôle `ceo` requis (PII candidats + CV).
  *
  * @returns `{ ok: true; items }` ou `{ ok: false; code: "forbidden" }`.
@@ -292,9 +286,6 @@ export async function listJobApplications(): Promise<
         createdAt: jobApplications.createdAt,
         invitedAt: jobApplications.invitedAt,
         rejectedAt: jobApplications.rejectedAt,
-        // Colonnes de l'entretien éventuel (LEFT JOIN) - `null` sans ligne.
-        interviewStartsAt: interviews.startsAt,
-        interviewEmailNorm: interviews.emailNorm,
         // Session d'examen éventuelle (LEFT JOIN) - `null` pour les
         // candidatures antérieures au pipeline zero-interview.
         examStatus: examSessions.status,
@@ -302,49 +293,35 @@ export async function listJobApplications(): Promise<
         examElapsed: examSessions.elapsedSeconds,
       })
       .from(jobApplications)
-      .leftJoin(interviews, eq(jobApplications.interviewId, interviews.id))
       .leftJoin(examSessions, eq(examSessions.applicationId, jobApplications.id))
       .orderBy(desc(jobApplications.createdAt))
       .limit(LIST_LIMIT);
 
     return {
       ok: true,
-      items: rows.map((row) => {
-        // Marqueur « réservé » : ligne d'entretien présente ET emailNorm
-        // non vide (les liens créés mais non réservés portent des sentinelles
-        // vides — voir le JSDoc du cycle de vie dans `src/actions/interviews.ts`).
-        const hasInterview = row.interviewEmailNorm !== null && row.interviewEmailNorm.length > 0;
-        return {
-          id: row.id,
-          firstName: row.firstName,
-          lastName: row.lastName,
-          email: row.email,
-          status: row.status,
-          locale: asLocale(row.locale),
-          cvFilename: row.cvFilename,
-          cvByteSize: row.cvByteSize,
-          createdAt: row.createdAt.toISOString(),
-          invitedAt: row.invitedAt === null ? null : row.invitedAt.toISOString(),
-          rejectedAt: row.rejectedAt === null ? null : row.rejectedAt.toISOString(),
-          interview: hasInterview
-            ? {
-                booked: true,
-                startsAt:
-                  row.interviewStartsAt === null ? null : row.interviewStartsAt.toISOString(),
-              }
-            : null,
-          // Session d'examen : `examStatus` non nul ⇔ session JOINée présente.
-          exam:
-            row.examStatus === null
-              ? null
-              : {
-                  status: row.examStatus,
-                  submittedAt:
-                    row.examSubmittedAt === null ? null : row.examSubmittedAt.toISOString(),
-                  elapsedSeconds: row.examElapsed,
-                },
-        };
-      }),
+      items: rows.map((row) => ({
+        id: row.id,
+        firstName: row.firstName,
+        lastName: row.lastName,
+        email: row.email,
+        status: row.status,
+        locale: asLocale(row.locale),
+        cvFilename: row.cvFilename,
+        cvByteSize: row.cvByteSize,
+        createdAt: row.createdAt.toISOString(),
+        invitedAt: row.invitedAt === null ? null : row.invitedAt.toISOString(),
+        rejectedAt: row.rejectedAt === null ? null : row.rejectedAt.toISOString(),
+        // Session d'examen : `examStatus` non nul ⇔ session JOINée présente.
+        exam:
+          row.examStatus === null
+            ? null
+            : {
+                status: row.examStatus,
+                submittedAt:
+                  row.examSubmittedAt === null ? null : row.examSubmittedAt.toISOString(),
+                elapsedSeconds: row.examElapsed,
+              },
+      })),
     };
   } catch (error) {
     console.error("[recrutement] échec de la liste des candidatures", error);
@@ -397,8 +374,6 @@ export async function getJobApplication(
         createdAt: jobApplications.createdAt,
         invitedAt: jobApplications.invitedAt,
         rejectedAt: jobApplications.rejectedAt,
-        interviewStartsAt: interviews.startsAt,
-        interviewEmailNorm: interviews.emailNorm,
         // Session d'examen éventuelle (LEFT JOIN) — `null` sans session.
         examStatus: examSessions.status,
         examSessionId: examSessions.id,
@@ -406,15 +381,12 @@ export async function getJobApplication(
         examElapsed: examSessions.elapsedSeconds,
       })
       .from(jobApplications)
-      .leftJoin(interviews, eq(jobApplications.interviewId, interviews.id))
       .leftJoin(examSessions, eq(examSessions.applicationId, jobApplications.id))
       .where(eq(jobApplications.id, parsedId.data))
       .limit(1);
 
     const row = rows[0];
     if (row === undefined) return { ok: false, code: "not_found" };
-
-    const hasInterview = row.interviewEmailNorm !== null && row.interviewEmailNorm.length > 0;
 
     // Réponses de l'examen — SECONDE requête seulement s'il y a une session
     // (une candidature antérieure au pipeline ne paie aucun coût DB).
@@ -451,12 +423,6 @@ export async function getJobApplication(
         // CV facultatif : sans pièce jointe, aucune URL — l'UI masque le CTA
         // au lieu de pointer vers une route qui renverrait 404.
         cvUrl: row.cvFilename === null ? null : `/api/applications/${row.id}/cv`,
-        interview: hasInterview
-          ? {
-              booked: true,
-              startsAt: row.interviewStartsAt === null ? null : row.interviewStartsAt.toISOString(),
-            }
-          : null,
         exam:
           row.examStatus === null
             ? null
@@ -579,13 +545,14 @@ export async function generateExamLink(
  * (valeurs strictes — une valeur forgée est `forbidden`, jamais une requête
  * SQL injectée).
  *
- * @param kind `"invite"` ou `"reject"`.
+ * @param kind `"reject"` — seul kind encore servi au CEO (parcours
+ *   zero-interview : plus d'invitation à un entretien).
  * @param locale `"fr"` ou `"en"`.
  * @returns `{ ok: true; subject; body }` ou `{ ok: false; code: "forbidden" }`.
  * @throws Erreur d'infra DB — journalisée puis propagée → 500.
  */
 export async function getEmailTemplate(
-  kind: EmailTemplateKind,
+  kind: "reject",
   locale: "fr" | "en",
 ): Promise<{ ok: true; subject: string; body: string } | { ok: false; code: "forbidden" }> {
   const actor = await activeActor();
@@ -624,7 +591,7 @@ export async function getEmailTemplate(
 }
 
 // ---------------------------------------------------------------------------
-// inviteToInterview / rejectApplication — e-mail CEO puis écriture.
+// rejectApplication — e-mail de refus CEO puis écriture.
 // ---------------------------------------------------------------------------
 
 /** Champs candidature relus en base avant envoi (jamais issus du payload). */
@@ -645,7 +612,8 @@ type ApplicationRecipient = {
 async function saveEmailTemplateIfRequested(
   db: ReturnType<typeof getDb>,
   args: {
-    kind: EmailTemplateKind;
+    /** Seul kind encore enregistrable : le formulaire CEO ne sert que le refus. */
+    kind: "reject";
     locale: "fr" | "en";
     subject: string;
     body: string;
@@ -696,158 +664,14 @@ async function writeAuditActivity(
 }
 
 /**
- * Invite un candidat à un entretien : génère un lien `createInterviewLink`,
- * envoie l'e-mail personnalisé, puis passe la candidature à `invite`.
- *
- * SÉQUENCE (règle invariante **e-mail d'abord, écriture ensuite**) :
- * 1. Zod → session CEO → lecture de la ligne (e-mail LUE EN BASE) ;
- * 2. `status = "refuse"` → `conflict` (refus terminal, aucun détail) ;
- * 3. `createInterviewLink(locale)` → échec → `failed` (jamais de fuite des
- *    codes internes `forbidden`/`invalid` : le CEO est déjà authentifié) ;
- * 4. `renderTemplate` (le lien est TOUJOURS présent dans l'e-mail final)
- *    → `sendMail` → échec → **`mail_failed` sans AUCUNE écriture** (le CEO
- *    réessaiera, un nouveau lien sera généré) ;
- * 5. UPDATE conditionnel `status <> 'refuse'` + `.returning()` → 0 ligne =
- *    `conflict` (refusé/refusé deux fois entre-temps — idempotence) ;
- * 6. sauvegarde optionnelle du modèle + audit, tous deux NON FATAUX.
- *
- * @param input `applicationId` (uuid), `subject` (1–200), `body` (1–10 000),
- *   `saveTemplate` optionnel.
- * @returns `{ ok: true; url }` (URL **absolue** du lien, affichable au CEO)
- *   ou `{ ok: false; code }`. Codes bruts uniquement.
- * @throws Erreur d'infra DB — journalisée puis renvoyée en `failed`.
- */
-export async function inviteToInterview(
-  input: SendApplicationEmailInput,
-): Promise<SendApplicationEmailResult> {
-  // 1. Validation Zod — avant tout accès DB.
-  const parsed = sendApplicationEmailSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, code: "invalid" };
-  const { applicationId, subject, body, saveTemplate } = parsed.data;
-
-  const actor = await activeActor();
-  if (actor === null) return { ok: false, code: "forbidden" };
-
-  try {
-    const db = getDb();
-
-    // 2. Lecture de la ligne — l'e-mail du destinataire vient TOUJOURS de
-    //    la base (jamais du payload) ; id inconnu = `not_found`, aucun détail.
-    const rows = await db
-      .select({
-        id: jobApplications.id,
-        firstName: jobApplications.firstName,
-        lastName: jobApplications.lastName,
-        email: jobApplications.email,
-        locale: jobApplications.locale,
-        status: jobApplications.status,
-      })
-      .from(jobApplications)
-      .where(eq(jobApplications.id, applicationId))
-      .limit(1);
-    const application = rows[0];
-    if (application === undefined) return { ok: false, code: "not_found" };
-    // Refus TERMINAL : aucune invitation possible, aucun détail renvoyé.
-    if (application.status === "refuse") return { ok: false, code: "conflict" };
-
-    // 3. Lien d'entretien (jeton aléatoire) — codes internes propages en
-    //    `failed` (le CEO est déjà authentifié ailleurs : pas de fuite).
-    //    Le label porte le nom du candidat (colonnes `label`, distinctes des
-    //    colonnes de réservation) — nom vide → aucun label.
-    const recipient: ApplicationRecipient = {
-      ...application,
-      locale: asLocale(application.locale),
-    };
-    const candidateLabel = `${application.firstName} ${application.lastName}`.trim();
-    const link = await createInterviewLink(
-      recipient.locale,
-      candidateLabel.length > 0 ? candidateLabel : undefined,
-    );
-    if (!link.ok) return { ok: false, code: "failed" };
-    const lien = absoluteInterviewUrl(link.url);
-
-    // Récupération de l'id de la ligne `interviews` créée : `createInterviewLink`
-    // ne renvoie que `token`/`url`, et modifier son contrat est hors périmètre.
-    // Le token est UNIQUE : 1 ligne garantie.
-    const interviewRows = await db
-      .select({ id: interviews.id })
-      .from(interviews)
-      .where(eq(interviews.token, link.token))
-      .limit(1);
-    const interviewId = interviewRows[0]?.id;
-    if (interviewId === undefined) return { ok: false, code: "failed" };
-
-    // 4. E-mail — AUCUNE écriture avant ce point : un échec Resend ne fige
-    //    jamais le statut (`mail_failed` → le CEO réessaiera).
-    const text = renderTemplate(body, {
-      prenom: recipient.firstName,
-      nom: recipient.lastName,
-      lien,
-    });
-    const mail = await sendMail({ to: recipient.email, subject, text });
-    if (!mail.ok) {
-      console.error("[recrutement] invitation non envoyée (candidature inchangée)", mail.error);
-      // Notification `mail_failed` — NON FATALE (notify() ne throw jamais) :
-      // l'action renvoie son code métier `mail_failed` quoi qu'il arrive.
-      // Destinataires : comptes **actifs** `ceo` moins l'acteur (règle d'or).
-      await notify({
-        type: "mail_failed",
-        link: "/espace/recrutement",
-        meta: { entity: recipient.email },
-        recipientIds: (await activeUserIdsByRoles(["ceo"])).filter(
-          (recipientId) => recipientId !== actor.id,
-        ),
-      });
-      return { ok: false, code: "mail_failed" };
-    }
-
-    // 5. Écriture conditionnelle — 0 ligne = refusé/refusé entre-temps.
-    const updated = await db
-      .update(jobApplications)
-      .set({
-        status: "invite",
-        interviewId,
-        invitedAt: new Date(),
-        updatedAt: sql`now()`,
-      })
-      .where(and(eq(jobApplications.id, applicationId), ne(jobApplications.status, "refuse")))
-      .returning({ id: jobApplications.id });
-    if (updated[0]?.id === undefined) return { ok: false, code: "conflict" };
-
-    // 6. Sauvegarde du modèle + audit — NON FATAUX (e-mail déjà parti).
-    if (saveTemplate === true) {
-      await saveEmailTemplateIfRequested(db, {
-        kind: "invite",
-        locale: recipient.locale,
-        subject,
-        body,
-        actorId: actor.id,
-      });
-    }
-    await writeAuditActivity(db, {
-      actorId: actor.id,
-      action: "application.invited",
-      entityId: applicationId,
-      meta: { interviewId, actorId: actor.id },
-    });
-
-    return { ok: true, url: lien };
-  } catch (error) {
-    // Erreur d'infra (DB indisponible…) : journalisée, code `failed` —
-    // aucun détail interne n'est propagé au client.
-    console.error("[recrutement] échec d'invitation à l'entretien", error);
-    return { ok: false, code: "failed" };
-  }
-}
-
-/**
  * Refuse une candidature : e-mail de politesse, puis passage à `refuse`.
  *
- * Miroir de `inviteToInterview` (**e-mail d'abord, écriture ensuite**) :
- * - états admis : `nouveau` ET `invite` (refus possible APRÈS un entretien) ;
+ * Règle invariante **e-mail d'abord, écriture ensuite** :
+ * - états admis : `nouveau` ET `invite` (`invite` = statut historique encore
+ *   présent en base : le parcours d'entretien a été retiré du code) ;
  * - `conflict` si déjà `refuse` (refus terminal, idempotence) ;
- * - PAS de lien d'entretien dans le rendu (`lien` non fourni → tout
- *   `{{lien}}` éventuel est laissé tel quel) ;
+ * - PAS de lien dans le rendu (`lien` non fourni → tout `{{lien}}` éventuel
+ *   est laissé tel quel) ;
  * - succès : `{ ok: true, url: "" }`.
  *
  * @param input `applicationId` (uuid), `subject` (1–200), `body` (1–10 000),
@@ -949,11 +773,12 @@ export async function rejectApplication(
  * Recrute un candidat (statut → `recrute`) et lui émet une **invitation
  * `sdr`** (lien d'activation de compte, même mécanique que le portail client).
  *
- * SÉQUENCE (motif `inviteToInterview`, e-mail d'abord sur le STATUT) :
+ * SÉQUENCE (règle invariante **e-mail d'abord, écriture du STATUT ensuite**) :
  * 1. Zod (`applicationId` uuid + `locale` ∈ locales) → `invalid` ; acteur
  *    revalidé (uuid → `invalid`, rôle ≠ `ceo` → `forbidden`) ;
  * 2. candidature lue en base (e-mail LUE EN BASE) → absente → `not_found` ;
- *    `status` ∉ {`nouveau`, `invite`} → `invalid` (déjà recrutée ou refusée) ;
+ *    `status` ∉ {`nouveau`, `invite`, `exam_submitted`} → `invalid` (déjà
+ *    recrutée, refusée ou test non soumis) ;
  * 3. invitation `sdr` **non utilisée** existante pour (email normalisé,
  *    `role = 'sdr'`) → réutilisée (refresh `expiresAt`, même jeton) ; sinon
  *    insert `invitations` : jeton 32 bytes hex, `role: "sdr"`, `projectId:
@@ -1010,9 +835,15 @@ export async function recruitCandidate(
       .limit(1);
     const application = rows[0];
     if (application === undefined) return { ok: false, code: "not_found" };
-    // États recrutables : `nouveau` ou `invite` (post-entretien) — un refus
-    // est terminal, un recrutement déjà effectué est idempotent-refusé.
-    if (application.status !== "nouveau" && application.status !== "invite") {
+    // États recrutables : `nouveau`, `invite` (`invite` = statut historique
+    // encore présent en base) ou `exam_submitted` (revue CEO depuis la page
+    // /espace/examen) — un refus est terminal, un recrutement déjà effectué
+    // est idempotent-refusé.
+    if (
+      application.status !== "nouveau" &&
+      application.status !== "invite" &&
+      application.status !== "exam_submitted"
+    ) {
       return { ok: false, code: "invalid" };
     }
 
@@ -1073,8 +904,8 @@ export async function recruitCandidate(
         "[recrutement] invitation sdr non envoyée (candidature inchangée)",
         mail.error,
       );
-      // Notification `mail_failed` — NON FATALE, même motif que
-      // `inviteToInterview` : comptes **actifs** `ceo` moins l'acteur.
+      // Notification `mail_failed` — NON FATALE, notify() ne throw jamais :
+      // comptes **actifs** `ceo` moins l'acteur.
       await notify({
         type: "mail_failed",
         link: "/espace/recrutement",
