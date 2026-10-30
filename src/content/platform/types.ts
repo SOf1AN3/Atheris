@@ -859,6 +859,113 @@ export interface RecruitmentContent {
 }
 
 // ---------------------------------------------------------------------------
+// Revue d'examen (/espace/examen — page CEO du pipeline zero-interview).
+// ---------------------------------------------------------------------------
+
+/**
+ * Codes d'échec traduits côté client — les Server Actions ne renvoient que
+ * des codes BRUTS (`forbidden`, `invalid`…), jamais un message (C2).
+ *
+ * Couvre les deux actions utilisées par la page : `listExamReviewSessions` /
+ * `getExamReviewSession` (`forbidden`, `not_found`, `failed`) et
+ * `recruitCandidate` (`invalid`, `mail_failed`…).
+ */
+export interface ExamReviewErrors {
+  /** Session absente, compte non `active` ou rôle non `ceo`. */
+  forbidden: string;
+  /** Saisie refusée par la validation serveur, ou transition non autorisée. */
+  invalid: string;
+  /** Id de session malformé, inconnu, ou candidature disparue. */
+  notFound: string;
+  /** La candidature a déjà été tranchée (décision concurrente / idempotence). */
+  conflict: string;
+  /** Envoi d'e-mail échoué — aucune modification n'a été appliquée. */
+  mailFailed: string;
+  /** Repli : échec d'infra (base indisponible). */
+  failed: string;
+}
+
+/** Libellés d'une popup de confirmation (annulation + validation EXPLICITES). */
+export interface ExamReviewConfirmContent {
+  title: string;
+  message: string;
+  cancel: string;
+  confirm: string;
+}
+
+/** Contenu de la page « Examen » (/espace/examen, CEO seul). */
+export interface ExamReviewContent {
+  /** Titre de page (H1 + `metadata.title`). */
+  title: string;
+  /** Chapeau court expliquant le tri et le filtre d'archives (H3). */
+  intro: string;
+  /** Titre de section « En cours » (sessions non soumises, triées en tête). */
+  inProgressTitle: string;
+  /** Titre de section « Soumis » (file de revue « < 24 h »). */
+  submittedTitle: string;
+  /** Aide sous l'état vide (`common.noData`). */
+  emptyHint: string;
+  /** Libellés de champs des lignes de la liste et du détail. */
+  columns: {
+    email: string;
+    status: string;
+    startedAt: string;
+    submittedAt: string;
+    duration: string;
+  };
+  /** Pastilles de statut de la SESSION d'examen. */
+  sessionStatus: {
+    inProgress: string;
+    submitted: string;
+  };
+  /** Bouton « Voir les réponses » / « Masquer les réponses ». */
+  openDetail: string;
+  closeDetail: string;
+  /** Titre du bloc de réponses déplié. */
+  detailTitle: string;
+  /** En-tête « statut de la candidature » (détail). */
+  applicationStatusLabel: string;
+  /** En-tête « ouvert le » (détail). */
+  startedAtLabel: string;
+  /** En-tête « soumis le » (détail). */
+  submittedAtLabel: string;
+  /** En-tête « lien valable jusqu'au » (détail). */
+  expiresAtLabel: string;
+  /** En-tête « durée mesurée » — indicative, jamais bloquante. */
+  durationLabel: string;
+  /** Format « Section {{n}} » avant le titre de section du barème. */
+  sectionLabel: string;
+  /** Aucune réponse enregistrée pour cette question. */
+  noAnswers: string;
+  /** Pastille « question éliminatoire » (section 4). */
+  eliminatoryLabel: string;
+  /** En-tête « réponse attendue » — affiché au SEUL CEO (règle `exam.ts`). */
+  expectedAnswer: string;
+  /** Le choix du candidat correspond à la réponse attendue. */
+  answerMatches: string;
+  /** Le choix du candidat diffère de la réponse attendue. */
+  answerDiffers: string;
+  /** Délai respecté : soumission de moins de 24 h, non encore tranchée. */
+  withinDeadline: string;
+  /** Délai de revue de 24 h dépassé. */
+  overdue: string;
+  /** CTA « Recruter ». */
+  recruitAction: string;
+  /** Libellé du bouton pendant l'appel `recruitCandidate`. */
+  recruiting: string;
+  /** Toast de succès (`role="status"`). */
+  recruitSuccess: string;
+  /** CTA « Refuser » (ouvre le modal d'e-mail `kind="reject"`). */
+  rejectAction: string;
+  /** Popup de confirmation — un clic ne recrute JAMAIS directement. */
+  confirmRecruit: ExamReviewConfirmContent;
+  /** Popup de confirmation — un clic ne refuse JAMAIS directement. */
+  confirmReject: ExamReviewConfirmContent;
+  /** Codes retour traduits (jamais de message servi par le serveur). */
+  errors: ExamReviewErrors;
+}
+
+// ---------------------------------------------------------------------------
 // Portail client.
 // ---------------------------------------------------------------------------
 
@@ -1030,6 +1137,8 @@ export interface PlatformContent {
   notifications: NotificationsContent;
   /** Page « Recrutement » (candidatures /recrutement, CEO seul). */
   recruitment: RecruitmentContent;
+  /** Page « Examen » (revue des sessions d'examen, CEO seul). */
+  examReview: ExamReviewContent;
   client: ClientContent;
   applications: ApplicationsContent;
   activities: ActivitiesContent;

@@ -593,7 +593,7 @@ export const fr: SiteContent = {
       "Le lien a peut-être expiré ou déjà été utilisé. Contactez Atheris LABS pour en obtenir un nouveau.",
     submittedTitle: "Ce test est déjà *soumis*",
     submittedMessage:
-      "Chaque lien ne sert qu'une fois. Vos réponses nous sont parvenues — vous recevrez la décision par email.",
+      "Chaque lien ne sert qu'une fois. Vos réponses nous sont parvenues : votre candidature est en revue, réponse sous 24 heures par email.",
     durationNote: "Environ 20-25 minutes. Le chronomètre est indicatif et ne vous bloque jamais.",
     autosaveNote: "Vos réponses sont enregistrées automatiquement à la fin de chaque section.",
     progressLabel: "Section {{n}} sur {{total}}",
@@ -607,13 +607,14 @@ export const fr: SiteContent = {
     errorLabel: "Une erreur est survenue. Merci de réessayer.",
     incompleteLabel:
       "Certaines questions sont encore vides — répondez à toutes les questions avant de soumettre. Nous vous avons ramené à la première.",
+    missingAnswerLabel: "Question sans réponse.",
     successTitle: "Test *soumis*",
     successMessage:
-      "Merci. Vos réponses ont bien été reçues et seront examinées personnellement par notre CEO sous 24 heures. Vous recevrez la décision par email.",
+      "Merci. Vos réponses ont bien été reçues : votre candidature est en revue et vous recevrez une réponse sous 24 heures, par email.",
     failedTitle: "Test non *validé*",
     failedMessage:
       "Malheureusement vos réponses ne correspondent pas au modèle de commission exigé pour ce poste : le test est donc clôturé. Merci pour votre temps.",
-    reviewNote: "Examiné personnellement par le CEO sous 24 heures - vous recevrez la décision par email.",
+    reviewNote: "Votre candidature est en revue — réponse sous 24 heures, par email.",
     readyTitle: "Un test vous attend",
     readyDescription:
       "4 sections, environ 20 à 25 minutes. Il n'y a pas d'entretien vidéo. Vos réponses sont enregistrées à la fin de chaque section : une coupure de connexion ne vous fait rien perdre.",

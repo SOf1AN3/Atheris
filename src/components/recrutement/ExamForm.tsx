@@ -53,6 +53,28 @@ type ExamFormProps = {
 /** État d'écriture d'une section (affiché sous le bouton). */
 type SaveState = "idle" | "saving" | "saved" | "failed";
 
+/**
+ * Frein à la copie des ÉNONCÉS — **H8 du plan : ceci n'est PAS une
+ * protection**.
+ *
+ * `user-select: none` (+ le préfixe `-webkit-` pour Safari/anciens Chromium)
+ * rend la sélection de l'énoncé pénible : c'est un **frein**, rien de plus.
+ * Toute personne déterminée contourne cette règle en trois secondes (DevTools,
+ * capture d'écran, téléphone). Ne JAMAIS la présenter comme une sécurité, ni
+ * l'invoquer comme tel dans un écran, un e-mail ou la doc.
+ *
+ * ─── OÙ ÇA S'APPLIQUE (et où JAMAIS) ───────────────────────────────────────
+ * ÉNONCÉS uniquement : le `<label>` de la question, son indice et le
+ * `<legend>`. JAMAIS sur les `<textarea>` / `<input>` / les libellés de CHOIX :
+ * le candidat doit pouvoir écrire, sélectionner et corriger sa propre réponse
+ * (l'anti-sélection sur un champ de saisie serait un défaut d'accessibilité,
+ * pas un contrôle anti-triche).
+ */
+const STATEMENT_SELECT_STYLE: React.CSSProperties = {
+  userSelect: "none",
+  WebkitUserSelect: "none",
+};
+
 /** `{{n}}` / `{{total}}` → interpolation simple (aucune dépendance i18n). */
 function interpolate(template: string, values: Record<string, string | number>): string {
   return Object.entries(values).reduce(
@@ -327,20 +349,29 @@ export function ExamForm({ token, locale, content }: ExamFormProps): React.JSX.E
                   {String(questions.length).padStart(2, "0")}
                 </span>
 
+                {/* ÉNONCÉ : frein à la copie (H8 — pas une protection), cf.
+                    JSDoc de `STATEMENT_SELECT_STYLE`. Le champ de saisie, lui,
+                    reste parfaitement sélectionnable et éditable. */}
                 <label
                   htmlFor={question.id}
-                  className="mt-3 block text-[15px] font-semibold leading-[1.5] text-fg"
+                  className="mt-3 block select-none text-[15px] font-semibold leading-[1.5] text-fg"
+                  style={STATEMENT_SELECT_STYLE}
                 >
                   {question.prompt[locale]}
                 </label>
 
                 {question.hint ? (
-                  <p className="mt-1.5 text-[13px] text-faint">{question.hint[locale]}</p>
+                  <p
+                    className="mt-1.5 select-none text-[13px] text-faint"
+                    style={STATEMENT_SELECT_STYLE}
+                  >
+                    {question.hint[locale]}
+                  </p>
                 ) : null}
 
                 {missing ? (
                   <p role="alert" className="mt-2 text-[13px] text-danger">
-                    {locale === "fr" ? "Question sans réponse." : "This question is empty."}
+                    {content.missingAnswerLabel}
                   </p>
                 ) : null}
 
@@ -355,7 +386,9 @@ export function ExamForm({ token, locale, content }: ExamFormProps): React.JSX.E
                 />
               ) : (
                 <fieldset className="mt-3">
-                  <legend className="sr-only">{question.prompt[locale]}</legend>
+                  <legend className="sr-only select-none" style={STATEMENT_SELECT_STYLE}>
+                    {question.prompt[locale]}
+                  </legend>
                   <div className="flex flex-col gap-2">
                     {question.options?.map((option) => {
                       const checked = answers[question.id] === option.id;
@@ -413,7 +446,11 @@ export function ExamForm({ token, locale, content }: ExamFormProps): React.JSX.E
         </span>
 
         <div className="flex items-center gap-3">
-          <Button variant="ghost" onClick={goPrevious} disabled={section <= 1}>
+          {/* L3a — UNE SEULE flèche `←` avant le libellé. Variante
+              `secondary` et NON `ghost` : `Button` ajoute automatiquement une
+              flèche `→` à toute variante `ghost`, ce qui affichait
+              « ← … → » sur un bouton de retour. */}
+          <Button variant="secondary" onClick={goPrevious} disabled={section <= 1}>
             ← {content.previousSectionLabel}
           </Button>
 

@@ -465,7 +465,8 @@ export interface ExamContent {
   /** État « lien invalide » (jeton inconnu ou déjà soumis). */
   notFoundTitle: string;
   notFoundMessage: string;
-  /** État « déjà soumis » — distinct du 404 : le lien a servi, pas perdu. */
+  /** État « déjà soumis » — distinct du 404 : le lien a servi, pas perdu.
+   *  Même engagement contractuel que `successMessage` : revue « sous 24 h ». */
   submittedTitle: string;
   submittedMessage: string;
   /** Rappel de durée et de caractère non bloquant du chrono. */
@@ -488,7 +489,10 @@ export interface ExamContent {
    *  message réseau : la cause n'est PAS la connexion, ce sont des questions
    *  sans réponse. */
   incompleteLabel: string;
-  /** Écran de confirmation après soumission. */
+  /** Repère « question vide » affiché sous CHAQUE champ manquant. */
+  missingAnswerLabel: string;
+  /** Écran de confirmation après soumission. Le wording est CONTRACTUEL :
+   *  il annonce la revue « sous 24 h » et ne promet JAMAIS un délai inférieur. */
   successTitle: string;
   successMessage: string;
   /** Écran « section 4 refusée » — échec éliminatoire. */

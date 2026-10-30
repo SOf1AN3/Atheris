@@ -3,13 +3,17 @@
 /**
  * Atheris — Server Actions du pipeline d'examen zero-interview (Lot 2b).
  *
- * ─── SÉCURITÉ — DEUX MODÈLES DISTINCTS ───────────────────────────────────────
+ * ─── SÉCURITÉ — TROIS MODÈLES DISTINCTS ─────────────────────────────────────
  * • `saveSection` / `submitExam` sont des actions **PUBLIQUES** : aucun compte,
  *   aucune session Auth.js — le candidat est anonyme. L'authentification est le
  *   **jeton** (`exam_sessions.token`, 32 bytes hex). Un id d'application ne
  *   suffit jamais : il est public et devinable, le jeton ne l'est pas.
  * • `startExamFromApplication` est réservée au **dépôt de candidature** (même
  *   fenêtre/rate-limit que `applyToJob`, appelée depuis elle).
+ * • `listExamReviewSessions` / `getExamReviewSession` sont réservées au **CEO**
+ *   (espace `/espace/examen`) : acteur reconstruit en session + rôle relu par
+ *   Zod — motif exact de `activeActor()` dans `src/actions/recrutement.ts`.
+ *   Le jeton public n'est JAMAIS projeté dans ces résultats.
  *
  * ─── ANTIMIMÉTISME ──────────────────────────────────────────────────────────
  * • `saveSection` → `onConflictDoUpdate` sur `(session_id, question_id)` :
@@ -25,19 +29,26 @@
 
 import { randomBytes } from "node:crypto";
 
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, ne, sql } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import { z } from "zod";
 
+import { auth } from "@/auth";
 import { getDb } from "@/lib/db";
 import {
   examAnswers,
   examSessions,
   jobApplications,
   recruitmentTemplates,
+  roleEnum,
 } from "@/lib/db/schema";
+// `import type` + `typeof` : les types STATUTS sont dérivés des enums Drizzle
+// (source de vérité unique) et effacés à la compilation — motif exact de
+// `src/actions/recrutement.ts`.
+import type { applicationStatusEnum, examStatusEnum } from "@/lib/db/schema";
 import { sendMail } from "@/lib/mail";
 import { activeUserIdsByRoles, notify } from "@/lib/notify";
+import type { Role } from "@/lib/permissions";
 import {
   DEFAULT_EMAIL_TEMPLATES,
   renderTemplate,
@@ -70,6 +81,13 @@ const answersSchema = z.record(
   z.string().max(16),
   z.string().max(EXAM_MAX_ANSWER_CHARS),
 );
+
+/** Rôle d'acteur relu côté serveur sur l'enum Drizzle `role` (motif Zod du
+ *  contrat `recruitCandidate`) : un JWT périmé ne franchit jamais la garde. */
+const roleSchema = z.enum(roleEnum.enumValues);
+
+/** Id de session (revue CEO) : uuid validé AVANT toute requête. */
+const sessionIdSchema = z.uuid();
 
 // ---------------------------------------------------------------------------
 // Rate-limit (motif `careers.ts` / `contact.ts` — Map module-scope, best effort).
@@ -119,6 +137,54 @@ export type SubmitExamResult =
       ok: false;
       code: "invalid" | "not_found" | "locked" | "incomplete" | "rate_limited" | "failed";
     };
+
+// ---------------------------------------------------------------------------
+// Contrats de la REVUE CEO (`/espace/examen`) — lecture seule, CEO seul.
+// Le jeton public (`exam_sessions.token`) n'apparaît dans AUCUN d'eux.
+// ---------------------------------------------------------------------------
+
+/** Statut d'une candidature, dérivé de l'enum Drizzle `application_status`. */
+export type ExamReviewApplicationStatus =
+  (typeof applicationStatusEnum.enumValues)[number];
+
+/** Statut d'une session d'examen, dérivé de l'enum Drizzle `exam_status`. */
+export type ExamReviewSessionStatus = (typeof examStatusEnum.enumValues)[number];
+
+/** Une session de la file de revue — dates ISO 8601 (sérialisables). */
+export type ExamReviewSessionItem = {
+  sessionId: string;
+  applicationId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  /** Variante linguistique de la candidature (e-mail de décision). */
+  locale: "fr" | "en";
+  sessionStatus: ExamReviewSessionStatus;
+  /** Toujours renseigné (colonne NOT NULL `defaultNow()`). */
+  startedAt: string;
+  /** `null` tant que le candidat n'a pas soumis. */
+  submittedAt: string | null;
+  /** Fin de validité du lien (fenêtre 3 j, H1) — `null` sans limite. */
+  expiresAt: string | null;
+  /** Durée mesurée (indicative, jamais bloquante) — `null` tant que non soumis. */
+  elapsedSeconds: number | null;
+  applicationStatus: ExamReviewApplicationStatus;
+};
+
+/** Une réponse projetée pour la revue CEO (100 % sérialisable). */
+export type ExamReviewAnswerItem = {
+  /** 1–4 (section du barème). */
+  section: number;
+  questionId: string;
+  answer: string;
+  /** Dernière autosauvegarde de cette réponse (`null` jamais observée en DB). */
+  updatedAt: string | null;
+};
+
+/** Détail d'une session : réponses + étiquette de candidature. */
+export type ExamReviewSessionDetail = ExamReviewSessionItem & {
+  answers: ExamReviewAnswerItem[];
+};
 
 // ---------------------------------------------------------------------------
 // Aide interne — résolution du jeton → session.
@@ -547,8 +613,224 @@ export async function startExam(
   }
 }
 
-// NOTE : aucun helper sync ici. Un fichier `"use server"` n'autorise que des
-// fonctions ASYNC (contrainte RSC — `examRelativeUrl` vit donc dans
-// `src/lib/exam.ts`). `SECTION_TITLES` / `EXAM_SECTIONS` sont également
-// importés depuis `@/lib/exam` : les réexporter ici casserait le build RSC
-// (tsc passe de toute façon, la contrainte n'est pas typée).
+// ---------------------------------------------------------------------------
+// Revue CEO — /espace/examen : liste puis détail des réponses.
+// ---------------------------------------------------------------------------
+
+/**
+ * Session Auth.js reconstruite **côté serveur** — copie du helper privé de
+ * `src/actions/recrutement.ts` (un fichier `"use server"` n'autorise que des
+ * fonctions async : le helper reste local, jamais exporté).
+ *
+ * Le rôle est REVALIDÉ par Zod sur `roleEnum.enumValues` : le JWT peut
+ * provenir d'un ancien schéma et ne fait pas foi à lui seul.
+ *
+ * @returns `null` si aucune session, compte non `active`, ou rôle non `ceo`.
+ */
+async function activeActor(): Promise<{ id: string; role: Role } | null> {
+  const session = await auth();
+  if (!session || session.user.status !== "active") return null;
+  const parsedRole = roleSchema.safeParse(session.user.role);
+  if (!parsedRole.success || parsedRole.data !== "ceo") return null;
+  return { id: session.user.id, role: parsedRole.data };
+}
+
+/**
+ * Rétrécit une `locale` relue en base (colonne `text`) vers le tuple
+ * `"fr" | "en"` du contrat public — repli sûr sur `"fr"` (miroir exact de
+ * `asLocale` dans `src/actions/recrutement.ts`).
+ */
+function asLocale(value: string): "fr" | "en" {
+  return value === "en" ? "en" : "fr";
+}
+
+/** Volume maximal renvoyé par `listExamReviewSessions` (plafond de payload). */
+const REVIEW_LIST_LIMIT = 200;
+
+/**
+ * Liste les sessions d'examen à traiter (page `/espace/examen`, CEO seul).
+ *
+ * ─── FILTRE H3 « ARCHIVÉS » ─────────────────────────────────────────────────
+ * Les candidatures `recrute` / `refuse` / `exam_failed` sont EXCLUES : ce sont
+ * les décisions déjà prises. C'est un **filtre de requête**, pas un statut —
+ * aucune migration, aucun nouveau statut. Une décision prise via la page fait
+ * donc tomber la ligne hors de la liste au prochain `router.refresh()`.
+ *
+ * ─── TRI ────────────────────────────────────────────────────────────────────
+ * `in_progress` d'abord (file « à faire »), puis `submitted` (file de revue
+ * « < 24 h »), chacun du plus récent au plus ancien.
+ *
+ * ─── SÉCURITÉ ───────────────────────────────────────────────────────────────
+ * Session `active` + rôle `ceo` revalidé côté serveur (PII candidats). Le
+ * jeton public n'est PAS projeté : il ne quitte jamais `exam_sessions` par ce
+ * chemin.
+ *
+ * @returns `{ ok: true; items }` ou `{ ok: false; code: "forbidden" }`.
+ * @throws Erreur d'infra DB — journalisée puis propagée → 500.
+ */
+export async function listExamReviewSessions(): Promise<
+  { ok: true; items: ExamReviewSessionItem[] } | { ok: false; code: "forbidden" }
+> {
+  const actor = await activeActor();
+  if (actor === null) return { ok: false, code: "forbidden" };
+
+  const db = getDb();
+  try {
+    const rows = await db
+      .select({
+        sessionId: examSessions.id,
+        sessionStatus: examSessions.status,
+        startedAt: examSessions.startedAt,
+        submittedAt: examSessions.submittedAt,
+        expiresAt: examSessions.expiresAt,
+        elapsedSeconds: examSessions.elapsedSeconds,
+        applicationId: jobApplications.id,
+        firstName: jobApplications.firstName,
+        lastName: jobApplications.lastName,
+        email: jobApplications.email,
+        locale: jobApplications.locale,
+        applicationStatus: jobApplications.status,
+        // NB : `examSessions.token` n'est JAMAIS sélectionné ici.
+      })
+      .from(examSessions)
+      // INNER JOIN : une session orpheline (candidature supprimée) n'a rien à
+      // montrer au CEO.
+      .innerJoin(jobApplications, eq(examSessions.applicationId, jobApplications.id))
+      .where(
+        and(
+          ne(jobApplications.status, "recrute"),
+          ne(jobApplications.status, "refuse"),
+          ne(jobApplications.status, "exam_failed"),
+        ),
+      )
+      .orderBy(
+        // 0 = en cours (d'abord), 1 = soumis ; puis du plus récent au plus
+        // ancien (heure de soumission, sinon heure d'ouverture).
+        sql`case when ${examSessions.status} = 'in_progress' then 0 else 1 end`,
+        sql`coalesce(${examSessions.submittedAt}, ${examSessions.startedAt}) desc`,
+      )
+      .limit(REVIEW_LIST_LIMIT);
+
+    return {
+      ok: true,
+      items: rows.map((row) => ({
+        sessionId: row.sessionId,
+        applicationId: row.applicationId,
+        firstName: row.firstName,
+        lastName: row.lastName,
+        email: row.email,
+        locale: asLocale(row.locale),
+        sessionStatus: row.sessionStatus,
+        startedAt: row.startedAt.toISOString(),
+        submittedAt: row.submittedAt === null ? null : row.submittedAt.toISOString(),
+        expiresAt: row.expiresAt === null ? null : row.expiresAt.toISOString(),
+        elapsedSeconds: row.elapsedSeconds,
+        applicationStatus: row.applicationStatus,
+      })),
+    };
+  } catch (error) {
+    console.error("[exams] échec de la liste de revue d'examen", error);
+    throw error;
+  }
+}
+
+/**
+ * Détail d'une session d'examen : identité du candidat + réponses par section.
+ *
+ * SÉCURITÉ : session `active` + rôle `ceo` ; un id non uuid renvoie
+ * `not_found` **sans requête** (motif `getJobApplication` — aucun indice sur un
+ * id forgé), idem pour une ligne absente.
+ *
+ * Les questions elles-mêmes ne transitent PAS : le client les lit dans
+ * `EXAM_QUESTIONS` (`src/lib/exam.ts`, source de vérité commune).
+ *
+ * @param sessionId uuid de la session.
+ * @returns `{ ok: true; item }` ou `{ ok: false; code: "forbidden" | "not_found" }`.
+ * @throws Erreur d'infra DB — journalisée puis propagée → 500.
+ */
+export async function getExamReviewSession(
+  sessionId: string,
+): Promise<
+  | { ok: true; item: ExamReviewSessionDetail }
+  | { ok: false; code: "forbidden" | "not_found" }
+> {
+  const actor = await activeActor();
+  if (actor === null) return { ok: false, code: "forbidden" };
+
+  // Id validé AVANT toute requête — jamais d'info sur un id forgé.
+  const parsedId = sessionIdSchema.safeParse(sessionId);
+  if (!parsedId.success) return { ok: false, code: "not_found" };
+
+  const db = getDb();
+  try {
+    const rows = await db
+      .select({
+        sessionId: examSessions.id,
+        sessionStatus: examSessions.status,
+        startedAt: examSessions.startedAt,
+        submittedAt: examSessions.submittedAt,
+        expiresAt: examSessions.expiresAt,
+        elapsedSeconds: examSessions.elapsedSeconds,
+        applicationId: jobApplications.id,
+        firstName: jobApplications.firstName,
+        lastName: jobApplications.lastName,
+        email: jobApplications.email,
+        locale: jobApplications.locale,
+        applicationStatus: jobApplications.status,
+      })
+      .from(examSessions)
+      .innerJoin(jobApplications, eq(examSessions.applicationId, jobApplications.id))
+      .where(eq(examSessions.id, parsedId.data))
+      .limit(1);
+
+    const row = rows[0];
+    if (row === undefined) return { ok: false, code: "not_found" };
+
+    // Réponses — ordre du barème (section, puis id de question).
+    const answerRows = await db
+      .select({
+        section: examAnswers.section,
+        questionId: examAnswers.questionId,
+        answer: examAnswers.answer,
+        updatedAt: examAnswers.updatedAt,
+      })
+      .from(examAnswers)
+      .where(eq(examAnswers.sessionId, row.sessionId))
+      .orderBy(examAnswers.section, examAnswers.questionId);
+
+    return {
+      ok: true,
+      item: {
+        sessionId: row.sessionId,
+        applicationId: row.applicationId,
+        firstName: row.firstName,
+        lastName: row.lastName,
+        email: row.email,
+        locale: asLocale(row.locale),
+        sessionStatus: row.sessionStatus,
+        startedAt: row.startedAt.toISOString(),
+        submittedAt: row.submittedAt === null ? null : row.submittedAt.toISOString(),
+        expiresAt: row.expiresAt === null ? null : row.expiresAt.toISOString(),
+        elapsedSeconds: row.elapsedSeconds,
+        applicationStatus: row.applicationStatus,
+        answers: answerRows.map((answer) => ({
+          section: answer.section,
+          questionId: answer.questionId,
+          answer: answer.answer,
+          updatedAt: answer.updatedAt === null ? null : answer.updatedAt.toISOString(),
+        })),
+      },
+    };
+  } catch (error) {
+    console.error("[exams] échec de la lecture d'une session (revue CEO)", error);
+    throw error;
+  }
+}
+
+// NOTE : aucun helper sync EXPORTÉ ici (les helpers privés — `isRateLimited`,
+// `asLocale` — ne franchissent jamais la frontière). Un fichier `"use server"`
+// n'autorise que des fonctions ASYNC à l'export (contrainte RSC —
+// `examRelativeUrl` vit donc dans `src/lib/exam.ts`). `SECTION_TITLES` /
+// `EXAM_SECTIONS` sont également importés depuis `@/lib/exam` : les
+// réexporter ici casserait le build RSC (tsc passe de toute façon, la
+// contrainte n'est pas typée).

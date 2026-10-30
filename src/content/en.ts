@@ -592,7 +592,7 @@ export const en: SiteContent = {
       "The link may have expired or already been used. Contact Atheris LABS to get a new one.",
     submittedTitle: "This assessment is already *submitted*",
     submittedMessage:
-      "Each link can be used once. Your answers are with our team - you will hear back by email.",
+      "Each link can be used once. Your answers are with us: your application is under review, answer within 24 hours by email.",
     durationNote: "About 20-25 minutes. The timer is indicative and never blocks you.",
     autosaveNote: "Your answers are saved automatically at the end of each section.",
     progressLabel: "Section {{n}} of {{total}}",
@@ -606,13 +606,14 @@ export const en: SiteContent = {
     errorLabel: "Something went wrong. Please try again.",
     incompleteLabel:
       "Some questions are still empty — answer every question before submitting. We took you back to the first one.",
+    missingAnswerLabel: "This question is empty.",
     successTitle: "Assessment *submitted*",
     successMessage:
-      "Thank you. Your answers have been received and will be reviewed personally by our CEO within 24 hours. You will receive an email with the decision.",
+      "Thank you. Your answers have been received: your application is under review and you will get an answer within 24 hours, by email.",
     failedTitle: "Assessment *not passed*",
     failedMessage:
       "Unfortunately your answers do not match the commission model required for this role, so the assessment is closed. Thank you for your time.",
-    reviewNote: "Reviewed personally by the CEO within 24 hours - you will get the decision by email.",
+    reviewNote: "Your application is under review — answer within 24 hours, by email.",
     readyTitle: "You have an assessment to *complete*",
     readyDescription:
       "Four sections, about 20 to 25 minutes. There is no video interview. Your answers are saved at the end of each section, so a lost connection will not cost you your work.",
