@@ -605,6 +605,8 @@ export const fr: SiteContent = {
     savedLabel: "Enregistré",
     saveFailedLabel: "Impossible d'enregistrer - vérifiez votre connexion",
     errorLabel: "Une erreur est survenue. Merci de réessayer.",
+    incompleteLabel:
+      "Certaines questions sont encore vides — répondez à toutes les questions avant de soumettre. Nous vous avons ramené à la première.",
     successTitle: "Test *soumis*",
     successMessage:
       "Merci. Vos réponses ont bien été reçues et seront examinées personnellement par notre CEO sous 24 heures. Vous recevrez la décision par email.",

@@ -544,6 +544,10 @@ export const en = {
     generateExamError: "Could not generate the link. Please retry.",
     generateExamConflict: "Already submitted or closed — no new link can be issued.",
     examLinkExisting: "Existing link reused.",
+    examExpectedLabel: "Expected",
+    examMatches: "matches",
+    examDiffers: "differs",
+    examIncomplete: "Some questions are still empty — answer every question before submitting.",
     modal: {
       inviteTitle: "Invite to an interview",
       rejectTitle: "Reject application",

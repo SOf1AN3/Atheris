@@ -553,6 +553,10 @@ export const fr: PlatformContent = {
     generateExamError: "Impossible de générer le lien. Merci de réessayer.",
     generateExamConflict: "Déjà soumis ou clos — aucun nouveau lien possible.",
     examLinkExisting: "Lien existant réutilisé.",
+    examExpectedLabel: "Réponse attendue",
+    examMatches: "correspond",
+    examDiffers: "diffère",
+    examIncomplete: "Certaines questions sont encore vides — répondez à toutes les questions avant de soumettre.",
     modal: {
       inviteTitle: "Inviter à un entretien",
       rejectTitle: "Refuser la candidature",

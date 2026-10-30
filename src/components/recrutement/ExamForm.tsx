@@ -34,11 +34,15 @@ import { Button } from "@/components/ui/Button";
 import type { ExamContent } from "@/content/types";
 import type { Locale } from "@/i18n/config";
 import {
+  EXAM_QUESTIONS,
   EXAM_SECTIONS,
   SECTION_TITLES,
+  isExamComplete,
   questionsForSection,
+  validateAnswer,
   type ExamSection,
 } from "@/lib/exam";
+import { cn } from "@/lib/utils";
 
 type ExamFormProps = {
   token: string;
@@ -89,6 +93,14 @@ export function ExamForm({ token, locale, content }: ExamFormProps): React.JSX.E
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<null | { failed: boolean }>(null);
   const [error, setError] = useState<string | null>(null);
+  /**
+   * Marque les questions VIDES après une tentative de soumission incomplète.
+   *
+   * Sans ce marquage, le message dit « certaines questions sont vides » sans
+   * dire LESQUELLES — le candidat doit relire 10 questions à la main. Le
+   * repère tombe dès la première saisie (le champ n'est plus vide).
+   */
+  const [showMissing, setShowMissing] = useState(false);
   const [elapsed, setElapsed] = useState(0);
 
   // Réf de la section en cours : utilisée par le chrono sans re-créer l'effet.
@@ -106,6 +118,8 @@ export function ExamForm({ token, locale, content }: ExamFormProps): React.JSX.E
   const setAnswer = useCallback((questionId: string, value: string) => {
     setAnswers((prev) => ({ ...prev, [questionId]: value }));
     setSaveState("idle");
+    // Saisie en cours : le repère « question vide » n'a plus lieu d'être.
+    setShowMissing(false);
   }, []);
 
   /**
@@ -159,13 +173,37 @@ export function ExamForm({ token, locale, content }: ExamFormProps): React.JSX.E
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [section]);
 
-  /** Soumission — verrou serveur + décision éliminatoire. */
+  /**
+   * Soumission — verrou serveur + décision éliminatoire.
+   *
+   * PRÉ-VALIDATION côté client AVANT l'appel serveur : une soumission
+   * incomplète ramène le candidat à la PREMIÈRE question vide et affiche un
+   * message EXACT. Sans ça, le serveur répond `incomplete` et le message
+   * affiché était « could not save — check your connection » : faux et
+   * trompeur, la cause n'a rien à voir avec le réseau (c'est d'ailleurs le
+   * cas réellement observé en soumettant à peine répondu).
+   */
   const handleSubmit = useCallback(async () => {
     if (submitting || submittedRef.current) return;
     setSubmitting(true);
     setError(null);
 
-    // Dernière section : on persiste d'abord (le serveur recharge la base).
+    // 1. Complétude LOCALE (module pur partagé avec le serveur — même barème).
+    const current = new Map(Object.entries(answers));
+    if (!isExamComplete(current)) {
+      const firstIncomplete = EXAM_QUESTIONS.find(
+        (question) => !validateAnswer(question, answers[question.id]).valid,
+      );
+      if (firstIncomplete !== undefined) setSection(firstIncomplete.section);
+      setError(content.incompleteLabel);
+      setShowMissing(true);
+      setSaveState("idle");
+      setSubmitting(false);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    // 2. Dernière section : on persiste d'abord (le serveur recharge la base).
     const persisted = await persistSection(section);
     if (!persisted && saveState === "failed") {
       setSubmitting(false);
@@ -181,7 +219,9 @@ export function ExamForm({ token, locale, content }: ExamFormProps): React.JSX.E
         return;
       }
       if (res.code === "incomplete") {
-        setError(content.saveFailedLabel);
+        // Filet de sécurité : la pré-validation locale devrait l'avoir
+        // catché, mais une réponse altérée côté base reste possible.
+        setError(content.incompleteLabel);
       } else if (res.code === "locked") {
         // Déjà soumis (double onglet) : état dédié, pas une erreur.
         submittedRef.current = true;
@@ -194,7 +234,7 @@ export function ExamForm({ token, locale, content }: ExamFormProps): React.JSX.E
     } finally {
       setSubmitting(false);
     }
-  }, [content, persistSection, saveState, section, submitting, token]);
+  }, [answers, content, persistSection, saveState, section, submitting, token]);
 
   // ── Écrans de résultat ────────────────────────────────────────────────────
   if (result !== null) {
@@ -269,32 +309,47 @@ export function ExamForm({ token, locale, content }: ExamFormProps): React.JSX.E
         </h2>
 
         <div className="mt-6 flex flex-col gap-6">
-          {questions.map((question, index) => (
-            <div
-              key={question.id}
-              className="rounded-[20px] border border-line border-t-line-2 bg-surface p-5 md:p-6"
-            >
-              <span aria-hidden="true" className="micro block text-faint">
-                {String(index + 1).padStart(2, "0")} / {String(questions.length).padStart(2, "0")}
-              </span>
+          {questions.map((question, index) => {
+            // Marquage « question vide » après une soumission incomplète.
+            const missing =
+              showMissing && !validateAnswer(question, answers[question.id]).valid;
 
-              <label
-                htmlFor={question.id}
-                className="mt-3 block text-[15px] font-semibold leading-[1.5] text-fg"
+            return (
+              <div
+                key={question.id}
+                className={cn(
+                  "rounded-[20px] border border-t-line-2 bg-surface p-5 md:p-6",
+                  missing ? "border-danger" : "border-line",
+                )}
               >
-                {question.prompt[locale]}
-              </label>
+                <span aria-hidden="true" className="micro block text-faint">
+                  {String(index + 1).padStart(2, "0")} /{" "}
+                  {String(questions.length).padStart(2, "0")}
+                </span>
 
-              {question.hint ? (
-                <p className="mt-1.5 text-[13px] text-faint">{question.hint[locale]}</p>
-              ) : null}
+                <label
+                  htmlFor={question.id}
+                  className="mt-3 block text-[15px] font-semibold leading-[1.5] text-fg"
+                >
+                  {question.prompt[locale]}
+                </label>
 
-              {question.kind === "textarea" ? (
-                <textarea
-                  id={question.id}
-                  rows={5}
-                  value={answers[question.id] ?? ""}
-                  onChange={(event) => setAnswer(question.id, event.target.value)}
+                {question.hint ? (
+                  <p className="mt-1.5 text-[13px] text-faint">{question.hint[locale]}</p>
+                ) : null}
+
+                {missing ? (
+                  <p role="alert" className="mt-2 text-[13px] text-danger">
+                    {locale === "fr" ? "Question sans réponse." : "This question is empty."}
+                  </p>
+                ) : null}
+
+                {question.kind === "textarea" ? (
+                  <textarea
+                    id={question.id}
+                    rows={5}
+                    value={answers[question.id] ?? ""}
+                    onChange={(event) => setAnswer(question.id, event.target.value)}
                   maxLength={question.maxLength}
                   className="mt-3 w-full rounded-xl border border-line-2 bg-ink-2 px-4 py-3 text-[15px] leading-[1.6] text-fg outline-none transition-colors duration-150 focus:border-accent focus:outline-2 focus:outline-accent focus:outline-offset-2"
                 />
@@ -321,22 +376,21 @@ export function ExamForm({ token, locale, content }: ExamFormProps): React.JSX.E
                             onChange={() => setAnswer(question.id, option.id)}
                             className="mt-1 size-4 shrink-0 accent-[#CCFF4A]"
                           />
-                          <span>
-                            {option.label[locale]}
-                            {option.recommended && !checked ? (
-                              <span className="micro mt-1 block text-faint">
-                                ✓ {locale === "fr" ? "réponse attendue" : "expected answer"}
-                              </span>
-                            ) : null}
-                          </span>
+                          {/* RÈGLE : `option.recommended` n'est JAMAIS rendu
+                              ici. C'est un repère de REVUE, affiché au seul
+                              CEO dans l'espace `/espace/recrutement` — le
+                              montrer au candidat reviendrait à lui donner la
+                              réponse dans un test de qualification. */}
+                          <span>{option.label[locale]}</span>
                         </label>
                       );
                     })}
                   </div>
                 </fieldset>
               )}
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </div>
       </section>
 

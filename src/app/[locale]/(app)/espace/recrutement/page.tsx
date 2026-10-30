@@ -274,6 +274,9 @@ export default async function RecrutementPage({
       generateExamError: recruitment.generateExamError,
       generateExamConflict: recruitment.generateExamConflict,
       examLinkExisting: recruitment.examLinkExisting,
+      examExpectedLabel: recruitment.examExpectedLabel,
+      examMatches: recruitment.examMatches,
+      examDiffers: recruitment.examDiffers,
       modal: recruitment.modal,
     };
 

@@ -484,6 +484,10 @@ export interface ExamContent {
   saveFailedLabel: string;
   /** Message d'erreur générique (code brut traduit côté client). */
   errorLabel: string;
+  /** Message affiché lorsqu'une soumission est incomplète — distinct du
+   *  message réseau : la cause n'est PAS la connexion, ce sont des questions
+   *  sans réponse. */
+  incompleteLabel: string;
   /** Écran de confirmation après soumission. */
   successTitle: string;
   successMessage: string;

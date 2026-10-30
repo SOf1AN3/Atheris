@@ -146,6 +146,9 @@ export type ApplicationsPanelLabels = {
   generateExamError: RecruitmentContent["generateExamError"];
   generateExamConflict: RecruitmentContent["generateExamConflict"];
   examLinkExisting: RecruitmentContent["examLinkExisting"];
+  examExpectedLabel: RecruitmentContent["examExpectedLabel"];
+  examMatches: RecruitmentContent["examMatches"];
+  examDiffers: RecruitmentContent["examDiffers"];
   modal: RecruitmentContent["modal"];
 };
 
@@ -555,19 +558,60 @@ export function ApplicationsPanel({
                               — {SECTION_TITLES[section][locale]}
                             </span>
                           </p>
-                          {questionsForSection(section).map((question) => (
-                            <div
-                              key={question.id}
-                              className="rounded-xl border border-line bg-ink-2 px-3.5 py-3"
-                            >
-                              <p className="text-[13px] leading-[1.5] text-muted">
-                                {question.prompt[locale]}
-                              </p>
-                              <p className="mt-1.5 whitespace-pre-wrap text-[14px] leading-[1.6] text-fg">
-                                {answered.get(question.id) ?? labels.examNoAnswers}
-                              </p>
-                            </div>
-                          ))}
+                          {questionsForSection(section).map((question) => {
+                            const given = answered.get(question.id);
+                            // Repère de REVUE : pour un QCM, la réponse
+                            // attendue est affichée UNIQUEMENT ICI (au CEO).
+                            // Elle ne l'est jamais côté candidat — ce serait
+                            // lui donner la réponse (règle `exam.ts`).
+                            const expected =
+                              question.options?.find((o) => o.recommended === true) ??
+                              null;
+                            const matches =
+                              expected !== null && given === expected.id;
+
+                            return (
+                              <div
+                                key={question.id}
+                                className="rounded-xl border border-line bg-ink-2 px-3.5 py-3"
+                              >
+                                <p className="text-[13px] leading-[1.5] text-muted">
+                                  {question.prompt[locale]}
+                                </p>
+                                <p
+                                  className={cn(
+                                    "mt-1.5 whitespace-pre-wrap text-[14px] leading-[1.6]",
+                                    given === undefined ? "text-faint" : "text-fg",
+                                  )}
+                                >
+                                  {given ?? labels.examNoAnswers}
+                                </p>
+                                {expected !== null ? (
+                                  <p className="micro mt-2 flex flex-wrap items-center gap-2 border-t border-line pt-2">
+                                    <span className="text-faint">
+                                      {labels.examExpectedLabel}
+                                    </span>
+                                    <span
+                                      className={cn(
+                                        matches ? "text-success" : "text-[#F59E0B]",
+                                      )}
+                                    >
+                                      {expected.label[locale]}
+                                    </span>
+                                    {given !== undefined ? (
+                                      <span
+                                        className={cn(
+                                          matches ? "text-success" : "text-[#F59E0B]",
+                                        )}
+                                      >
+                                        · {matches ? labels.examMatches : labels.examDiffers}
+                                      </span>
+                                    ) : null}
+                                  </p>
+                                ) : null}
+                              </div>
+                            );
+                          })}
                         </div>
                       );
                     })

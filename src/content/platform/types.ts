@@ -832,6 +832,15 @@ export interface RecruitmentContent {
   generateExamConflict: string;
   /** Mention lorsqu'un lien existait déjà (non recréé). */
   examLinkExisting: string;
+  /** ── Revue : repère de réponse attendue (QCM) ─────────────────────────── */
+  /** En-tête « réponse attendue » — affiché au SEUL CEO (jamais au candidat). */
+  examExpectedLabel: string;
+  /** Le choix du candidat correspond à la réponse attendue. */
+  examMatches: string;
+  /** Le choix du candidat diffère de la réponse attendue. */
+  examDiffers: string;
+  /** Message affiché lorsqu'une soumission est incomplète (questions vides). */
+  examIncomplete: string;
   modal: {
     inviteTitle: string;
     rejectTitle: string;

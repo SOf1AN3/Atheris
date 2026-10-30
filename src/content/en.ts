@@ -604,6 +604,8 @@ export const en: SiteContent = {
     savedLabel: "Saved",
     saveFailedLabel: "Could not save - check your connection",
     errorLabel: "Something went wrong. Please try again.",
+    incompleteLabel:
+      "Some questions are still empty — answer every question before submitting. We took you back to the first one.",
     successTitle: "Assessment *submitted*",
     successMessage:
       "Thank you. Your answers have been received and will be reviewed personally by our CEO within 24 hours. You will receive an email with the decision.",
