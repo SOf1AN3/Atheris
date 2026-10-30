@@ -43,9 +43,11 @@ import { and, desc, eq, isNull, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { createInterviewLink } from "@/actions/interviews";
+import { startExam } from "@/actions/exams";
 import { auth } from "@/auth";
 import { locales, type Locale } from "@/i18n/config";
 import { getPlatformDictionary } from "@/i18n/platform-dictionaries";
+import { examRelativeUrl } from "@/lib/exam";
 import { getDb } from "@/lib/db";
 import {
   activities,
@@ -150,6 +152,26 @@ export type SendApplicationEmailInput = {
   body: string;
   saveTemplate?: boolean;
 };
+
+/**
+ * Contrat de `generateExamLink`.
+ *
+ * `created: false` = une session EXISTAIT déjà (générée automatiquement au
+ * dépôt) — on renvoie SON lien plutôt que d'en créer une seconde. C'est
+ * volontaire : `exam_sessions` n'a aucune contrainte UNIQUE sur
+ * `application_id`, l'invariant 1:1 ne tient que par construction du code.
+ * Créer un second lien briserait ce que la jointure de `listJobApplications`
+ * suppose (candidature affichée en double).
+ *
+ * `examUrl: null` en cas d'échec de création → la candidature reste
+ * inchangée, le CEO peut réessayer.
+ */
+export type GenerateExamLinkResult =
+  | { ok: true; examUrl: string; created: boolean }
+  | {
+      ok: false;
+      code: "forbidden" | "not_found" | "invalid" | "conflict" | "failed";
+    };
 
 /** Codes d'échec des e-mails de recrutement — traduits côté client. */
 export type ApplicationEmailFailureCode =
@@ -450,6 +472,98 @@ export async function getJobApplication(
   } catch (error) {
     console.error("[recrutement] échec de lecture de la candidature", error);
     throw error;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// generateExamLink — lien d'examen (remplace « inviter à un entretien »).
+// ---------------------------------------------------------------------------
+
+/**
+ * Génère (ou RÉUTILISE) le lien d'examen d'une candidature — action **CEO**.
+ *
+ * Remplace l'invitation à un entretien dans l'interface : le parcours
+ * zero-interview ne propose plus d'entretien, mais un test en ligne.
+ *
+ * ─── Idempotence assumée ────────────────────────────────────────────────────
+ * Si une session existe déjà (créée automatiquement au dépôt de la
+ * candidature), SON lien est renvoyé — jamais une seconde session. Voir le
+ * JSDoc de `GenerateExamLinkResult` : créer un second lien briserait
+ * l'invariant 1:1 que la jointure de `listJobApplications` suppose.
+ *
+ * ─── Retour ────────────────────────────────────────────────────────────────
+ * `ok: true` avec `examUrl` (relative, locale incluse) — le CEO la copie ou
+ * l'envoie telle quelle. `created` distingue « lien neuf » de « lien déjà
+ * existant » pour l'affichage.
+ *
+ * @param applicationId Id de candidature (validé par Zod avant toute requête).
+ */
+export async function generateExamLink(
+  applicationId: string,
+): Promise<GenerateExamLinkResult> {
+  // 1. Zod sur l'entrée — AVANT toute requête DB.
+  const parsedId = applicationIdSchema.safeParse(applicationId);
+  if (!parsedId.success) return { ok: false, code: "invalid" };
+
+  // 2. Droit d'écriture : SEUL le CEO génère un lien (motif exact de
+  //    `recruitCandidate` — l'acteur est relu en session serveur, jamais
+  //    transmis depuis le client).
+  const actor = await activeActor();
+  if (actor === null) return { ok: false, code: "forbidden" };
+
+  try {
+    const db = getDb();
+
+    // 3. Candidature — jamais de détail sur un id inconnu.
+    const rows = await db
+      .select({
+        id: jobApplications.id,
+        locale: jobApplications.locale,
+        status: jobApplications.status,
+      })
+      .from(jobApplications)
+      .where(eq(jobApplications.id, parsedId.data))
+      .limit(1);
+    const application = rows[0];
+    if (application === undefined) return { ok: false, code: "not_found" };
+
+    // Statuts TERMINAUX : rien à générer, aucun détail renvoyé.
+    if (application.status === "refuse" || application.status === "recrute") {
+      return { ok: false, code: "conflict" };
+    }
+
+    const locale = asLocale(application.locale);
+
+    // 4. Session existante ? → RÉUTILISATION (idempotence).
+    const existing = await db
+      .select({ token: examSessions.token, status: examSessions.status })
+      .from(examSessions)
+      .where(eq(examSessions.applicationId, application.id))
+      .limit(1);
+    const session = existing[0];
+
+    if (session !== undefined) {
+      // Session déjà SOUMISE : verrouillée, un nouveau lien ne la rouvrirait
+      // pas — le CEO doit trancher le dossier, pas relancer le test.
+      if (session.status === "submitted") return { ok: false, code: "conflict" };
+      return { ok: true, examUrl: examRelativeUrl(session.token, locale), created: false };
+    }
+
+    // 5. Création (candidature antérieure au pipeline, ou création auto échouée).
+    const token = await startExam(application.id, locale);
+    if (token === null) return { ok: false, code: "failed" };
+
+    // Bascule en `exam_pending` — ne JAMAIS promettre un examen qui n'existe
+    // pas : le statut ne suit que si la session est bien là.
+    await db
+      .update(jobApplications)
+      .set({ status: "exam_pending", updatedAt: sql`now()` })
+      .where(eq(jobApplications.id, application.id));
+
+    return { ok: true, examUrl: examRelativeUrl(token, locale), created: true };
+  } catch (error) {
+    console.error("[recrutement] échec de génération du lien d'examen", error);
+    return { ok: false, code: "failed" };
   }
 }
 

@@ -20,7 +20,7 @@ config({ path: ".env" });
 
 const sql = neon(process.env.DATABASE_URL);
 const BASE = "http://127.0.0.1:3000";
-const MARK = "e2e-dbg@atherislabs.com";
+const MARK = "e2e-dbg@example.com";
 
 async function rows(text, params = []) {
   const res = await sql.query(text, params);

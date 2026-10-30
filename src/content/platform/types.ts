@@ -815,6 +815,23 @@ export interface RecruitmentContent {
   examNoAnswers: string;
   /** Format « section 2 sur 4 » (index de section dans la revue). */
   examSectionLabel: string;
+  /** ── Génération de lien d'examen (remplace « inviter à un entretien ») ── */
+  /** CTA : générer le lien de test pour cette candidature. */
+  generateExamAction: string;
+  /** Libellé pendant l'appel serveur. */
+  generatingExam: string;
+  /** Champ affichant l'URL à copier, une fois générée. */
+  examLinkLabel: string;
+  /** Bouton de copie du lien. */
+  copyLink: string;
+  /** Confirmation de copie. */
+  linkCopied: string;
+  /** Échec de génération. */
+  generateExamError: string;
+  /** Conflit : test déjà soumis, ou candidature à statut terminal. */
+  generateExamConflict: string;
+  /** Mention lorsqu'un lien existait déjà (non recréé). */
+  examLinkExisting: string;
   modal: {
     inviteTitle: string;
     rejectTitle: string;

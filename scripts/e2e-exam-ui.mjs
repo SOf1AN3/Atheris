@@ -23,7 +23,7 @@ config({ path: ".env" });
 
 const sql = neon(process.env.DATABASE_URL);
 const BASE = "http://127.0.0.1:3000";
-const MARK_LIKE = "e2e-%@atherislabs.com";
+const MARK_LIKE = "e2e-%@example.com";
 
 async function rows(text, params = []) {
   const res = await sql.query(text, params);
@@ -60,7 +60,7 @@ try {
   // ── Création des deux sessions ────────────────────────────────────────────
   async function make(suffix) {
     const token = (await import("node:crypto")).randomBytes(32).toString("hex");
-    const email = `e2e-${suffix}@atherislabs.com`;
+    const email = `e2e-${suffix}@example.com`;
     const app = await rows(
       `INSERT INTO job_applications (first_name,last_name,email,email_norm,locale,status)
        VALUES ($1,$2,$3,$3,'en','exam_pending') RETURNING id`,

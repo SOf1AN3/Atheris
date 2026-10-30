@@ -9,7 +9,7 @@ import { SafeArea } from "../components/SafeArea";
 
 /** Coordonnées — source : `contact.channels` + domaine de production */
 const CONTACT = [
-  "contact@atherislabs.com",
+  "contact@sofianeasma.me",
   "+213 551 79 73 13",
   "atheris-labs.sofianeasma.me",
 ];

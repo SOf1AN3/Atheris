@@ -266,6 +266,14 @@ export default async function RecrutementPage({
       examWithinDeadline: recruitment.examWithinDeadline,
       examNoAnswers: recruitment.examNoAnswers,
       examSectionLabel: recruitment.examSectionLabel,
+      generateExamAction: recruitment.generateExamAction,
+      generatingExam: recruitment.generatingExam,
+      examLinkLabel: recruitment.examLinkLabel,
+      copyLink: recruitment.copyLink,
+      linkCopied: recruitment.linkCopied,
+      generateExamError: recruitment.generateExamError,
+      generateExamConflict: recruitment.generateExamConflict,
+      examLinkExisting: recruitment.examLinkExisting,
       modal: recruitment.modal,
     };
 

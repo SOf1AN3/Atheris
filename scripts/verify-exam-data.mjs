@@ -30,7 +30,7 @@ config({ path: ".env.local" });
 config({ path: ".env" });
 
 const sql = neon(process.env.DATABASE_URL);
-const MARK = "e2e-data@atherislabs.com";
+const MARK = "e2e-data@example.com";
 
 async function rows(text, params = []) {
   const res = await sql.query(text, params);
@@ -150,7 +150,7 @@ try {
   const app2 = await rows(
     `INSERT INTO job_applications (first_name,last_name,email,email_norm,locale,status)
      VALUES ('Data2','E2E',$1,$1,'en','exam_pending') RETURNING id`,
-    ["e2e-data2@atherislabs.com"],
+    ["e2e-data2@example.com"],
   );
   await rows(
     `INSERT INTO exam_sessions (token,application_id,status,locale) VALUES ($1,$2,'in_progress','en')`,

@@ -25,7 +25,7 @@ const sql = neon(process.env.DATABASE_URL);
  * sur une adresse unique ne supprime rien et laisse des orphelines en prod
  * (bug réel intercepté ici avant nettoyage).
  */
-const MARK_LIKE = "e2e-%@atherislabs.com";
+const MARK_LIKE = "e2e-%@example.com";
 const MARK_COL = "email_norm";
 
 async function rows(text, params = []) {
@@ -72,7 +72,7 @@ await teardown(); // idempotent : on repart d'un état propre
 
 async function createApplication(suffix) {
   const token = randomBytes(32).toString("hex");
-  const email = `e2e-${suffix}@atherislabs.com`;
+  const email = `e2e-${suffix}@example.com`;
   const app = await rows(
     `INSERT INTO job_applications
        (first_name, last_name, email, email_norm, locale, status)

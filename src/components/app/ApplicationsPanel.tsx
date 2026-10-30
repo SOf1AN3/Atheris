@@ -50,6 +50,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Fragment, useState } from "react";
 
 import {
+  generateExamLink,
   getJobApplication,
   recruitCandidate,
   type JobApplicationDetail,
@@ -137,6 +138,14 @@ export type ApplicationsPanelLabels = {
   examWithinDeadline: RecruitmentContent["examWithinDeadline"];
   examNoAnswers: RecruitmentContent["examNoAnswers"];
   examSectionLabel: RecruitmentContent["examSectionLabel"];
+  generateExamAction: RecruitmentContent["generateExamAction"];
+  generatingExam: RecruitmentContent["generatingExam"];
+  examLinkLabel: RecruitmentContent["examLinkLabel"];
+  copyLink: RecruitmentContent["copyLink"];
+  linkCopied: RecruitmentContent["linkCopied"];
+  generateExamError: RecruitmentContent["generateExamError"];
+  generateExamConflict: RecruitmentContent["generateExamConflict"];
+  examLinkExisting: RecruitmentContent["examLinkExisting"];
   modal: RecruitmentContent["modal"];
 };
 
@@ -217,6 +226,20 @@ export function ApplicationsPanel({
   /** Dernière erreur de recrutement (`role="alert"`, aucun détail technique). */
   const [recruitError, setRecruitError] = useState<string | null>(null);
 
+  // ── Génération de lien d'examen ──────────────────────────────────────────
+  /** Id de la candidature en cours de génération (aucun appel vol en parallèle). */
+  const [generatingId, setGeneratingId] = useState<string | null>(null);
+  /** Lien généré (ou réutilisé) : `{ id, url, existing }`. */
+  const [examLink, setExamLink] = useState<{
+    id: string;
+    url: string;
+    existing: boolean;
+  } | null>(null);
+  /** Dernière erreur de génération (`role="alert"`). */
+  const [examLinkError, setExamLinkError] = useState<string | null>(null);
+  /** Confirmation de copie (réinitialisée par le caller). */
+  const [copied, setCopied] = useState(false);
+
   const visibleRows =
     filter === "all" ? rows : rows.filter((row) => row.status === filter);
 
@@ -264,6 +287,50 @@ export function ApplicationsPanel({
   function handleSent(kind: "invite" | "reject"): void {
     setNotice(kind === "invite" ? labels.modal.successInvite : labels.modal.successReject);
     router.refresh();
+  }
+
+  /**
+   * Génère (ou réutilise) le lien d'examen de la candidature.
+   *
+   * Remplace l'invitation à un entretien : le parcours zero-interview ne
+   * propose plus d'entretien. Un seul appel en vol à la fois, et l'erreur
+   * reste locale (aucun détail technique en UI, motif `detailErrorText`).
+   */
+  async function handleGenerateExam(row: ApplicationRow): Promise<void> {
+    if (generatingId !== null) return;
+    setGeneratingId(row.id);
+    setExamLinkError(null);
+    setCopied(false);
+    try {
+      const result = await generateExamLink(row.id);
+      if (result.ok) {
+        setExamLink({ id: row.id, url: result.examUrl, existing: !result.created });
+        if (!result.created) setNotice(labels.examLinkExisting);
+        // Statut basculé en `exam_pending` côté serveur → liste à jour.
+        router.refresh();
+      } else {
+        setExamLinkError(
+          result.code === "conflict"
+            ? labels.generateExamConflict
+            : labels.generateExamError,
+        );
+      }
+    } catch {
+      setExamLinkError(labels.generateExamError);
+    } finally {
+      setGeneratingId(null);
+    }
+  }
+
+  /** Copie le lien dans le presse-papiers (repli silencieux si refusé). */
+  async function handleCopyExamLink(url: string): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
   }
 
   /**
@@ -542,6 +609,10 @@ export function ApplicationsPanel({
     const isDetailOpen = detail !== null && detail.id === row.id;
     const isRecruiting = recruitingId === row.id;
     const canRecruit = row.status !== "refuse" && row.status !== "recrute";
+    // Statuts TERMINAUX : aucun lien d'examen possible. `exam_submitted` n'est
+    // PAS désactivé ici — l'action renvoie alors `conflict` avec un message
+    // explicite (masquer le bouton cacherait la raison au CEO).
+    const canExam = row.status !== "refuse" && row.status !== "recrute";
 
     return (
       <span className={cn("flex flex-wrap items-center gap-2", className)}>
@@ -560,13 +631,13 @@ export function ApplicationsPanel({
           type="button"
           variant="ghost"
           size="sm"
-          disabled={!row.inviteAllowed}
-          aria-disabled={!row.inviteAllowed}
+          disabled={!canExam}
+          aria-disabled={!canExam}
           onClick={() => {
-            handleOpenModal(row, "invite");
+            void handleGenerateExam(row);
           }}
         >
-          {labels.inviteAction}
+          {generatingId === row.id ? labels.generatingExam : labels.generateExamAction}
         </Button>
         <Button
           type="button"
@@ -655,6 +726,44 @@ export function ApplicationsPanel({
         <p role="alert" className="text-sm text-danger">
           {recruitError}
         </p>
+      ) : null}
+
+      {/* Alerte de génération (conflit ou échec — aucun détail technique). */}
+      {examLinkError !== null ? (
+        <p role="alert" className="text-sm text-danger">
+          {examLinkError}
+        </p>
+      ) : null}
+
+      {/* Lien d'examen généré : URL + copie (le CEO l'envoie tel quel).
+          Le nom du candidat est affiché : le lien seul ne dit pas QUI contacter. */}
+      {examLink !== null ? (
+        (() => {
+          const owner = rows.find((r) => r.id === examLink.id);
+          return (
+            <div className="flex flex-col gap-2 rounded-[20px] border border-line bg-surface p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <span className="micro text-faint">
+                  {labels.examLinkLabel}
+                  {owner ? ` — ${owner.candidateName}` : ""}
+                </span>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    void handleCopyExamLink(examLink.url);
+                  }}
+                >
+                  {copied ? labels.linkCopied : labels.copyLink}
+                </Button>
+              </div>
+              <code className="block break-all rounded-xl border border-line bg-ink-2 px-3 py-2 text-[13px] leading-[1.55] text-fg">
+                {examLink.url}
+              </code>
+            </div>
+          );
+        })()
       ) : null}
 
       <section aria-labelledby="recruitment-list-title" className="flex flex-col gap-4">
