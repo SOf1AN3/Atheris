@@ -62,11 +62,32 @@ import type {
   RecruitmentContent,
 } from "@/content/platform/types";
 import { isValidLocale, type Locale } from "@/i18n/config";
+import {
+  EXAM_SECTIONS,
+  SECTION_TITLES,
+  questionsForSection,
+} from "@/lib/exam";
 import type { Role } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 
 /** Filtre actif — `"all"` = tous les statuts. */
 type StatusFilter = "all" | JobApplicationStatus;
+
+/**
+ * Âge d'une soumission en heures (flottant).
+ *
+ * Sert à l'engagement public de revue **sous 24 h** : au-delà, la pastille
+ * passe en ambre pour signaler un retard. Une date absente renvoie `0` (aucune
+ * alerte à afficher sans horodatage).
+ *
+ * @param submittedAt ISO 8601 ou `null`.
+ */
+function overdueHours(submittedAt: string | null): number {
+  if (submittedAt === null) return 0;
+  const submitted = Date.parse(submittedAt);
+  if (Number.isNaN(submitted)) return 0;
+  return Math.max(0, (Date.now() - submitted) / 3_600_000);
+}
 
 /** État du chargement du dossier déplié. */
 type DetailState =
@@ -106,6 +127,16 @@ export type ApplicationsPanelLabels = {
   /** Erreur (`role="alert"`) — `dict.recruitment.recruitError`. */
   recruitError: string;
   unavailable: string;
+  /** ── Revue de l'examen (pipeline zero-interview) ─────────────────────── */
+  examTitle: RecruitmentContent["examTitle"];
+  examAbsent: RecruitmentContent["examAbsent"];
+  examInProgress: RecruitmentContent["examInProgress"];
+  examDurationLabel: RecruitmentContent["examDurationLabel"];
+  examSubmittedLabel: RecruitmentContent["examSubmittedLabel"];
+  examOverdue: RecruitmentContent["examOverdue"];
+  examWithinDeadline: RecruitmentContent["examWithinDeadline"];
+  examNoAnswers: RecruitmentContent["examNoAnswers"];
+  examSectionLabel: RecruitmentContent["examSectionLabel"];
   modal: RecruitmentContent["modal"];
 };
 
@@ -381,6 +412,103 @@ export function ApplicationsPanel({
               </p>
             </div>
           ) : null}
+
+          {/* ── Revue de l'examen ───────────────────────────────────────
+              Aucune session (candidature antérieure) ou session non soumise :
+              une ligne d'état, jamais un bloc vide. Sinon les 4 sections du
+              barème, chacune avec ses réponses. */}
+          <div className="flex flex-col gap-3 border-t border-line pt-4">
+            <dt className="micro text-faint">{labels.examTitle}</dt>
+
+            {state.item.exam === null ? (
+              <dd className="text-[14px] text-muted">{labels.examAbsent}</dd>
+            ) : state.item.exam.status === "in_progress" ? (
+              <dd className="text-[14px] text-muted">{labels.examInProgress}</dd>
+            ) : (
+              <>
+                {/* Méta : durée + horodatage + respect du délai de 24 h. */}
+                <dd className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[14px] text-fg">
+                  {state.item.exam.elapsedSeconds !== null ? (
+                    <span>
+                      <span className="micro mr-1.5 text-faint">
+                        {labels.examDurationLabel}
+                      </span>
+                      {Math.floor(state.item.exam.elapsedSeconds / 60)}:
+                      {String(state.item.exam.elapsedSeconds % 60).padStart(2, "0")}
+                    </span>
+                  ) : null}
+                  {state.item.exam.submittedAt !== null ? (
+                    <span className="tabular-nums">
+                      <span className="micro mr-1.5 text-faint">
+                        {labels.examSubmittedLabel}
+                      </span>
+                      {new Date(state.item.exam.submittedAt).toLocaleString(
+                        locale === "fr" ? "fr-FR" : "en-GB",
+                        { dateStyle: "medium", timeStyle: "short" },
+                      )}
+                    </span>
+                  ) : null}
+                  <span
+                    className={cn(
+                      "micro rounded-full border px-2.5 py-1",
+                      overdueHours(state.item.exam.submittedAt) > 24
+                        ? "border-[rgba(245,158,11,0.30)] bg-[rgba(245,158,11,0.12)] text-[#F59E0B]"
+                        : "border-line text-faint",
+                    )}
+                  >
+                    {overdueHours(state.item.exam.submittedAt) > 24
+                      ? labels.examOverdue
+                      : labels.examWithinDeadline}
+                  </span>
+                </dd>
+
+                {/* Réponses, groupées par section du barème. Les questions
+                    viennent de `lib/exam` (source de vérité partagée) — le
+                    serveur n'a transmis que les réponses. */}
+                <dd className="flex flex-col gap-4 pt-1">
+                  {state.item.examAnswers === null ||
+                  state.item.examAnswers.length === 0 ? (
+                    <p className="text-[14px] text-muted">{labels.examNoAnswers}</p>
+                  ) : (
+                    EXAM_SECTIONS.map((section) => {
+                      const answered = new Map(
+                        (state.item?.examAnswers ?? [])
+                          .filter((a) => a.section === section)
+                          .map((a) => [a.questionId, a.answer]),
+                      );
+                      if (answered.size === 0) return null;
+                      return (
+                        <div key={section} className="flex flex-col gap-2.5">
+                          <p className="micro text-accent">
+                            {labels.examSectionLabel.replace(
+                              "{{n}}",
+                              String(section),
+                            )}{" "}
+                            <span className="text-faint">
+                              — {SECTION_TITLES[section][locale]}
+                            </span>
+                          </p>
+                          {questionsForSection(section).map((question) => (
+                            <div
+                              key={question.id}
+                              className="rounded-xl border border-line bg-ink-2 px-3.5 py-3"
+                            >
+                              <p className="text-[13px] leading-[1.5] text-muted">
+                                {question.prompt[locale]}
+                              </p>
+                              <p className="mt-1.5 whitespace-pre-wrap text-[14px] leading-[1.6] text-fg">
+                                {answered.get(question.id) ?? labels.examNoAnswers}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })
+                  )}
+                </dd>
+              </>
+            )}
+          </div>
         </div>
       );
     }
@@ -476,7 +604,17 @@ export function ApplicationsPanel({
       <fieldset className="flex flex-col gap-3">
         <legend className="sr-only">{labels.filterLabel}</legend>
         <div className="flex flex-wrap items-center gap-2">
-          {(["all", "nouveau", "invite", "refuse"] as const).map((value) => {
+          {(
+            [
+              "all",
+              "nouveau",
+              "exam_pending",
+              "exam_submitted",
+              "exam_failed",
+              "invite",
+              "refuse",
+            ] as const
+          ).map((value) => {
             const isActive = filter === value;
             return (
               <button

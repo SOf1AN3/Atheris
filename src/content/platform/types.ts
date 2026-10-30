@@ -796,6 +796,25 @@ export interface RecruitmentContent {
   /** Erreur : envoi du lien de recrutement impossible. */
   recruitError: string;
   unavailable: string;
+  /** ── Revue de l'examen (pipeline zero-interview) ─────────────────────── */
+  /** Titre du bloc de réponses dans le dossier candidat. */
+  examTitle: string;
+  /** Aucune session d'examen (candidature antérieure au pipeline). */
+  examAbsent: string;
+  /** Session créée mais non soumise (candidat en cours). */
+  examInProgress: string;
+  /** En-tête « durée mesurée » — indicative, jamais bloquante. */
+  examDurationLabel: string;
+  /** En-tête « soumis le » (horodatage, fuseau du CEO). */
+  examSubmittedLabel: string;
+  /** Alerte au-delà de l'engagement public de revue sous 24 h. */
+  examOverdue: string;
+  /** Mention tranquille : dans les délais. */
+  examWithinDeadline: string;
+  /** Réponses vides (session créée, aucune écriture). */
+  examNoAnswers: string;
+  /** Format « section 2 sur 4 » (index de section dans la revue). */
+  examSectionLabel: string;
   modal: {
     inviteTitle: string;
     rejectTitle: string;

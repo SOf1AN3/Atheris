@@ -469,9 +469,9 @@ export const en: SiteContent = {
         id: "process",
         heading: "Selection process",
         bullets: [
-          "Application: form and CV.",
-          "A 30-minute interview, at the slot of your choice.",
-          "CEO approval, then platform access (manual validation).",
+          "Application: the form. The CV is optional.",
+          "An online assessment: 4 sections, about 20 to 25 minutes.",
+          "Review by the CEO within 24 hours, then platform access (manual validation).",
         ],
       },
     ],

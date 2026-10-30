@@ -470,9 +470,9 @@ export const fr: SiteContent = {
         id: "process",
         heading: "Processus de sélection",
         bullets: [
-          "Candidature\u00A0: formulaire et CV.",
-          "Entretien de 30 minutes, au créneau de votre choix.",
-          "Validation par le CEO, puis accès à la plateforme (validation manuelle).",
+          "Candidature\u00A0: le formulaire. Le CV est facultatif.",
+          "Un test en ligne\u00A0: 4 sections, environ 20 à 25 minutes.",
+          "Revue par le CEO sous 24 heures, puis accès à la plateforme (validation manuelle).",
         ],
       },
     ],

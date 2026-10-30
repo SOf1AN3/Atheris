@@ -49,6 +49,8 @@ import { getPlatformDictionary } from "@/i18n/platform-dictionaries";
 import { getDb } from "@/lib/db";
 import {
   activities,
+  examAnswers,
+  examSessions,
   interviews,
   invitations,
   jobApplications,
@@ -98,6 +100,28 @@ export type JobApplicationListItem = {
   rejectedAt: string | null;
   /** Entretien lié (`interviewId`) — `booked` = créneau réellement réservé. */
   interview: null | { booked: boolean; startsAt: string | null };
+  /**
+   * Examen lié (pipeline zero-interview). `null` = pas de session (candidature
+   * antérieure au pipeline, ou création de session échouée).
+   *
+   * `submittedAt` sert d'indicateur **« < 24 h »** dans la file de revue :
+   * l'engagement public est que le CEO tranche sous 24 h — l'UI affiche donc
+   * l'ancienneté et passe en alerte au-delà du seuil.
+   */
+  exam: null | {
+    status: "in_progress" | "submitted";
+    submittedAt: string | null;
+    /** Durée mesurée (indicatif, jamais bloquant) — `null` tant que non soumis. */
+    elapsedSeconds: number | null;
+  };
+};
+
+/** Une réponse d'examen, projetée pour la revue CEO (100 % sérialisable). */
+export type ExamAnswerItem = {
+  questionId: string;
+  /** 1–4 (section du barème). */
+  section: number;
+  answer: string;
 };
 
 /** Détail d'une candidature (liste + message + CV servi par la route API). */
@@ -108,6 +132,15 @@ export type JobApplicationDetail = JobApplicationListItem & {
   /** URL relative du CV : `GET /api/applications/{id}/cv` (CEO seul, 404 muet).
    *  `null` sans CV. */
   cvUrl: string | null;
+  /**
+   * Réponses de l'examen, dans l'ordre du barème. `null` = aucune session.
+   * Vide (`[]`) = session créée mais aucune réponse encore écrite.
+   *
+   * Les questions elle-mêmes ne transitent PAS : le CEO les obtient du barème
+   * (`lib/exam.ts`, source de vérité commune). Le serveur n'envoie que des
+   * réponses — moins de données, et aucune raison de les dupliquer.
+   */
+  examAnswers: ExamAnswerItem[] | null;
 };
 
 /** Entrée d'un envoi d'e-mail CEO (invitation ou refus). */
@@ -237,12 +270,18 @@ export async function listJobApplications(): Promise<
         createdAt: jobApplications.createdAt,
         invitedAt: jobApplications.invitedAt,
         rejectedAt: jobApplications.rejectedAt,
-        // Colonnes de l'entretien éventuel (LEFT JOIN) — `null` sans ligne.
+        // Colonnes de l'entretien éventuel (LEFT JOIN) - `null` sans ligne.
         interviewStartsAt: interviews.startsAt,
         interviewEmailNorm: interviews.emailNorm,
+        // Session d'examen éventuelle (LEFT JOIN) - `null` pour les
+        // candidatures antérieures au pipeline zero-interview.
+        examStatus: examSessions.status,
+        examSubmittedAt: examSessions.submittedAt,
+        examElapsed: examSessions.elapsedSeconds,
       })
       .from(jobApplications)
       .leftJoin(interviews, eq(jobApplications.interviewId, interviews.id))
+      .leftJoin(examSessions, eq(examSessions.applicationId, jobApplications.id))
       .orderBy(desc(jobApplications.createdAt))
       .limit(LIST_LIMIT);
 
@@ -272,6 +311,16 @@ export async function listJobApplications(): Promise<
                   row.interviewStartsAt === null ? null : row.interviewStartsAt.toISOString(),
               }
             : null,
+          // Session d'examen : `examStatus` non nul ⇔ session JOINée présente.
+          exam:
+            row.examStatus === null
+              ? null
+              : {
+                  status: row.examStatus,
+                  submittedAt:
+                    row.examSubmittedAt === null ? null : row.examSubmittedAt.toISOString(),
+                  elapsedSeconds: row.examElapsed,
+                },
         };
       }),
     };
@@ -328,9 +377,15 @@ export async function getJobApplication(
         rejectedAt: jobApplications.rejectedAt,
         interviewStartsAt: interviews.startsAt,
         interviewEmailNorm: interviews.emailNorm,
+        // Session d'examen éventuelle (LEFT JOIN) — `null` sans session.
+        examStatus: examSessions.status,
+        examSessionId: examSessions.id,
+        examSubmittedAt: examSessions.submittedAt,
+        examElapsed: examSessions.elapsedSeconds,
       })
       .from(jobApplications)
       .leftJoin(interviews, eq(jobApplications.interviewId, interviews.id))
+      .leftJoin(examSessions, eq(examSessions.applicationId, jobApplications.id))
       .where(eq(jobApplications.id, parsedId.data))
       .limit(1);
 
@@ -338,6 +393,23 @@ export async function getJobApplication(
     if (row === undefined) return { ok: false, code: "not_found" };
 
     const hasInterview = row.interviewEmailNorm !== null && row.interviewEmailNorm.length > 0;
+
+    // Réponses de l'examen — SECONDE requête seulement s'il y a une session
+    // (une candidature antérieure au pipeline ne paie aucun coût DB).
+    let answers: ExamAnswerItem[] | null = null;
+    if (row.examSessionId !== null) {
+      const answerRows = await db
+        .select({
+          questionId: examAnswers.questionId,
+          section: examAnswers.section,
+          answer: examAnswers.answer,
+        })
+        .from(examAnswers)
+        .where(eq(examAnswers.sessionId, row.examSessionId))
+        .orderBy(examAnswers.section, examAnswers.questionId);
+      answers = answerRows;
+    }
+
     return {
       ok: true,
       item: {
@@ -363,6 +435,16 @@ export async function getJobApplication(
               startsAt: row.interviewStartsAt === null ? null : row.interviewStartsAt.toISOString(),
             }
           : null,
+        exam:
+          row.examStatus === null
+            ? null
+            : {
+                status: row.examStatus,
+                submittedAt:
+                  row.examSubmittedAt === null ? null : row.examSubmittedAt.toISOString(),
+                elapsedSeconds: row.examElapsed,
+              },
+        examAnswers: answers,
       },
     };
   } catch (error) {
