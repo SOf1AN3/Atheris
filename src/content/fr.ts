@@ -613,7 +613,16 @@ export const fr: SiteContent = {
     failedTitle: "Test non *validé*",
     failedMessage:
       "Malheureusement vos réponses ne correspondent pas au modèle de commission exigé pour ce poste : le test est donc clôturé. Merci pour votre temps.",
-    reviewNote: "Examiné personnellement par le CEO sous 24 heures — vous recevrez la décision par email.",
+    reviewNote: "Examiné personnellement par le CEO sous 24 heures - vous recevrez la décision par email.",
+    readyTitle: "Un test vous attend",
+    readyDescription:
+      "4 sections, environ 20 à 25 minutes. Il n'y a pas d'entretien vidéo. Vos réponses sont enregistrées à la fin de chaque section : une coupure de connexion ne vous fait rien perdre.",
+    startLabel: "Commencer le test",
+    startingLabel: "Démarrage...",
+    validityNote: "Vous avez 3 jours pour commencer. Passé ce délai, ce lien n'est plus valide.",
+    expiredTitle: "Ce lien a *expiré*",
+    expiredMessage:
+      "Votre lien de test n'est plus valide. Contactez Atheris LABS si vous souhaitez poursuivre votre candidature.",
   },
 
   notFound: {

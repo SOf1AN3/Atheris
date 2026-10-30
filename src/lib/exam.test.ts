@@ -9,12 +9,15 @@ import {
   ELIMINATORY_ACCEPTED_ANSWER,
   ELIMINATORY_QUESTION_ID,
   EXAM_QUESTIONS,
+  EXAM_LINK_VALIDITY_DAYS,
   EXAM_MAX_ANSWER_CHARS,
   EXAM_MIN_TEXTAREA_CHARS,
   EXAM_SECTIONS,
   SECTION_TITLES,
-  isEliminatoryFailure,
+  examExpiryFrom,
   isExamComplete,
+  isExamExpired,
+  isEliminatoryFailure,
   questionsForSection,
   sectionAnswersAreCoherent,
   validateAnswer,
@@ -150,6 +153,52 @@ describe("section 4 — éliminatoire", () => {
 
   it("ELIMINATORY_ACCEPTED_ANSWER est bien « yes »", () => {
     expect(ELIMINATORY_ACCEPTED_ANSWER).toBe("yes");
+  });
+});
+
+describe("expiration du lien (D6 — fenêtre 3 j)", () => {
+  const DAY = 24 * 60 * 60 * 1000;
+
+  it("EXAM_LINK_VALIDITY_DAYS vaut bien 3", () => {
+    expect(EXAM_LINK_VALIDITY_DAYS).toBe(3);
+  });
+
+  it("examExpiryFrom ajoute exactement 3 jours", () => {
+    const start = new Date("2026-01-01T10:00:00.000Z");
+    const expiry = examExpiryFrom(start);
+    expect(expiry.getTime() - start.getTime()).toBe(3 * DAY);
+  });
+
+  it("accepte une chaîne ISO et renvoie un Date (typage Drizzle)", () => {
+    const expiry = examExpiryFrom("2026-01-01T10:00:00.000Z");
+    expect(expiry).toBeInstanceOf(Date);
+    expect(expiry.toISOString()).toBe("2026-01-04T10:00:00.000Z");
+  });
+
+  it("n'est jamais expirée avant l'échéance", () => {
+    const expiry = examExpiryFrom(new Date("2026-01-01T10:00:00Z"));
+    expect(isExamExpired(expiry, new Date("2026-01-04T09:59:59Z"))).toBe(false);
+  });
+
+  it("est expirée à l'échéance exacte (borne stricte : après)", () => {
+    const expiry = examExpiryFrom(new Date("2026-01-01T10:00:00Z"));
+    // À la seconde exacte : encore valide ; une seconde plus tard, non.
+    expect(isExamExpired(expiry, new Date("2026-01-04T10:00:00Z"))).toBe(false);
+    expect(isExamExpired(expiry, new Date("2026-01-04T10:00:01Z"))).toBe(true);
+  });
+
+  it("`null` = session héritée : JAMAIS expirée", () => {
+    expect(isExamExpired(null, new Date("2099-01-01"))).toBe(false);
+  });
+
+  it("accepte une Date ou une ISO pour le contrôle", () => {
+    const d = new Date("2020-01-01T00:00:00Z");
+    expect(isExamExpired(d, new Date("2026-01-01"))).toBe(true);
+    expect(isExamExpired(d.toISOString(), new Date("2026-01-01"))).toBe(true);
+  });
+
+  it("une chaîne illisible n'expire JAMAIS (repli sûr, jamais de blocage)", () => {
+    expect(isExamExpired("pas-une-date", new Date())).toBe(false);
   });
 });
 

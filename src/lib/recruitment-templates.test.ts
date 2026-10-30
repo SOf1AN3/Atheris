@@ -172,9 +172,46 @@ describe("modèles d'examen (exam_passed / exam_failed)", () => {
     }
   });
 
-  it("4 kinds × 2 locales = 8 modèles au total", () => {
+  it("5 kinds × 2 locales = 10 modèles au total", () => {
     expect(Object.keys(DEFAULT_EMAIL_TEMPLATES).sort()).toEqual(
-      ["exam_failed", "exam_passed", "invite", "reject"].sort(),
+      ["exam_failed", "exam_invite", "exam_passed", "invite", "reject"].sort(),
     );
+  });
+});
+
+/**
+ * `exam_invite` — porte le LIEN D'EXAMEN au candidat (et non d'entretien).
+ * Seul kind du parcours qui contient `{{lien}}` : si le placeholder disparaît,
+ * `renderTemplate` le réinjecte, mais le message doit annoncer la fenêtre
+ * de 3 jours, sinon le candidat ignore la deadline.
+ */
+describe("modèle exam_invite (lien d'examen)", () => {
+  const LOCALES = ["fr", "en"] as const;
+
+  it("contient `{{lien}}` (le lien est le cœur du message)", () => {
+    for (const locale of LOCALES) {
+      expect(DEFAULT_EMAIL_TEMPLATES.exam_invite[locale].body, locale).toContain("{{lien}}");
+    }
+  });
+
+  it("annonce la fenêtre de 3 jours dans les deux langues", () => {
+    expect(DEFAULT_EMAIL_TEMPLATES.exam_invite.fr.body).toContain("3 JOURS");
+    expect(DEFAULT_EMAIL_TEMPLATES.exam_invite.en.body).toContain("3 DAYS");
+  });
+
+  it("précise qu'il n'y a PAS d'entretien vidéo (changement de parcours)", () => {
+    expect(DEFAULT_EMAIL_TEMPLATES.exam_invite.fr.body).toMatch(/pas d'entretien/);
+    expect(DEFAULT_EMAIL_TEMPLATES.exam_invite.en.body).toMatch(/no video interview/);
+  });
+
+  it("`{{lien}}` se remplace et le lien est rendu", () => {
+    const rendered = renderTemplate(DEFAULT_EMAIL_TEMPLATES.exam_invite.en.body, {
+      prenom: "Ada",
+      nom: "Lovelace",
+      lien: "https://example.com/en/examen/abc",
+    });
+    expect(rendered).toContain("https://example.com/en/examen/abc");
+    expect(rendered).not.toContain("{{lien}}");
+    expect(rendered).toContain("Ada");
   });
 });

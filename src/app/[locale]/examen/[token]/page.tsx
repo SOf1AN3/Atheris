@@ -4,13 +4,15 @@ import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
 
 import { ExamForm } from "@/components/recrutement/ExamForm";
+import { ExamStart } from "@/components/recrutement/ExamStart";
 import { Badge } from "@/components/ui/Badge";
 import { isValidLocale, type Locale } from "@/i18n/config";
+import { cn } from "@/lib/utils";
 import { getDictionary } from "@/i18n/dictionaries";
 import type { ExamContent } from "@/content/types";
 import { getDb } from "@/lib/db";
 import { examSessions } from "@/lib/db/schema";
-import { EXAM_TOKEN_PATTERN, EXAM_SECTIONS } from "@/lib/exam";
+import { EXAM_TOKEN_PATTERN, isExamExpired } from "@/lib/exam";
 
 /**
  * SEGMENT DYNAMIQUE NON ENUMERABLE — le root layout pose
@@ -53,6 +55,46 @@ export async function generateMetadata({
     // Jamais indexée : contenu de recrutement personnel.
     robots: { index: false, follow: false },
   };
+}
+
+/**
+ * Coquillage plein écran partagé par les quatre états du parcours
+ * (formulaire / Start / soumis / expiré). Une seule nappe d'instrument,
+ * jamais dupliquée — le décor ne doit pas varier d'un état à l'autre.
+ *
+ * `center` : les cartes d'état (courtes) se centrent verticalement ; le
+ * formulaire, lui, dépasse le viewport et serait **coupé en haut** par un
+ * `items-center` (bug classique du centrage flex : le débordement se fait
+ * des deux côtés, et la moitié haute devient injoignable). Il passe donc
+ * en `items-start`.
+ */
+function ExamShell({
+  children,
+  center = true,
+}: {
+  children: React.ReactNode;
+  center?: boolean;
+}): React.JSX.Element {
+  return (
+    <div className="relative min-h-[100svh] overflow-hidden bg-ink">
+      {/* Ambiance « instrument voilée » à 60 % — la lecture prime. */}
+      <div aria-hidden="true" className="hero-bg">
+        <div className="hero-nappe" />
+        <div className="floor" />
+        <div className="hero-vignette" />
+        <div className="absolute inset-0 bg-ink/60" />
+      </div>
+      <main
+        id="main"
+        className={cn(
+          "relative z-10 flex min-h-[100svh] w-full px-[clamp(20px,5vw,56px)] py-[clamp(96px,14vh,176px)]",
+          center ? "items-center" : "items-start",
+        )}
+      >
+        {children}
+      </main>
+    </div>
+  );
 }
 
 /** Décompose un titre du dict en ses deux voix (DESIGN §2.2.1) : les
@@ -121,9 +163,17 @@ export default async function ExamenPage({
   // la base (404 immédiat, zéro requête DB).
   if (!EXAM_TOKEN_PATTERN.test(token)) notFound();
 
-  // Lecture minimale — `status` et `locale` seulement.
+  // Lecture minimale — `status`, `locale` + les trois instants qui pilotent
+  // la bascule d'écran (formulaire / Start / expiré). Aucun nom ni email ne
+  // quitte le serveur.
   const rows = await getDb()
-    .select({ status: examSessions.status, locale: examSessions.locale })
+    .select({
+      status: examSessions.status,
+      locale: examSessions.locale,
+      startedAt: examSessions.startedAt,
+      createdAt: examSessions.createdAt,
+      expiresAt: examSessions.expiresAt,
+    })
     .from(examSessions)
     .where(eq(examSessions.token, token))
     .limit(1);
@@ -135,50 +185,54 @@ export default async function ExamenPage({
 
   if (row.status === "submitted") {
     return (
-      <div className="relative min-h-[100svh] overflow-hidden bg-ink">
-        <div aria-hidden="true" className="hero-bg">
-          <div className="hero-nappe" />
-          <div className="floor" />
-          <div className="hero-vignette" />
-          <div className="absolute inset-0 bg-ink/60" />
-        </div>
-        <main
-          id="main"
-          className="relative z-10 flex min-h-[100svh] w-full items-center px-[clamp(20px,5vw,56px)] py-[clamp(96px,14vh,176px)]"
-        >
-          <ExamState
-            badge={content.badge}
-            title={content.submittedTitle}
-            message={content.submittedMessage}
-          />
-        </main>
-      </div>
+      <ExamShell>
+        <ExamState
+          badge={content.badge}
+          title={content.submittedTitle}
+          message={content.submittedMessage}
+        />
+      </ExamShell>
     );
   }
 
   if (row.status !== "in_progress") notFound();
 
-  return (
-    <div className="relative min-h-[100svh] overflow-hidden bg-ink">
-      {/* Ambiance « instrument voilée » à 60 % — la lecture prime. */}
-      <div aria-hidden="true" className="hero-bg">
-        <div className="hero-nappe" />
-        <div className="floor" />
-        <div className="hero-vignette" />
-        <div className="absolute inset-0 bg-ink/60" />
-      </div>
+  // ── Lien expiré (D6) ────────────────────────────────────────────────────
+  // `expires_at` court depuis la CANDIDATURE : un candidat qui a attendu
+  // plus de 3 jours n'a plus accès, et le CEO doit en régénérer un.
+  if (isExamExpired(row.expiresAt)) {
+    return (
+      <ExamShell>
+        <ExamState
+          badge={content.badge}
+          title={content.expiredTitle}
+          message={content.expiredMessage}
+        />
+      </ExamShell>
+    );
+  }
 
-      <main
-        id="main"
-        className="relative z-10 w-full px-[clamp(20px,5vw,56px)] py-[clamp(40px,7vh,72px)]"
-      >
-        <div className="mx-auto w-full max-w-[860px]">
-          <ExamForm token={token} locale={loc} content={content} />
-        </div>
-      </main>
-    </div>
+  // ── Pas encore commencé ─────────────────────────────────────────────────
+  // Signal : `started_at` est toujours égal à `created_at` tant que le
+  // candidat n'a pas cliqué Start. Les deux colonnes reçoivent le MÊME
+  // `now()` dans l'INSERT de création (Postgres `now()` est stable dans une
+  // transaction), et seul `beginExam` réécrit `started_at` — dans une
+  // transaction ULTERIEURE, donc strictement postérieure. La comparaison est
+  // exacte, pas approximative.
+  const started = row.startedAt.getTime() > row.createdAt.getTime();
+  if (!started) {
+    return (
+      <ExamShell>
+        <ExamStart token={token} content={content} />
+      </ExamShell>
+    );
+  }
+
+  return (
+    <ExamShell center={false}>
+      <div className="mx-auto w-full max-w-[860px]">
+        <ExamForm token={token} locale={loc} content={content} />
+      </div>
+    </ExamShell>
   );
 }
-
-/** Réexport utile au formulaire client (source de vérité unique du barème). */
-export { EXAM_SECTIONS };

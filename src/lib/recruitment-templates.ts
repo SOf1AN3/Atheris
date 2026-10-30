@@ -5,10 +5,11 @@
  * par `src/actions/recrutement.ts` et `src/actions/exams.ts`.
  *
  * CONTRAT :
- * - `DEFAULT_EMAIL_TEMPLATES` — 8 textes figés (4 kinds × fr/en) avec
+ * - `DEFAULT_EMAIL_TEMPLATES` — 10 textes figés (5 kinds × fr/en) avec
  *   les placeholders `{{prenom}}`, `{{nom}}` et `{{lien}}` :
  *   `invite` / `reject` envoyés manuellement par le CEO,
- *   `exam_passed` / `exam_failed` envoyés automatiquement à la soumission ;
+ *   `exam_invite` envoyé au dépôt (porte le lien, fenêtre 3 j),
+ *   `exam_passed` / `exam_failed` envoyés à la soumission ;
  * - `renderTemplate(body, vars)` — remplacement des placeholders ; le lien
  *   est **toujours** présent dans l'e-mail final (exigence métier : s'il a
  *   disparu du corps, il est réinjecté en fin de message) ;
@@ -26,8 +27,14 @@
 `ApplicationEmailModal`). `exam_passed` / `exam_failed` sont envoyés
 AUTOMATIQUEMENT à la soumission de l'examen (`src/actions/exams.ts`) — le
 candidat a déjà son écran de confirmation, l'e-mail est le double formel qui
-lui parvient par écrit. */
-export type EmailTemplateKind = "invite" | "reject" | "exam_passed" | "exam_failed";
+lui parvient par écrit. `exam_invite` porte le LIEN du test au candidat
+(la page « vous avez 3 jours pour commencer »), envoyé au dépôt. */
+export type EmailTemplateKind =
+  | "invite"
+  | "reject"
+  | "exam_passed"
+  | "exam_failed"
+  | "exam_invite";
 
 /** Locales admises (aligné sur `@/i18n/config`). */
 export type TemplateLocale = "fr" | "en";
@@ -178,6 +185,56 @@ closed and we will not be moving forward with your application.
 
 This decision relates specifically to that model and does not reflect on the
 quality of your profile.
+
+Best regards,
+The Atheris Labs team`,
+    },
+  },
+
+  // ── Invitation à passer le test (envoyée au dépôt de la candidature) ─────
+  // `{{lien}}` est le LIEN D'EXAMEN (et non d'entretien) — la page « vous
+  // avez 3 jours pour commencer ». Il porte sa propre fenêtre de validité.
+  exam_invite: {
+    fr: {
+      subject: "Votre test de recrutement — Atheris Labs",
+      body: `Bonjour {{prenom}},
+
+Merci pour votre candidature au poste de Sales Development Representative
+chez Atheris Labs.
+
+La prochaine étape est un test en ligne : 4 sections, environ 20 à 25
+minutes. Il n'y a pas d'entretien vidéo.
+
+Vous avez 3 JOURS pour le commencer. Passé ce délai, ce lien ne sera plus
+valide et nous ne pourrons pas poursuivre votre candidature.
+
+Commencez ici :
+{{lien}}
+
+Vos réponses sont enregistrées automatiquement à la fin de chaque section :
+une coupure de connexion ne vous fait rien perdre.
+
+Bien à vous,
+Sofiane — Atheris Labs`,
+    },
+    en: {
+      subject: "Your assessment — Atheris Labs",
+      body: `Bonjour {{prenom}},
+
+Thank you for applying for the Sales Development Representative position at
+Atheris Labs.
+
+The next step is an online assessment: 4 sections, about 20 to 25 minutes.
+There is no video interview.
+
+You have 3 DAYS to start it. After that this link will no longer be valid
+and we will not be able to continue your application.
+
+Start here:
+{{lien}}
+
+Your answers are saved automatically at the end of each section: losing your
+connection will not cost you your work.
 
 Best regards,
 The Atheris Labs team`,

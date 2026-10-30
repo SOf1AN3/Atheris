@@ -48,6 +48,8 @@ import {
   EXAM_QUESTIONS,
   EXAM_TOKEN_BYTES,
   EXAM_TOKEN_PATTERN,
+  examExpiryFrom,
+  isExamExpired,
   isEliminatoryFailure,
   questionsForSection,
   sectionAnswersAreCoherent,
@@ -425,6 +427,79 @@ async function sendExamResultEmail(args: {
 }
 
 // ---------------------------------------------------------------------------
+// beginExam — le clic « Start » du candidat.
+// ---------------------------------------------------------------------------
+
+/** Contrat de `beginExam` — union discriminée par `ok`. */
+export type BeginExamResult =
+  | { ok: true }
+  | {
+      ok: false;
+      code: "invalid" | "not_found" | "locked" | "expired";
+    };
+
+/**
+ * Ouvre effectivement l'examen : repousse `started_at` à l'instant du clic.
+ *
+ * Pourquoi ce n'est pas fait à la création : la session naît au dépôt de la
+ * candidature, mais le candidat peut attendre avant de commencer (il a 3 j).
+ * Si le chrono comptait depuis le dépôt, un candidat qui démarre au bout de
+ * deux jours afficherait « 48 h d'examen » — faux, et le CEO en déduirait à
+ * tort un examen abandonné. Le temps affiché doit être le temps passé sur
+ * l'examen, pas celui passé à procrastiner.
+ *
+ * UPDATE conditionnelle `WHERE status = 'in_progress'` : un double-clic ou
+ * deux onglets ne produisent qu'une seule réécriture, et une session déjà
+ * soumise ne peut pas être « rouverte » par ce chemin.
+ *
+ * Une session EXPIRÉE (D6) renvoie `expired` : le lien n'est plus valide et
+ * le CEO doit en régénérer un — le candidat n'a plus accès.
+ *
+ * @param input `{ token }` — 64 chars hex, validés avant toute requête.
+ */
+export async function beginExam(input: { token: string }): Promise<BeginExamResult> {
+  const parsedToken = tokenSchema.safeParse(input?.token);
+  if (!parsedToken.success) return { ok: false, code: "invalid" };
+  const token = parsedToken.data;
+
+  try {
+    const db = getDb();
+    const rows = await db
+      .select({
+        id: examSessions.id,
+        status: examSessions.status,
+        expiresAt: examSessions.expiresAt,
+        startedAt: examSessions.startedAt,
+      })
+      .from(examSessions)
+      .where(eq(examSessions.token, token))
+      .limit(1);
+    const session = rows[0];
+    // Jeton inconnu — aucune distinction (anti-énumération, motif du reste
+    // du parcours).
+    if (session === undefined) return { ok: false, code: "not_found" };
+    // Déjà soumis : verrouillé, pas de « réouverture ».
+    if (session.status !== "in_progress") return { ok: false, code: "locked" };
+    // Lien expiré (D6).
+    if (isExamExpired(session.expiresAt)) return { ok: false, code: "expired" };
+
+    // Repousse `started_at` — CONDITIONNEL, idempotent.
+    const updated = await db
+      .update(examSessions)
+      .set({ startedAt: sql`now()`, updatedAt: sql`now()` })
+      .where(and(eq(examSessions.id, session.id), eq(examSessions.status, "in_progress")))
+      .returning({ id: examSessions.id });
+    // 0 ligne = un concurrent l'a soumise entre le SELECT et l'UPDATE.
+    if (updated.length === 0) return { ok: false, code: "locked" };
+
+    return { ok: true };
+  } catch (error) {
+    console.error("[exams] échec d'ouverture de l'examen", error);
+    return { ok: false, code: "invalid" };
+  }
+}
+
+// ---------------------------------------------------------------------------
 // startExam — création de session (fenêtre `applyToJob`).
 // ---------------------------------------------------------------------------
 
@@ -455,6 +530,13 @@ export async function startExam(
       applicationId,
       status: "in_progress",
       locale,
+      // Fenêtre 3 j (D6). Calculée à la CRÉATION — dans le flux normal la
+      // session naît à la seconde près de la candidature, donc cela
+      // satisfait « 3 j depuis la candidature » ; et lors d'une
+      // RÉGÉNÉRATION par le CEO sur une candidature ancienne, la fenêtre
+      // repart de la régénération (un lien expiré d'avance ne servirait à
+      // rien).
+      expiresAt: examExpiryFrom(new Date()),
     });
     return token;
   } catch (error) {

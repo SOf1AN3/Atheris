@@ -613,6 +613,15 @@ export const en: SiteContent = {
     failedMessage:
       "Unfortunately your answers do not match the commission model required for this role, so the assessment is closed. Thank you for your time.",
     reviewNote: "Reviewed personally by the CEO within 24 hours - you will get the decision by email.",
+    readyTitle: "You have an assessment to *complete*",
+    readyDescription:
+      "Four sections, about 20 to 25 minutes. There is no video interview. Your answers are saved at the end of each section, so a lost connection will not cost you your work.",
+    startLabel: "Start the assessment",
+    startingLabel: "Starting...",
+    validityNote: "You have 3 days to start. After that this link is no longer valid.",
+    expiredTitle: "This link has *expired*",
+    expiredMessage:
+      "Your assessment link is no longer valid. Please contact Atheris LABS if you wish to continue your application.",
   },
 
   notFound: {

@@ -299,6 +299,52 @@ export const ELIMINATORY_ACCEPTED_ANSWER = "yes";
 export const EXAM_TOKEN_BYTES = 32;
 export const EXAM_TOKEN_PATTERN = /^[a-f0-9]{64}$/;
 
+/**
+ * Durée de validité du lien d'examen, en jours (décision client : D6).
+ *
+ * Le décompte court depuis la CANDIDATURE, pas depuis le clic Start — un
+ * candidat qui attend a déjà dépensé une partie de sa fenêtre. Au-delà,
+ * le lien n'est plus valide et le CEO doit en régénérer un.
+ */
+export const EXAM_LINK_VALIDITY_DAYS = 3;
+
+/**
+ * Instant d'expiration d'un lien d'examen, calculé depuis le dépôt.
+ *
+ * Fonction pure (aucune lecture de `Date.now()` implicite) : l'appelant
+ * fournit la date, ce qui la rend testable et empêche deux calculs
+ * divergents entre la création et la vérification.
+ *
+ * @returns **`Date`** — typé ainsi pour l'insertion Drizzle (`timestamptz`
+ *   refuse une `string`), et parce qu'un `Date` reste manipulable par
+ *   l'appelant (formatage, comparaison) sans re-parse.
+ */
+export function examExpiryFrom(createdAt: Date | string): Date {
+  const start = createdAt instanceof Date ? createdAt : new Date(createdAt);
+  return new Date(start.getTime() + EXAM_LINK_VALIDITY_DAYS * 24 * 60 * 60 * 1000);
+}
+
+/**
+ * Le lien d'examen est-il expiré ?
+ *
+ * `null` = session héritée, sans limite (les sessions créées avant ce
+ * lot n'ont pas de `expires_at`) → jamais expirée.
+ *
+ * @param expiresAt `Date` (retour de Drizzle), ISO 8601, ou `null`.
+ * @param now Instant de contrôle (injecté, jamais lu implicitement).
+ */
+export function isExamExpired(
+  expiresAt: Date | string | null,
+  now: Date = new Date(),
+): boolean {
+  if (expiresAt === null) return false;
+  // Drizzle renvoie un `Date` pour `timestamptz` ; une chaîne ISO reste
+  // admise pour les appels depuis un payload sérialisé.
+  const deadline = expiresAt instanceof Date ? expiresAt.getTime() : Date.parse(expiresAt);
+  if (Number.isNaN(deadline)) return false;
+  return now.getTime() > deadline;
+}
+
 /** Toutes les questions d'une section, dans l'ordre du barème. */
 export function questionsForSection(section: ExamSection): ExamQuestion[] {
   return EXAM_QUESTIONS.filter((question) => question.section === section);

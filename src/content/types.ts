@@ -496,6 +496,20 @@ export interface ExamContent {
   failedMessage: string;
   /** Mention légale : réponse revue par le CEO sous 24 h. */
   reviewNote: string;
+  /** ── Écran « vous avez un examen à passer » (avant le Start) ────────── */
+  /** Titre de l'écran d'accueil du test. */
+  readyTitle: string;
+  /** Description : ce qui va se passer (4 sections, pas d'entretien vidéo). */
+  readyDescription: string;
+  /** Bouton « Commencer ». */
+  startLabel: string;
+  /** Libellé pendant l'appel serveur. */
+  startingLabel: string;
+  /** Rappel de la fenêtre de 3 jours. */
+  validityNote: string;
+  /** État « lien expiré » (D6) : plus de recrutement possible. */
+  expiredTitle: string;
+  expiredMessage: string;
 }
 
 /** Racine du contenu de la landing page (FR ou EN). */
