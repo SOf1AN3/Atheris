@@ -625,6 +625,96 @@ export const en: SiteContent = {
       "Your assessment link is no longer valid. Please contact Atheris LABS if you wish to continue your application.",
   },
 
+  contract: {
+    title: "SDR partnership agreement",
+    intro:
+      "This agreement governs your collaboration with Atheris LABS as a Sales Development Representative (SDR). Read all 9 clauses below: your acceptance will be timestamped and recorded with your IP address.",
+    nonBlockingNote:
+      "Free access with no lockout: your consent is voluntary, but it is required for your first commission payout.",
+    versionLabel: "Version {{version}}",
+    clausesTitle: "Contract clauses",
+    clauses: [
+      {
+        id: "objet",
+        title: "Purpose",
+        body:
+          "This partnership agreement sets out the terms under which the Partner, acting as a Sales Development Representative (SDR), sources and refers clients to Atheris LABS. The Partner acts fully independently, as an external contractor, with no employment, subordination or agency relationship.",
+      },
+      {
+        id: "duree",
+        title: "Term and termination",
+        body:
+          "This agreement is concluded for an indefinite term from its acceptance. Either party may terminate it at any time, without notice or cause, by simple written notification. Commissions earned at the time of termination remain due; no new referral is remunerated after the effective date of termination.",
+      },
+      {
+        id: "remuneration",
+        title: "Remuneration terms",
+        body:
+          "Progressive commission calculated on the cumulative number of paying clients — 10% (0\u20134 clients), 12.5% (5\u20139), 15% (10\u201319), 20% (20 or more). The rate applicable to a deal is locked in when the deposit is collected and is never retroactive. No cap on earnings.",
+      },
+      {
+        id: "obligations",
+        title: "Mutual obligations",
+        body:
+          "Atheris LABS undertakes to provide the Partner with the material needed for the mission (presentation, pitch, prospecting assets) and to handle every referred prospect promptly. The Partner undertakes to represent Atheris LABS loyally, to make no commercial promise binding the company, and to faithfully relay the current offering and pricing.",
+      },
+      {
+        id: "confidentialite",
+        title: "Confidentiality",
+        body:
+          "Each party agrees to keep strictly confidential the commercial, technical and financial information of the other party that it learns in the course of the partnership. This obligation survives termination of the agreement for three years.",
+      },
+      {
+        id: "prospects",
+        title: "Ownership of referred prospects and clients",
+        body:
+          "Prospects and clients brought in by the Partner are recorded in their name on the Atheris platform and remain attached to their portfolio for commission purposes, including after termination, for deals outstanding at that date.",
+      },
+      {
+        id: "paiement",
+        title: "Payment and transfer methods",
+        body:
+          "Commissions are paid by international transfer (Wise, PayPal or bank transfer) to the payment details declared by the Partner in their workspace. The Partner is responsible for their accuracy and upkeep; any transfer provider fees remain their responsibility.",
+      },
+      {
+        id: "propriete",
+        title: "Intellectual property of deliverables",
+        body:
+          "Deliverables produced by the Partner within the partnership (prospecting materials, outreach sequences, presentations) are assigned to Atheris LABS upon payment. The Partner warrants their originality and freedom from third-party rights.",
+      },
+      {
+        id: "juridiction",
+        title: "Jurisdiction and governing law",
+        body:
+          "This agreement is governed by Algerian law. Any dispute relating to its interpretation or execution will first be subject to an amicable settlement between the parties; failing that, it shall be brought before the competent courts of Algiers.",
+      },
+    ],
+    checkboxLabel: "I acknowledge that I have read and accept all 9 clauses above.",
+    acceptLabel: "Accept the agreement",
+    acceptingLabel: "Saving...",
+    successMessage: "Your consent has been recorded.",
+    acceptedTitle: "Agreement accepted",
+    acceptedMessage: "You accepted this agreement on {{date}}.",
+    emailCopyNote:
+      "A copy of the accepted version has been emailed to the address on your account.",
+    loadFailed: "Could not load your contract status. Please try again later.",
+    errors: {
+      invalid: "Your request is incomplete. Tick the box to confirm your consent.",
+      forbidden: "Your account is not authorized to accept this agreement.",
+      failed: "Recording failed. Please try again in a moment.",
+    },
+    mail: {
+      subject: "Atheris partnership agreement — version {{version}}",
+      greeting: "Hello,",
+      intro:
+        "Below is the copy of the partnership agreement you have just accepted on the Atheris platform.",
+      versionLabel: "Agreement version: {{version}}",
+      acceptedAtLabel: "Accepted on {{date}}",
+      closing:
+        "This message is kept as evidence of your acceptance. Please keep it safe.",
+    },
+  },
+
   notFound: {
     code: "404 \u00B7 Not found",
     title: "This page does not *exist*",

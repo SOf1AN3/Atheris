@@ -626,6 +626,97 @@ export const fr: SiteContent = {
       "Votre lien de test n'est plus valide. Contactez Atheris LABS si vous souhaitez poursuivre votre candidature.",
   },
 
+  contract: {
+    title: "Contrat de partenariat SDR",
+    intro:
+      "Ce contrat encadre votre collaboration avec Atheris LABS en qualité de Sales Development Representative (SDR). Lisez l'intégralité des 9 clauses ci-dessous : votre acceptation sera horodatée et enregistrée avec votre adresse IP.",
+    nonBlockingNote:
+      "Consultation libre et sans blocage : votre accord est volontaire, mais il est requis lors de votre premier virement de commission.",
+    versionLabel: "Version {{version}}",
+    clausesTitle: "Clauses du contrat",
+    clauses: [
+      {
+        id: "objet",
+        title: "Objet",
+        body:
+          "Le présent contrat de partenariat définit les conditions dans lesquelles le Partenaire, agissant en qualité de Sales Development Representative (SDR), prospecte et apporte des clients à Atheris LABS. Le Partenaire agit en toute indépendance, en tant que prestataire externe, sans lien de subordination, de salariat ou de mandat d'agence.",
+      },
+      {
+        id: "duree",
+        title: "Durée et résiliation",
+        body:
+          "Le contrat est conclu pour une durée indéterminée à compter de son acceptation. Chaque partie peut y mettre fin à tout moment, sans préavis ni motif, par simple notification écrite. Les commissions acquises au moment de la résiliation restent dues ; aucun nouvel apport n'est rémunéré après la date de prise d'effet de la résiliation.",
+      },
+      {
+        id: "remuneration",
+        title: "Modalités de rémunération",
+        body:
+          "Commission progressive calculée sur le nombre cumulé de clients payants — 10 % (0\u20134 clients), 12,5 % (5\u20139), 15 % (10\u201319), 20 % (20 et plus). Le taux applicable à un deal est figé au moment où l'acompte est encaissé et ne rétroagit jamais. Aucun plafond de gains.",
+      },
+      {
+        id: "obligations",
+        title: "Obligations mutuelles",
+        body:
+          "Atheris LABS s'engage à fournir au Partenaire les éléments nécessaires à sa mission (présentation, argumentaire, supports de prospection) et à traiter chaque prospect apporté dans les meilleurs délais. Le Partenaire s'engage à représenter Atheris LABS avec loyauté, à ne formuler aucune promesse commerciale engageant l'entreprise et à relayer fidèlement l'offre et les tarifs en vigueur.",
+      },
+      {
+        id: "confidentialite",
+        title: "Confidentialité",
+        body:
+          "Chaque partie s'engage à garder strictement confidentielles les informations commerciales, techniques et financières de l'autre partie dont elle prend connaissance dans le cadre du partenariat. Cette obligation survit à la résiliation du contrat pour une durée de trois ans.",
+      },
+      {
+        id: "prospects",
+        title: "Propriété des prospects et clients apportés",
+        body:
+          "Les prospects et clients apportés par le Partenaire sont enregistrés à son nom dans la plateforme Atheris et demeurent rattachés à son portefeuille pour le calcul de ses commissions, y compris après la résiliation, sur les affaires en cours à la date de celle-ci.",
+      },
+      {
+        id: "paiement",
+        title: "Paiement et modalités de virement",
+        body:
+          "Les commissions sont versées par virement international (Wise, PayPal ou virement bancaire) sur les coordonnées de paiement déclarées par le Partenaire dans son espace. Le Partenaire veille à leur exactitude et à leur actualisation ; les frais éventuels du prestataire de transfert restent à sa charge.",
+      },
+      {
+        id: "propriete",
+        title: "Propriété intellectuelle des livrables",
+        body:
+          "Les livrables produits par le Partenaire dans le cadre du partenariat (documents de prospection, séquences de prise de contact, présentations) sont cédés à Atheris LABS à compter de leur paiement. Le Partenaire garantit leur originalité et l'absence de droits de tiers.",
+      },
+      {
+        id: "juridiction",
+        title: "Juridiction et droit applicable",
+        body:
+          "Le présent contrat est régi par le droit algérien. Tout litige relatif à son interprétation ou à son exécution fera l'objet d'une tentative de résolution amiable entre les parties ; à défaut, il sera porté devant les tribunaux compétents d'Alger.",
+      },
+    ],
+    checkboxLabel:
+      "Je reconnais avoir lu et j'accepte l'intégralité des 9 clauses ci-dessus.",
+    acceptLabel: "Accepter le contrat",
+    acceptingLabel: "Enregistrement...",
+    successMessage: "Votre consentement a été enregistré.",
+    acceptedTitle: "Contrat accepté",
+    acceptedMessage: "Vous avez accepté ce contrat le {{date}}.",
+    emailCopyNote:
+      "Une copie de la version acceptée vous a été envoyée par e-mail à l'adresse de votre compte.",
+    loadFailed: "Impossible de charger l'état de votre contrat. Réessayez plus tard.",
+    errors: {
+      invalid: "Votre demande est incomplète. Cochez la case pour confirmer votre accord.",
+      forbidden: "Votre compte n'est pas autorisé à accepter ce contrat.",
+      failed: "L'enregistrement a échoué. Réessayez dans un instant.",
+    },
+    mail: {
+      subject: "Contrat de partenariat Atheris — version {{version}}",
+      greeting: "Bonjour,",
+      intro:
+        "Vous trouverez ci-dessous la copie du contrat de partenariat que vous venez d'accepter sur la plateforme Atheris.",
+      versionLabel: "Version du contrat\u00A0: {{version}}",
+      acceptedAtLabel: "Accepté le {{date}}",
+      closing:
+        "Ce message est conservé comme preuve de votre acceptation. Conservez-le précieusement.",
+    },
+  },
+
   notFound: {
     code: "404 \u00B7 Page introuvable",
     title: "Cette page n'existe *pas*",

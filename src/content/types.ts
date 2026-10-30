@@ -421,6 +421,65 @@ export interface InterviewContent {
   form: InterviewFormStrings;
 }
 
+/** Une clause du contrat de partenariat SDR — titre + corps (4-8 lignes). */
+export interface ContractClause {
+  id: string;
+  title: string;
+  body: string;
+}
+
+/**
+ * Contenu de la page `/[locale]/espace/contrat` (consentement au contrat de
+ * partenariat SDR — L11, D5/D6).
+ *
+ * Le texte des 9 clauses vit ICI (source de vérité FR/EN partagée par la page
+ * et par la copie e-mail serveur) : la clause `remuneration` porte le barème
+ * progressif AUTORITAIRE (D1 — 10 → 20 %, aucun plancher monétaire).
+ */
+export interface ContractContent {
+  /** Titre de page (H1 + metadata). */
+  title: string;
+  /** Introduction — rappel du caractère non bloquant du consentement (D5). */
+  intro: string;
+  /** Note légale : la consultation n'est jamais bloquée (D5/H6). */
+  nonBlockingNote: string;
+  /** Version du contrat accepté — `{{version}}` remplacé côté serveur. */
+  versionLabel: string;
+  /** Titre de la section des clauses. */
+  clausesTitle: string;
+  /** Exactement 9 clauses — texte contractuel, identique serveur/client. */
+  clauses: ContractClause[];
+  /** Case à cocher obligatoire avant validation. */
+  checkboxLabel: string;
+  acceptLabel: string;
+  acceptingLabel: string;
+  /** Succès — toast `role="status"` avant re-rendu serveur. */
+  successMessage: string;
+  /** État « déjà accepté » (rendu serveur) — `{{date}}` = horodatage formaté. */
+  acceptedTitle: string;
+  acceptedMessage: string;
+  /** Copie e-mail envoyée — affiché seulement si `emailSentAt` est renseigné. */
+  emailCopyNote: string;
+  /** Échec de la lecture de l'état (bloc sobre, aucun détail technique). */
+  loadFailed: string;
+  /** Codes bruts des Server Actions → messages traduits côté client (C2). */
+  errors: {
+    invalid: string;
+    forbidden: string;
+    failed: string;
+  };
+  /** Copie contractuelle e-mail (textes SERVEUR — jamais rendus en UI). */
+  mail: {
+    /** Sujet — jamais de `:` après le premier jeton (sanitisé par `sendMail`). */
+    subject: string;
+    greeting: string;
+    intro: string;
+    versionLabel: string;
+    acceptedAtLabel: string;
+    closing: string;
+  };
+}
+
 /** Contenu de la page 404 (route inconnue). */
 export interface NotFoundContent {
   code: string;
@@ -532,6 +591,7 @@ export interface SiteContent {
   careers: CareersContent;
   sdrKit: SdrKitContent;
   exam: ExamContent;
+  contract: ContractContent;
   notFound: NotFoundContent;
   interview: InterviewContent;
   footer: FooterContent;

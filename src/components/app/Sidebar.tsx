@@ -4,6 +4,7 @@ import {
   Circle,
   Coins,
   FileCheck2,
+  FileSignature,
   FolderKanban,
   LayoutDashboard,
   Target,
@@ -57,6 +58,7 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   "/espace/equipe": UsersRound,
   "/espace/projet": FolderKanban,
   "/espace/examen": FileCheck2,
+  "/espace/contrat": FileSignature,
 };
 
 /** Icône rendue quand le `href` n'est pas dans `NAV_ICONS`. */
