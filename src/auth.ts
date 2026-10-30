@@ -3,8 +3,9 @@
  *
  * CHOIX TECHNIQUES (validés par le Lead, détails pour le Reviewer) :
  *
- * 1. SESSION JWT (strategy "jwt", 7 jours) — credentials n'a pas de stockage
- *    adapter ; le jeton chiffré (AUTH_SECRET) embarque id/role/name/status.
+ * 1. SESSION JWT (strategy "jwt", 30 jours — H7) — credentials n'a pas de
+ *    stockage adapter ; le jeton chiffré (AUTH_SECRET) embarque
+ *    id/role/name/status.
  *
  * 2. DIFFÉRENCIATION DES ÉCHECS SANS FUITE — `authorize` ne renvoie jamais de
  *    message : soit `null` (→ code générique "credentials"), soit elle throw
@@ -62,8 +63,16 @@ import { verifyPassword } from "@/lib/password";
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 /** Seuil d'échecs consécutifs au-delà duquel la connexion est refusée. */
 const RATE_LIMIT_MAX_ATTEMPTS = 5;
-/** Durée de vie du jeton de session (7 jours, identique JWT + session). */
-const SESSION_MAX_AGE = 7 * 24 * 3600;
+/**
+ * Durée de vie du jeton de session — **30 jours** (identique JWT + session).
+ *
+ * H7 (arbitrée par le client, PLAN-REFONTE-PLATEFORME.md §3) : « rester
+ * connecté » se définit par un `maxAge` global de 30 jours. C'est une
+ * DÉFINITION PRODUIT, pas une garantie de sécurité : le JWT est stateless,
+ * un cookie volé reste donc valable 30 jours (aucune checkbox « rester
+ * connecté » — maxAge global, comme arbitré).
+ */
+const SESSION_MAX_AGE = 30 * 24 * 3600;
 
 /**
  * Hash leurre au format `salt:hash` (scrypt N=16384 r=8 p=1 keylen=64) d'un
@@ -291,7 +300,7 @@ const UUID_SHAPE =
  *
  * ─── POURQUOI ──────────────────────────────────────────────────────────────
  * La session JWT survit à la suppression du compte : un ancien cookie d'un
- * compte **purgé** restait valide `maxAge` (7 jours) — constaté en revue du
+ * compte **purgé** restait valide `maxAge` (30 jours, H7) — constaté en revue du
  * Lot 4 (session fantôme d'un compte supprimé). Le callback `session` de
  * cette version de NextAuth ne peut pas renvoyer `null` (typage), d'où ce
  * wrapper : le jeton n'est plus qu'une PREUVE d'identité, l'état affiché

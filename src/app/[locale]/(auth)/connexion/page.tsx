@@ -49,7 +49,7 @@ export default async function ConnexionPage({ params }: ConnexionPageProps) {
   }
 
   const dict = await getPlatformDictionary(locale);
-  const { login, validation } = dict.auth;
+  const { login, validation, passwordReset } = dict.auth;
 
   // Connecté ET compte toujours valide en DB → retour à la home du rôle.
   // Un jeton orphelin (compte supprimé) rend `auth()` → `null` : la page
@@ -76,7 +76,7 @@ export default async function ConnexionPage({ params }: ConnexionPageProps) {
             passwordLabel: login.passwordLabel,
             submit: login.submit,
             submitLoading: login.submitLoading,
-            forgotNote: login.forgotNote,
+            forgotLink: passwordReset.forgot.linkLabel,
             signupLink: login.signupLink,
           }}
           messages={{

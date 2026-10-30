@@ -173,8 +173,6 @@ export interface LoginContent {
   passwordLabel: string;
   submit: string;
   submitLoading: string;
-  /** Note discrète sous le formulaire (rôle de l'admin sur les mots de passe). */
-  forgotNote: string;
   /** Lien vers la page de candidature, affiché sous le formulaire. */
   signupLink: string;
   errors: LoginErrorsContent;
@@ -248,12 +246,60 @@ export interface InvitationContent {
   };
 }
 
+/**
+ * Contenu du flux « mot de passe oublié » (L10 · VAGUE 2) — jeton stateless
+ * signé HMAC, valable 30 minutes, aucune table (voir `src/actions/
+ * password-reset.ts` pour les limites documentées).
+ */
+export interface PasswordResetContent {
+  /** Page `/{locale}/mot-de-passe-oublie` : demande par e-mail. */
+  forgot: {
+    title: string;
+    subtitle: string;
+    emailLabel: string;
+    submit: string;
+    submitLoading: string;
+    /** Message après soumission — TOUJOURS le même, même compte inconnu (C4). */
+    success: string;
+    /** Libellé du lien « mot de passe oublié ? » sous le formulaire de
+     *  connexion (remplace l'ancien texte mort `login.forgotNote`). */
+    linkLabel: string;
+  };
+  /** Page `/{locale}/reinitialisation?token=…` : choix du nouveau mot de passe. */
+  reset: {
+    title: string;
+    subtitle: string;
+    passwordLabel: string;
+    passwordConfirmLabel: string;
+    submit: string;
+    submitLoading: string;
+    successTitle: string;
+    successBody: string;
+    /** Lien de CTA après succès → `/{locale}/connexion` (libellé `login.submit`). */
+    signIn: string;
+    /** Jeton absent, expiré ou invalide — un SEUL message, aucun détail (C4). */
+    invalidToken: string;
+    /** Repli pour tout code inattendu + erreur réseau → `login.errors.generic`. */
+    errorGeneric: string;
+    /** Service de réinitialisation inopérant côté serveur → `login.errors.config`. */
+    errorService: string;
+  };
+  /** Textes de l'e-mail de réinitialisation. */
+  email: {
+    /** Objet de l'e-mail. */
+    subject: string;
+    /** Corps — placeholder littéral `{{link}}` remplacé côté serveur avant envoi. */
+    body: string;
+  };
+}
+
 /** Contenu authentification racine. */
 export interface AuthContent {
   login: LoginContent;
   signup: SignupContent;
   validation: ValidationContent;
   invitation: InvitationContent;
+  passwordReset: PasswordResetContent;
 }
 
 // ---------------------------------------------------------------------------
@@ -1113,6 +1159,11 @@ export interface PlatformSeoContent {
   dashboard: PlatformSeoMeta;
   /** Page publique d'activation d'une invitation client. */
   invitation: PlatformSeoMeta;
+  /** Pages du flux « mot de passe oublié » (demande puis réinitialisation). */
+  passwordReset: {
+    forgot: PlatformSeoMeta;
+    reset: PlatformSeoMeta;
+  };
   /** Page projet du portail client. */
   clientPortal: PlatformSeoMeta;
 }

@@ -62,6 +62,7 @@ export const fr: PlatformContent = {
       { label: "Tableau de bord", href: "/espace/tableau-de-bord" },
       { label: "Mes prospects", href: "/espace/prospects" },
       { label: "Mes gains", href: "/espace/commissions" },
+      { label: "Contrat", href: "/espace/contrat" },
     ],
     client: [{ label: "Mon projet", href: "/espace/projet" }],
     logout: "Déconnexion",
@@ -79,7 +80,6 @@ export const fr: PlatformContent = {
       passwordLabel: "Mot de passe",
       submit: "Se connecter",
       submitLoading: "Connexion en cours…",
-      forgotNote: "Mot de passe oublié ? Contactez votre administrateur.",
       signupLink: "Candidatez pour obtenir un accès",
       errors: {
         invalid: "Adresse email ou mot de passe incorrect.",
@@ -141,6 +141,40 @@ export const fr: PlatformContent = {
           subject: "Votre espace client Atheris",
           body: "Bonjour {{name}},\n\nNous sommes ravis de vous accueillir. Votre compte est créé via ce lien personnel, valable 48 heures.\n\n{{link}}\n\nL’équipe Atheris",
         },
+      },
+    },
+    passwordReset: {
+      forgot: {
+        title: "Mot de passe oublié",
+        subtitle:
+          "Indiquez votre adresse email. Si un compte correspond, vous recevrez un lien pour choisir un nouveau mot de passe.",
+        emailLabel: "Adresse email",
+        submit: "Recevoir un lien de réinitialisation",
+        submitLoading: "Envoi en cours…",
+        success:
+          "Si un compte correspond à cette adresse, un e-mail de réinitialisation vient d’être envoyé. Consultez votre boîte de réception (et vos spams).",
+        linkLabel: "Mot de passe oublié ?",
+      },
+      reset: {
+        title: "Nouveau mot de passe",
+        subtitle: "Choisissez un nouveau mot de passe pour votre compte.",
+        passwordLabel: "Nouveau mot de passe",
+        passwordConfirmLabel: "Confirmer le nouveau mot de passe",
+        submit: "Réinitialiser mon mot de passe",
+        submitLoading: "Réinitialisation en cours…",
+        successTitle: "Mot de passe réinitialisé",
+        successBody:
+          "Votre mot de passe a bien été modifié. Connectez-vous avec votre nouveau mot de passe.",
+        signIn: "Se connecter",
+        invalidToken:
+          "Ce lien de réinitialisation est expiré ou invalide. Demandez-en un nouveau.",
+        errorGeneric: "Une erreur est survenue. Veuillez réessayer.",
+        errorService:
+          "Le service de réinitialisation est momentanément indisponible. Réessayez dans quelques instants.",
+      },
+      email: {
+        subject: "Réinitialisation de votre mot de passe",
+        body: "Bonjour,\n\nVous avez demandé la réinitialisation de votre mot de passe Atheris. Ce lien est personnel et valable 30 minutes :\n\n{{link}}\n\nSi vous n’êtes pas à l’origine de cette demande, ignorez cet e-mail : votre mot de passe reste inchangé.\n\nL’équipe Atheris",
       },
     },
   },
@@ -741,6 +775,18 @@ export const fr: PlatformContent = {
       title: "Activation | ATHERIS LABS",
       description:
         "Activez votre espace client ATHERIS LABS et suivez votre projet en ligne.",
+    },
+    passwordReset: {
+      forgot: {
+        title: "Mot de passe oublié | ATHERIS LABS",
+        description:
+          "Recevez un lien sécurisé pour réinitialiser le mot de passe de votre espace ATHERIS LABS.",
+      },
+      reset: {
+        title: "Nouveau mot de passe | ATHERIS LABS",
+        description:
+          "Choisissez un nouveau mot de passe pour votre compte ATHERIS LABS.",
+      },
     },
     clientPortal: {
       title: "Mon projet | ATHERIS LABS",

@@ -58,6 +58,7 @@ export const en = {
       { label: "Dashboard", href: "/espace/tableau-de-bord" },
       { label: "My prospects", href: "/espace/prospects" },
       { label: "My earnings", href: "/espace/commissions" },
+      { label: "Contract", href: "/espace/contrat" },
     ],
     client: [{ label: "My project", href: "/espace/projet" }],
     logout: "Sign out",
@@ -75,7 +76,6 @@ export const en = {
       passwordLabel: "Password",
       submit: "Sign in",
       submitLoading: "Signing in…",
-      forgotNote: "Forgot your password? Contact your administrator.",
       signupLink: "Apply for platform access",
       errors: {
         invalid: "Incorrect email or password.",
@@ -135,6 +135,40 @@ export const en = {
           subject: "Your Atheris client portal",
           body: "Hello {{name}},\n\nWe are pleased to welcome you. Your account is created through this personal link, valid for 48 hours.\n\n{{link}}\n\nThe Atheris team",
         },
+      },
+    },
+    passwordReset: {
+      forgot: {
+        title: "Forgot your password",
+        subtitle:
+          "Enter your email address. If an account matches, you will receive a link to choose a new password.",
+        emailLabel: "Email address",
+        submit: "Send a reset link",
+        submitLoading: "Sending…",
+        success:
+          "If an account matches this address, a reset email has just been sent. Check your inbox (and your spam folder).",
+        linkLabel: "Forgot your password?",
+      },
+      reset: {
+        title: "New password",
+        subtitle: "Choose a new password for your account.",
+        passwordLabel: "New password",
+        passwordConfirmLabel: "Confirm new password",
+        submit: "Reset my password",
+        submitLoading: "Resetting…",
+        successTitle: "Password reset",
+        successBody:
+          "Your password has been changed. Sign in with your new password.",
+        signIn: "Sign in",
+        invalidToken:
+          "This reset link has expired or is invalid. Request a new one.",
+        errorGeneric: "Something went wrong. Please try again.",
+        errorService:
+          "The reset service is temporarily unavailable. Please try again in a few moments.",
+      },
+      email: {
+        subject: "Reset your password",
+        body: "Hello,\n\nYou asked to reset your Atheris password. This link is personal and valid for 30 minutes:\n\n{{link}}\n\nIf you were not behind this request, ignore this email: your password is unchanged.\n\nThe Atheris team",
       },
     },
   },
@@ -731,6 +765,17 @@ export const en = {
     invitation: {
       title: "Activate | ATHERIS LABS",
       description: "Activate your ATHERIS LABS client portal and follow your project online.",
+    },
+    passwordReset: {
+      forgot: {
+        title: "Forgot your password | ATHERIS LABS",
+        description:
+          "Receive a secure link to reset the password of your ATHERIS LABS workspace.",
+      },
+      reset: {
+        title: "New password | ATHERIS LABS",
+        description: "Choose a new password for your ATHERIS LABS account.",
+      },
     },
     clientPortal: {
       title: "My project | ATHERIS LABS",

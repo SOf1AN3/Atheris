@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AlertCircle } from "lucide-react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -42,7 +43,12 @@ export type LoginFormLabels = {
   passwordLabel: string;
   submit: string;
   submitLoading: string;
-  forgotNote: string;
+  /**
+   * Libellé du lien « Mot de passe oublié ? » → `/{locale}/mot-de-passe-oublie`
+   * (L10 — remplace l'ancien texte mort `forgotNote` « contactez
+   * l'administrateur », qui ne menait nulle part).
+   */
+  forgotLink: string;
   /**
    * @deprecated L'inscription libre (`/{locale}/inscription`) a été supprimée
    * (Lot 3 : comptes sur invitation uniquement) — le CTA n'est plus rendu ;
@@ -254,8 +260,15 @@ export function LoginForm({ locale, labels, messages }: LoginFormProps) {
         </div>
       ) : null}
 
+      {/* Lien « mot de passe oublié » (L10) : navigation classique, accessible
+          clavier, cible ≥ 44 px — remplace le texte mort `forgotNote`. */}
       <p className="text-center text-[13px] leading-snug text-muted">
-        {labels.forgotNote}
+        <Link
+          href={`/${locale}/mot-de-passe-oublie`}
+          className="inline-flex min-h-11 items-center underline underline-offset-4 transition-colors hover:text-fg focus-visible:text-fg focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-[3px]"
+        >
+          {labels.forgotLink}
+        </Link>
       </p>
 
       {/* Pas de CTA d'inscription : les comptes naissent uniquement d'un lien
