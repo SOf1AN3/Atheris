@@ -290,6 +290,15 @@ export const ELIMINATORY_QUESTION_ID = "s4q1";
 /** Seule réponse qui NE fait PAS échouer l'examen. */
 export const ELIMINATORY_ACCEPTED_ANSWER = "yes";
 
+/**
+ * Longueur du jeton d'accès en bytes (32 → 64 chars hex), et motif de
+ * validation. Miroir strict de `interviews.token` : le jeton est la SEULE
+ * clé d'accès à une session — jamais un id d'application (public et
+ * devinable), d'où cette entropie (2^256, zéro énumération possible).
+ */
+export const EXAM_TOKEN_BYTES = 32;
+export const EXAM_TOKEN_PATTERN = /^[a-f0-9]{64}$/;
+
 /** Toutes les questions d'une section, dans l'ordre du barème. */
 export function questionsForSection(section: ExamSection): ExamQuestion[] {
   return EXAM_QUESTIONS.filter((question) => question.section === section);
@@ -302,6 +311,31 @@ export const SECTION_TITLES: Record<ExamSection, Record<Locale, string>> = {
   3: { fr: "Prospection & génération de leads", en: "Prospecting & lead generation" },
   4: { fr: "Modèle de commission", en: "Commission model agreement" },
 };
+
+/**
+ * Vérifie qu'un jeu de réponses correspond EXACTEMENT aux questions d'une
+ * section donnée du barème.
+ *
+ * C'est le garde anti-injection de l'autosauvegarde : une question inconnue
+ * (forgée) ou une question d'une AUTRE section est rejetée. Sans ce contrôle,
+ * un client compromis écrirait la réponse de la section 4 (éliminatoire) en
+ * appelant la section 2. Le serveur n'écrit jamais ce qu'il n'expose pas.
+ *
+ * @param section Section attendue (1–4).
+ * @param answers Clés reçues — seules ces clés sont examinées.
+ * @returns `true` si les clés reçues sont exactement les `questionId` de la
+ *   section, dans n'importe quel ordre.
+ */
+export function sectionAnswersAreCoherent(
+  section: ExamSection,
+  answers: Readonly<Record<string, string>>,
+): boolean {
+  const expected = questionsForSection(section);
+  const received = Object.keys(answers);
+  // Même cardinal ET mêmes clés : ni question étrangère, ni question fantôme.
+  if (received.length !== expected.length) return false;
+  return expected.every((question) => received.includes(question.id));
+}
 
 // ---------------------------------------------------------------------------
 // Validation — pure, sans Zod (codes métier explicites, zéro couplage).

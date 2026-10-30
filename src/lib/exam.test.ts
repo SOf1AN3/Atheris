@@ -16,6 +16,7 @@ import {
   isEliminatoryFailure,
   isExamComplete,
   questionsForSection,
+  sectionAnswersAreCoherent,
   validateAnswer,
   type ExamQuestion,
 } from "./exam";
@@ -228,5 +229,61 @@ describe("isExamComplete", () => {
 
   it("faux sur une map vide", () => {
     expect(isExamComplete(new Map())).toBe(false);
+  });
+});
+
+describe("sectionAnswersAreCoherent — garde anti-injection", () => {
+  it("accepte les clés EXACTES d'une section, quel que soit l'ordre", () => {
+    const section1 = questionsForSection(1);
+    const shuffled = Object.fromEntries(
+      [...section1].reverse().map((q) => [q.id, "une réponse valide suffisamment longue"]),
+    );
+    expect(sectionAnswersAreCoherent(1, shuffled)).toBe(true);
+  });
+
+  it("refuse une question d'une AUTRE section (vol de la section 4)", () => {
+    // Toutes les questions de la section 1 + `s4q1` en plus.
+    const forged: Record<string, string> = {};
+    for (const q of questionsForSection(1)) forged[q.id] = "réponse valide suffisante";
+    forged[ELIMINATORY_QUESTION_ID] = "yes";
+    // Cardinal différent → rejet (même si une clé manque, le compteur trahit).
+    expect(sectionAnswersAreCoherent(1, forged)).toBe(false);
+  });
+
+  it("refuse une clé de section 4 substituée à une vraie question", () => {
+    const section2 = questionsForSection(2);
+    const forged: Record<string, string> = {};
+    for (const q of section2) forged[q.id] = "réponse valide suffisante";
+    // Remplace la DERNIÈRE question de la section 2 par la question éliminatoire.
+    const last = section2[section2.length - 1];
+    if (last) delete forged[last.id];
+    forged[ELIMINATORY_QUESTION_ID] = "yes";
+    expect(sectionAnswersAreCoherent(2, forged)).toBe(false);
+  });
+
+  it("refuse une question inconnue (fantôme hors barème)", () => {
+    const forged: Record<string, string> = {};
+    for (const q of questionsForSection(3)) forged[q.id] = "réponse valide suffisante";
+    forged.s9q9 = "réponse valide suffisante";
+    expect(sectionAnswersAreCoherent(3, forged)).toBe(false);
+  });
+
+  it("refuse une section incomplète", () => {
+    const section1 = questionsForSection(1);
+    const partial: Record<string, string> = {};
+    for (const q of section1.slice(0, -1)) partial[q.id] = "réponse valide suffisante";
+    expect(sectionAnswersAreCoherent(1, partial)).toBe(false);
+  });
+
+  it("refuse une map vide", () => {
+    expect(sectionAnswersAreCoherent(1, {})).toBe(false);
+  });
+
+  it("chaque section est cohérente avec elle-même (barème non vide)", () => {
+    for (const s of EXAM_SECTIONS) {
+      const answers: Record<string, string> = {};
+      for (const q of questionsForSection(s)) answers[q.id] = "réponse valide suffisante";
+      expect(sectionAnswersAreCoherent(s, answers)).toBe(true);
+    }
   });
 });

@@ -41,8 +41,10 @@
  */
 
 import { headers } from "next/headers";
+import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
+import { examRelativeUrl, startExam } from "@/actions/exams";
 import { getDb } from "@/lib/db";
 import { jobApplications } from "@/lib/db/schema";
 import { activeUserIdsByRoles, notify } from "@/lib/notify";
@@ -57,8 +59,18 @@ import { normalizeEmail } from "@/lib/prospect-dedup";
 /** Codes d'échec d'`applyToJob` — traduits côté client, jamais servis en message. */
 export type ApplyToJobFailureCode = "invalid" | "too_large" | "bad_type" | "rate_limited" | "failed";
 
-/** Contrat d'`applyToJob` : union discriminée par `ok`. */
-export type ApplyToJobResult = { ok: true } | { ok: false; code: ApplyToJobFailureCode };
+/**
+ * Contrat d'`applyToJob` : union discriminée par `ok`.
+ *
+ * `examUrl` — URL relative du parcours d'examen, générée **automatiquement**
+ * au dépôt (décision « zéro-interview » : aucune intervention CEO).
+ * `null` = création de session échouée → la candidature existe quand même et
+ * le CEO peut générer un lien manuellement. **Non fatal** : un candidat ne
+ * perd jamais sa candidature à cause du sous-système d'examen.
+ */
+export type ApplyToJobResult =
+  | { ok: true; examUrl: string | null }
+  | { ok: false; code: ApplyToJobFailureCode };
 
 // ---------------------------------------------------------------------------
 // Schéma Zod (v4) — validation systématique AVANT toute lecture de fichier.
@@ -355,28 +367,61 @@ async function processApplication(formData: FormData): Promise<ApplyToJobResult>
   //    candidature non stockée ne doit pas déclencher de notification
   //    orpheline. Le rate-limit n'est consommé qu'après ce point.
   const { firstName, lastName, email, message, locale } = parsed.data;
+  const appLocale = locale ?? "fr";
   const db = getDb();
+  let applicationId: string;
   try {
-    await db.insert(jobApplications).values({
-      firstName,
-      lastName,
-      email,
-      emailNorm: normalizeEmail(email),
-      locale: locale ?? "fr",
-      message: message !== undefined && message.length > 0 ? message : null,
-      status: "nouveau",
-      // CV facultatif : les 4 colonnes sont renseignées ENSEMBLE ou pas du
-      // tout (contrat d'atomicité commenté dans le schema).
-      cvFilename: filename,
-      cvMimeType: mimeType,
-      cvByteSize: bytes === null ? null : bytes.length,
-      cvBytes: bytes,
-    });
+    // `.returning()` : l'id est nécessaire à la création de la session d'examen
+    // juste après (FK `exam_sessions.application_id`).
+    const inserted = await db
+      .insert(jobApplications)
+      .values({
+        firstName,
+        lastName,
+        email,
+        emailNorm: normalizeEmail(email),
+        locale: appLocale,
+        message: message !== undefined && message.length > 0 ? message : null,
+        status: "nouveau",
+        // CV facultatif : les 4 colonnes sont renseignées ENSEMBLE ou pas du
+        // tout (contrat d'atomicité commenté dans le schema).
+        cvFilename: filename,
+        cvMimeType: mimeType,
+        cvByteSize: bytes === null ? null : bytes.length,
+        cvBytes: bytes,
+      })
+      .returning({ id: jobApplications.id });
+    const row = inserted[0];
+    if (row === undefined) throw new Error("INSERT sans ligne retournée");
+    applicationId = row.id;
   } catch (error) {
     // Échec DB : aucun e-mail admin envoyé, code `failed` — le candidat
     // peut réessayer immédiatement (pas de consommation de quota).
     console.error("[careers] candidature non enregistrée en base", error);
     return { ok: false, code: "failed" };
+  }
+
+  // 5-ter. Session d'examen — GÉNÉRÉE AUTOMATIQUEMENT (décision zéro-interview,
+  // aucune intervention CEO). NON FATALE : `startExam` ne throw jamais et
+  // renvoie `null` en cas d'échec → la candidature reste en base avec le statut
+  // `nouveau`, et le CEO peut générer un lien manuellement. Le statut ne bascule
+  // en `exam_pending` QUE si la session existe réellement (jamais de statut qui
+  // promet un examen inexistant).
+  let examUrl: string | null = null;
+  const examToken = await startExam(applicationId, appLocale);
+  if (examToken !== null) {
+    examUrl = examRelativeUrl(examToken, appLocale);
+    try {
+      await db
+        .update(jobApplications)
+        .set({ status: "exam_pending", updatedAt: sql`now()` })
+        .where(eq(jobApplications.id, applicationId));
+    } catch (error) {
+      // Le statut n'a pas suivi : la session existe mais la candidature reste
+      // `nouveau` (état conservateur, cohérent avec l'UI CEO). Non fatal.
+      console.error("[careers] statut exam_pending non appliqué", error);
+      examUrl = null;
+    }
   }
 
   // 5-bis. Notification `application_created` — NON FATALE, écrite APRÈS
@@ -420,7 +465,7 @@ async function processApplication(formData: FormData): Promise<ApplyToJobResult>
     );
   }
 
-  return { ok: true };
+  return { ok: true, examUrl };
 }
 
 /**
