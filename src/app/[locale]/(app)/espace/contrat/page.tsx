@@ -42,7 +42,7 @@ function errorBlock(retryLabel: string): React.JSX.Element {
   return (
     <div
       role="alert"
-      className="max-w-[720px] rounded-[20px] border border-line bg-surface px-6 py-12 text-center"
+      className="w-full rounded-[20px] border border-line bg-surface px-6 py-12 text-center"
     >
       <p className="text-[15px] font-semibold text-fg">{retryLabel}</p>
     </div>
@@ -122,7 +122,7 @@ export default async function ContratPage({
     consentBlock = (
       <div
         role="status"
-        className="flex max-w-[720px] flex-col gap-4 rounded-[20px] border border-accent/35 bg-accent/10 p-7"
+        className="flex w-full flex-col gap-4 rounded-[20px] border border-accent/35 bg-accent/10 p-7"
       >
         <Badge variant="verified">{contract.acceptedTitle}</Badge>
         <p className="text-[15px] leading-[1.65] text-fg">
@@ -142,7 +142,9 @@ export default async function ContratPage({
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    // Colonne de contenu centrée (`mx-auto`) et élargie (860px) — marges
+    // latérales réduites demandées en revue client.
+    <div className="mx-auto flex w-full max-w-[860px] flex-col gap-6 px-5">
       <div className="flex flex-col gap-3">
         <h1 className="h-display text-[clamp(1.75rem,3vw,2.5rem)] text-fg">
           {contract.title}
@@ -157,11 +159,13 @@ export default async function ContratPage({
 
       <Reveal>
         <div className="flex flex-col gap-6">
-          {/* Les 9 clauses — colonne contrainte, rendues côté serveur
+          {/* Les 9 clauses — TEXTE NU centré dans la colonne (revue client) :
+              titre + paragraphe séparés par un filet discret, SANS carte
+              (ni bordure, ni fond, ni arrondi). Rendues côté serveur
               (texte contractuel, aucun état client). */}
           <section
             aria-labelledby="contract-clauses-title"
-            className="flex max-w-[720px] flex-col gap-4"
+            className="flex flex-col gap-4"
           >
             <h2
               id="contract-clauses-title"
@@ -169,11 +173,11 @@ export default async function ContratPage({
             >
               {contract.clausesTitle}
             </h2>
-            <ol className="flex flex-col gap-4">
+            <ol className="flex flex-col">
               {contract.clauses.map((clause, index) => (
                 <li
                   key={clause.id}
-                  className="rounded-[20px] border border-line bg-surface px-6 py-5"
+                  className="border-b border-line py-5 first:pt-0 last:border-b-0 last:pb-0"
                 >
                   <div className="flex items-baseline gap-3">
                     <span aria-hidden="true" className="micro text-faint">

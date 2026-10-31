@@ -61,11 +61,17 @@ export type PipelineRow = ProspectListItem & {
   reminderLabel?: string | null;
 };
 
-/** Libellés de colonnes, résolus dans `dict.pipeline.columns` côté serveur. */
+/**
+ * Libellés de colonnes, résolus dans `dict.pipeline.columns` côté serveur.
+ *
+ * RETOUR CLIENT (PLAN-REFONTE §1) : **plus de colonne « Source »** — le
+ * pipeline n'affiche jamais l'origine (`ldg`, …) d'un prospect : les lignes
+ * affichées sont déjà scopées au périmètre du spectateur (`source_user_id`),
+ * mentionner la source n'a aucune valeur d'affichage.
+ */
 export type PipelineColumnLabels = {
   name: string;
   status: string;
-  source: string;
   lastActivity: string;
   reminder: string;
 };
@@ -156,7 +162,6 @@ export function PipelineTable({
                   couche `base` de globals.css. */}
               <TableHead className="w-[28%]">{columnLabels.name}</TableHead>
               <TableHead>{columnLabels.status}</TableHead>
-              <TableHead>{columnLabels.source}</TableHead>
               <TableHead>{columnLabels.lastActivity}</TableHead>
               {showReminder ? <TableHead>{columnLabels.reminder}</TableHead> : null}
             </TableRow>
@@ -189,12 +194,6 @@ export function PipelineTable({
                       status={item.status}
                       label={statusLabels[item.status]}
                     />
-                  </TableCell>
-                  {/* Source : badge neutre (§12.3 — ni couleur ni décor). */}
-                  <TableCell>
-                    <span className="inline-flex items-center whitespace-nowrap rounded-lg border border-line bg-surface-2 px-2.5 py-[5px] text-xs font-medium text-muted">
-                      {item.source}
-                    </span>
                   </TableCell>
                   <TableCell className="text-sm tabular-nums text-muted">
                     {item.dateLabel}
@@ -248,7 +247,7 @@ export function PipelineTable({
                 </span>
 
                 {/* Colonnes restantes, en blocs libellés séparés par un
-                    filet `border-line` (statut, source, activité, relance). */}
+                    filet `border-line` (statut, activité, relance). */}
                 <span className="mt-3 flex flex-col border-t border-line">
                   <span className="flex flex-col gap-1.5 py-2.5">
                     <span className="micro text-muted">{columnLabels.status}</span>
@@ -258,10 +257,6 @@ export function PipelineTable({
                         label={statusLabels[item.status]}
                       />
                     </span>
-                  </span>
-                  <span className="flex flex-col gap-1.5 border-t border-line py-2.5">
-                    <span className="micro text-muted">{columnLabels.source}</span>
-                    <span className="text-sm text-fg">{item.source}</span>
                   </span>
                   <span className="flex flex-col gap-1.5 border-t border-line py-2.5">
                     <span className="micro text-muted">

@@ -59,10 +59,8 @@ export interface NavContent {
   brand: Brand;
   /** 4 items : Services, Réalisations, Technologies, Méthode. */
   items: NavItem[];
-  ctaLabel: string;
-  /** Libellé COMPACT du CTA — barre 1024–1279px (spec header v2.1 H4). */
-  ctaShort: string;
-  /** Accès dashboard — lien SUBTIL du header, jamais dans `items`. */
+  /** Accès dashboard — SEUL aplat volt du header (bouton « Connexion »),
+   *  jamais dans `items`. */
   loginLabel: string;
 }
 

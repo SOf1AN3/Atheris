@@ -18,10 +18,15 @@
  * dans un nouvel onglet (`rel="noopener noreferrer"`).
  *
  * ─── DÉCISIONS ─────────────────────────────────────────────────────────────
- * Seules deux actions vivent ici : « Dossier » (détail déplié) et
- * « Générer le lien d'examen ». Les décisions **Recruter** / **Refuser**
- * (e-mail de refus via `ApplicationEmailModal`) ont été déplacées sur la
- * page `/espace/examen` (parcours zero-interview).
+ * Seules trois actions vivent ici : « Dossier » (détail déplié),
+ * « Générer le lien d'examen » puis — une fois le lien affiché (URL
+ * absolue + copie) — « Envoyer par e-mail », qui ouvre
+ * `ApplicationEmailModal` en `kind="exam_invite"` : aperçu du modèle
+ * prérempli AVEC le lien substitué, vérification par le CEO, envoi réel via
+ * `sendExamInviteEmail`. La bascule `exam_pending` n'a lieu côté serveur
+ * qu'après l'envoi effectif (retour client), jamais à la génération. Les
+ * décisions **Recruter** / **Refuser** (e-mail de refus via
+ * `ApplicationEmailModal`) restent sur la page `/espace/examen`.
  *
  * ─── RESPONSIVE ────────────────────────────────────────────────────────────
  * ≥ md : tableau inchangé (`hidden md:block`). < md : chaque candidature
@@ -50,6 +55,7 @@ import {
   type JobApplicationDetail,
 } from "@/actions/recrutement";
 import { Button } from "@/components/ui/Button";
+import { ApplicationEmailModal } from "@/components/app/ApplicationEmailModal";
 import type { ApplicationRow } from "@/app/[locale]/(app)/espace/recrutement/page";
 import type {
   JobApplicationStatus,
@@ -204,6 +210,20 @@ export function ApplicationsPanel({
   /** Confirmation de copie (réinitialisée par le caller). */
   const [copied, setCopied] = useState(false);
 
+  // ── Envoi du lien d'examen par e-mail ────────────────────────────────────
+  /**
+   * Cible du modal `kind="exam_invite"` : tout ce qui manque au rendu du
+   * modal est figé à l'ouverture (libellés et candidat provenant de la
+   * ligne projetée, lien absolu issu de `generateExamLink`).
+   */
+  const [examEmailTarget, setExamEmailTarget] = useState<{
+    applicationId: string;
+    firstName: string;
+    lastName: string;
+    locale: Locale;
+    examUrl: string;
+  } | null>(null);
+
   const visibleRows =
     filter === "all" ? rows : rows.filter((row) => row.status === filter);
 
@@ -253,8 +273,13 @@ export function ApplicationsPanel({
       const result = await generateExamLink(row.id);
       if (result.ok) {
         setExamLink({ id: row.id, url: result.examUrl, existing: !result.created });
-        if (!result.created) setNotice(labels.examLinkExisting);
-        // Statut basculé en `exam_pending` côté serveur → liste à jour.
+        // `created` → « Lien généré » ; sinon le lien existant est réutilisé.
+        setNotice(
+          result.created ? labels.modal.examLinkGenerated : labels.examLinkExisting,
+        );
+        // Session éventuellement créée côté serveur → liste à jour. ATTENTION :
+        // le statut NE BASCULE PLUS ici (`exam_pending` est posé par
+        // `sendExamInviteEmail`, après envoi réel de l'e-mail).
         router.refresh();
       } else {
         setExamLinkError(
@@ -279,6 +304,25 @@ export function ApplicationsPanel({
     } catch {
       setCopied(false);
     }
+  }
+
+  /**
+   * Ouvre l'aperçu d'e-mail (`kind="exam_invite"`) pour le lien déjà généré :
+   * le CEO vérifie le modèle prérempli AVEC le lien absolu, puis envoie.
+   *
+   * La ligne projetée porte un `candidateName` combiné ; le modal attend
+   * prénom et nom séparés → découpe sur le premier espace (affichage seul,
+   * le serveur relit ses propres champs en base).
+   */
+  function handleOpenExamEmail(row: ApplicationRow, examUrl: string): void {
+    const parts = row.candidateName.trim().split(/\s+/);
+    setExamEmailTarget({
+      applicationId: row.id,
+      firstName: parts[0] ?? "",
+      lastName: parts.slice(1).join(" "),
+      locale: row.locale,
+      examUrl,
+    });
   }
 
   /**
@@ -651,35 +695,76 @@ export function ApplicationsPanel({
         </p>
       ) : null}
 
-      {/* Lien d'examen généré : URL + copie (le CEO l'envoie tel quel).
-          Le nom du candidat est affiché : le lien seul ne dit pas QUI contacter. */}
-      {examLink !== null ? (
-        (() => {
-          const owner = rows.find((r) => r.id === examLink.id);
-          return (
-            <div className="flex flex-col gap-2 rounded-[20px] border border-line bg-surface p-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <span className="micro text-faint">
-                  {labels.examLinkLabel}
-                  {owner ? ` — ${owner.candidateName}` : ""}
-                </span>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => {
-                    void handleCopyExamLink(examLink.url);
-                  }}
-                >
-                  {copied ? labels.linkCopied : labels.copyLink}
-                </Button>
+      {/* Lien d'examen généré : URL ABSOLUE + copie + envoi par e-mail.
+          Le nom du candidat est affiché : le lien seul ne dit pas QUI
+          contacter. « Envoyer par e-mail » ouvre l'aperçu de la template
+          `exam_invite` déjà substituée (vérification avant envoi réel). */}
+      {examLink !== null
+        ? (() => {
+            const owner = rows.find((r) => r.id === examLink.id);
+            return (
+              <div className="flex flex-col gap-2 rounded-[20px] border border-line bg-surface p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <span className="micro text-faint">
+                    {labels.examLinkLabel}
+                    {owner ? ` — ${owner.candidateName}` : ""}
+                  </span>
+                  <span className="flex flex-wrap items-center gap-2">
+                    {owner !== undefined ? (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => {
+                          handleOpenExamEmail(owner, examLink.url);
+                        }}
+                      >
+                        {labels.modal.examEmailAction}
+                      </Button>
+                    ) : null}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        void handleCopyExamLink(examLink.url);
+                      }}
+                    >
+                      {copied ? labels.linkCopied : labels.copyLink}
+                    </Button>
+                  </span>
+                </div>
+                <code className="block break-all rounded-xl border border-line bg-ink-2 px-3 py-2 text-[13px] leading-[1.55] text-fg">
+                  {examLink.url}
+                </code>
               </div>
-              <code className="block break-all rounded-xl border border-line bg-ink-2 px-3 py-2 text-[13px] leading-[1.55] text-fg">
-                {examLink.url}
-              </code>
-            </div>
-          );
-        })()
+            );
+          })()
+        : null}
+
+      {/* Aperçu + envoi de l'invitation d'examen (modal uni-
+          `kind="exam_invite"` : modèle prérempli AVEC le lien, boutons
+          Annuler / Envoyer, codes bruts traduits via `labels.modal`). */}
+      {examEmailTarget !== null ? (
+        <ApplicationEmailModal
+          kind="exam_invite"
+          applicationId={examEmailTarget.applicationId}
+          candidateFirstName={examEmailTarget.firstName}
+          candidateLastName={examEmailTarget.lastName}
+          applicationLocale={examEmailTarget.locale}
+          examUrl={examEmailTarget.examUrl}
+          labels={{ modal: labels.modal }}
+          onClose={() => {
+            setExamEmailTarget(null);
+          }}
+          onSent={() => {
+            // Envoi OK : le serveur a posé `exam_pending` (si la candidature
+            // était encore `nouveau`) → toast de succès + liste rafraîchie.
+            setExamEmailTarget(null);
+            setNotice(labels.modal.successExamInvite);
+            router.refresh();
+          }}
+        />
       ) : null}
 
       <section aria-labelledby="recruitment-list-title" className="flex flex-col gap-4">

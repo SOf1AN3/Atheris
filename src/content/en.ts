@@ -27,8 +27,6 @@ export const en: SiteContent = {
       { label: "Technologies", href: "#technologies" },
       { label: "Process", href: "#methode" },
     ],
-    ctaLabel: "Request a quote",
-    ctaShort: "Quote",
     loginLabel: "Sign in",
   },
 

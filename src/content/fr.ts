@@ -28,8 +28,6 @@ export const fr: SiteContent = {
       { label: "Technologies", href: "#technologies" },
       { label: "Méthode", href: "#methode" },
     ],
-    ctaLabel: "Demander un devis",
-    ctaShort: "Devis",
     loginLabel: "Connexion",
   },
 

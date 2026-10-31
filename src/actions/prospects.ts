@@ -113,7 +113,12 @@ export type ProspectListItem = {
   company: string | null;
   email: string;
   status: ProspectStatus;
-  source: ProspectSource;
+  /**
+   * `source` volontairement ABSENTE (RETOUR CLIENT PLAN-REFONTE §1) : le
+   * pipeline n'affiche plus l'origine d'un prospect, inutile de la renvoyer.
+   * La colonne DB `prospects.source` reste en place (stockage : création par
+   * formulaire de contact / import landing — hors périmètre de la liste).
+   */
   sourceUserId: string | null;
   nextReminderAt: Date | null;
   /**
@@ -482,7 +487,6 @@ export async function listProspects(
           company: prospects.company,
           email: prospects.email,
           status: prospects.status,
-          source: prospects.source,
           sourceUserId: prospects.sourceUserId,
           nextReminderAt: prospects.nextReminderAt,
           updatedAt: prospects.updatedAt,

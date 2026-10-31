@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { LogIn, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -355,7 +355,7 @@ export function Header({ nav, a11y, className }: HeaderProps): ReactNode {
           {/* Spacer droit (flex:1, plancher 24px) — équilibre la respiration gauche */}
           <span aria-hidden="true" className="hidden min-w-6 flex-1 lg:block" />
 
-          {/* Module 3 — module d'action UNIQUE : locale texte │ Connexion fantôme │ CTA */}
+          {/* Module 3 — module d'action UNIQUE : locale texte │ Connexion */}
           <div className="ml-auto flex shrink-0 items-center gap-3 lg:ml-0">
             {/* Locale en TEXTE mono 11px caps (H1 : plus de pill, plus de
                 bordure, plus de rayon) — l'actif porte son filet volt 1px,
@@ -369,27 +369,12 @@ export function Header({ nav, a11y, className }: HeaderProps): ReactNode {
               aria-hidden="true"
               className="hidden h-4 w-px shrink-0 bg-line-2 lg:block"
             />
-            {/* `Connexion` rétrogradée : fantôme mono 11px caps `faint` → `fg`
-                au survol, SANS icône (fin du 4ᵉ vocabulaire d'icône) et FIN du
-                `hidden xl:inline` (H2) : lisible de 1024 à 1440. Toujours
-                `/{locale}/connexion` via `useParams()` — aucun code en dur. */}
-            <Link
-              href={loginHref}
-              className={cn(
-                "hidden min-h-11 shrink-0 items-center px-2 micro text-faint",
-                "transition-colors duration-150 hover:text-fg lg:inline-flex",
-                EASE_CURVE,
-                FOCUS_RING,
-              )}
-            >
+            {/* CTA §2.6 — SEUL aplat volt de la barre : bouton « Connexion »
+                (i18n `nav.loginLabel`) vers `/{locale}/connexion` via
+                `loginHref` — aucun libellé ni URL en dur (C2), et UN SEUL
+                bouton connexion (plus de lien fantôme en doublon). */}
+            <Button variant="primary" size="sm" href={loginHref}>
               {nav.loginLabel}
-            </Link>
-            {/* CTA §2.6 — SEUL aplat volt de la barre : libellé long `ctaLabel`
-                ≥ 1280px (xl), libellé court `ctaShort` entre 1024 et 1279px ET
-                sur mobile (H7 : le devis est à 1 clic, pas à 2). */}
-            <Button variant="primary" size="sm" href="#contact">
-              <span className="hidden xl:inline">{nav.ctaLabel}</span>
-              <span className="xl:hidden">{nav.ctaShort}</span>
             </Button>
           </div>
 
@@ -485,36 +470,18 @@ export function Header({ nav, a11y, className }: HeaderProps): ReactNode {
               </nav>
             </div>
 
-            {/* Pied du panneau : locale + accès dashboard subtil + CTA */}
+            {/* Pied du panneau : locale + UN SEUL bouton « Connexion »
+                (aplat volt, i18n `nav.loginLabel`) vers `/{locale}/connexion`. */}
             <div className="flex shrink-0 flex-col gap-4 border-t border-line px-[clamp(1.25rem,5vw,2.5rem)] py-6">
               <LocaleSwitcher label={a11y.switchLocale} className="self-start" />
-              {/* Même lien fantôme qu'en desktop : cible ≥ 44px, fantôme. */}
-              <Link
-                href={loginHref}
-                onClick={() => closeMenu(false)}
-                className={cn(
-                  "inline-flex min-h-11 items-center gap-1.5 micro text-faint",
-                  "transition-colors duration-150 hover:text-fg",
-                  EASE_CURVE,
-                  FOCUS_RING,
-                )}
-              >
-                <LogIn
-                  aria-hidden="true"
-                  focusable="false"
-                  className="h-4 w-4 shrink-0"
-                  strokeWidth={1.5}
-                />
-                {nav.loginLabel}
-              </Link>
               <Button
                 variant="primary"
                 size="md"
-                href="#contact"
+                href={loginHref}
                 className="w-full"
                 onClick={() => closeMenu(false)}
               >
-                {nav.ctaLabel}
+                {nav.loginLabel}
               </Button>
             </div>
           </motion.div>

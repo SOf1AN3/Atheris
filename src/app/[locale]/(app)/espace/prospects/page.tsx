@@ -187,7 +187,6 @@ export default async function ProspectsPage({
   const columnLabels: PipelineColumnLabels = {
     name: dict.pipeline.columns.name,
     status: dict.pipeline.columns.status,
-    source: dict.pipeline.columns.source,
     lastActivity: dict.pipeline.columns.lastActivity,
     reminder: dict.pipeline.columns.reminder,
   };

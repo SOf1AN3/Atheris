@@ -317,7 +317,8 @@ export default async function ProfilPage({
   }
 
   return (
-    <div className="flex w-full max-w-[560px] flex-col gap-4 sm:gap-6">
+    // Colonne centrée (`mx-auto`) et élargie (800px) — revue client.
+    <div className="mx-auto flex w-full max-w-[800px] flex-col gap-4 px-5 sm:gap-6">
       <h1 className="text-2xl font-bold tracking-[-0.02em] text-fg">
         {profile.title}
       </h1>

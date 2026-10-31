@@ -332,7 +332,11 @@ export interface PipelineContent {
     name: string;
     company: string;
     status: string;
-    source: string;
+    /**
+     * Pas de `source` (RETOUR CLIENT PLAN-REFONTE §1) : le pipeline
+     * n'affiche plus l'origine d'un prospect — ni en colonne de liste ni sur
+     * la fiche détail (`prospect.labels.source` supprimée).
+     */
     lastActivity: string;
     reminder: string;
   };
@@ -374,7 +378,6 @@ export interface ProspectContent {
     email: string;
     phone: string;
     company: string;
-    source: string;
     /** Bénéficiaire du prospect (`prospects.sourceUserId`). */
     owner: string;
     createdAt: string;
@@ -890,15 +893,27 @@ export interface RecruitmentContent {
   modal: {
     inviteTitle: string;
     rejectTitle: string;
+    /** Titre du modal d'invitation à l'examen (`kind="exam_invite"`). */
+    examInviteTitle: string;
+    /** Rappel d'aperçu : le lien d'examen absolu est déjà substitué. */
+    examPreviewLabel: string;
     subjectLabel: string;
     bodyLabel: string;
     bodyHint: string;
+    /** Indice de variables pour l'e-mail d'invitation d'examen (`{{lien}}` = lien du test). */
+    bodyHintExam: string;
     saveTemplateLabel: string;
     send: string;
     sending: string;
     cancel: string;
     successInvite: string;
     successReject: string;
+    /** Toast après envoi OK de l'invitation d'examen (statut basculé côté serveur). */
+    successExamInvite: string;
+    /** CTA « Envoyer par e-mail » — affiché après génération du lien d'examen (panel recrutement). */
+    examEmailAction: string;
+    /** Toast après génération (création) d'un lien d'examen. */
+    examLinkGenerated: string;
     loadError: string;
     errors: RecruitmentErrors;
   };

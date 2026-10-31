@@ -236,7 +236,6 @@ export const en = {
       name: "Name",
       company: "Company",
       status: "Status",
-      source: "Source",
       lastActivity: "Last activity",
       reminder: "Reminder",
     },
@@ -266,7 +265,6 @@ export const en = {
       email: "Email",
       phone: "Phone",
       company: "Company",
-      source: "Source",
       owner: "Owner",
       createdAt: "Added on",
       updatedAt: "Last updated",
@@ -586,16 +584,25 @@ export const en = {
     modal: {
       inviteTitle: "Invite to an interview",
       rejectTitle: "Reject application",
+      examInviteTitle: "Send the exam link",
+      examPreviewLabel:
+        "Email preview — the absolute exam link is already inserted: this is exactly what the candidate will receive.",
       subjectLabel: "Subject",
       bodyLabel: "Message",
       bodyHint:
         "Available variables: {{prenom}}, {{nom}}, {{lien}} (invitation only). The booking link is re-added automatically if removed from the message.",
+      bodyHintExam:
+        "Available variables: {{prenom}}, {{nom}}, {{lien}} (exam link). The link is re-appended at the end of the message if removed.",
       saveTemplateLabel: "Save as default template",
       send: "Send",
       sending: "Sending…",
       cancel: "Cancel",
       successInvite: "Invitation sent to the candidate.",
       successReject: "Rejection email sent to the candidate.",
+      successExamInvite:
+        "Exam invitation sent to the candidate — the application now shows “Exam in progress”.",
+      examEmailAction: "Send by email",
+      examLinkGenerated: "Link generated.",
       loadError: "Could not load the email template.",
       errors: {
         forbidden: "Not authorized.",

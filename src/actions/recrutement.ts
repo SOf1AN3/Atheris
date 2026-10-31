@@ -10,12 +10,16 @@
  *   `{ ok: false; code: "forbidden" }` ;
  * - `getJobApplication(applicationId)` → `{ ok: true; item: JobApplicationDetail }` |
  *   `{ ok: false; code: "forbidden" | "not_found" }` ;
- * - `generateExamLink(applicationId)` → `GenerateExamLinkResult` ;
+ * - `generateExamLink(applicationId)` → `GenerateExamLinkResult` (le statut
+ *   ne bascule PLUS ici : cf. plus bas) ;
  * - `getEmailTemplate(kind, locale)` → `{ ok: true; subject; body }` |
- *   `{ ok: false; code: "forbidden" }` (le parcours zero-interview ne sert
- *   plus que le modèle `"reject"`) ;
+ *   `{ ok: false; code: "forbidden" }` (kinds servis au CEO : `"reject"` et
+ *   `"exam_invite"`) ;
  * - `rejectApplication(input)` → `{ ok: true; url: "" }` |
  *   `{ ok: false; code: ApplicationEmailFailureCode }` ;
+ * - `sendExamInviteEmail(input)` → `{ ok: true; url: "" }` |
+ *   `{ ok: false; code: ApplicationEmailFailureCode }` (envoi RÉEL de
+ *   l'invitation d'examen, SEUL moment où le statut passe `exam_pending`) ;
  * - `recruitCandidate(input, actor)` → `{ ok: true }` |
  *   `{ ok: false; code: "forbidden" | "not_found" | "invalid" | "mail_failed" |
  *   "failed" }`.
@@ -158,6 +162,14 @@ export type SendApplicationEmailInput = {
  *
  * `examUrl: null` en cas d'échec de création → la candidature reste
  * inchangée, le CEO peut réessayer.
+ *
+ * `examUrl` est **absolue** (`SITE_URL` + locale incluse, cf.
+ * `absoluteInterviewUrl`) : c'est la valeur affichée au CEO, copiable et
+ * déjà telle qu'elle sera reçue par le candidat.
+ *
+ * RETOUR CLIENT : la génération ne pose **plus** `exam_pending` — un lien
+ * généré n'a prévenu personne. La bascule de statut a lieu UNIQUEMENT dans
+ * `sendExamInviteEmail`, après transmission effective de l'e-mail.
  */
 export type GenerateExamLinkResult =
   | { ok: true; examUrl: string; created: boolean }
@@ -193,11 +205,12 @@ const applicationIdSchema = z.uuid();
 
 /**
  * Kind d'e-mail servis par `getEmailTemplate` (initialisation du formulaire
- * du CEO). Le parcours zero-interview ne sert plus que le refus : les kinds
- * d'examen (`exam_*`) sont émis automatiquement par `src/actions/exams.ts`,
- * jamais par ce formulaire.
+ * du CEO) : `"reject"` (refus depuis `/espace/examen`) et `"exam_invite"`
+ * (aperçu du lien d'examen depuis `/espace/recrutement`, avant envoi réel
+ * par `sendExamInviteEmail`). Les kinds `exam_passed` / `exam_failed` restent
+ * émis automatiquement par `src/actions/exams.ts`, jamais par ce formulaire.
  */
-const emailKindSchema = z.enum(["reject"]);
+const emailKindSchema = z.enum(["reject", "exam_invite"]);
 
 const emailLocaleSchema = z.enum(["fr", "en"]);
 
@@ -206,6 +219,19 @@ const sendApplicationEmailSchema = z.object({
   subject: z.string().trim().min(1).max(200),
   body: z.string().trim().min(1).max(10_000),
   saveTemplate: z.boolean().optional(),
+});
+
+/**
+ * Entrée de `sendExamInviteEmail` — même gabarit que l'envoi de refus, plus
+ * la `locale` du candidat (validée ici, mais le lien est reconstruit côté
+ * serveur avec la locale **relue en base** : le payload ne porte jamais de
+ * URL ni de langue de destination).
+ */
+const sendExamInviteEmailSchema = z.object({
+  applicationId: z.uuid(),
+  locale: z.enum(locales),
+  subject: z.string().trim().min(1).max(200),
+  body: z.string().trim().min(1).max(10_000),
 });
 
 const recruitCandidateSchema = z.object({
@@ -458,9 +484,16 @@ export async function getJobApplication(
  * l'invariant 1:1 que la jointure de `listJobApplications` suppose.
  *
  * ─── Retour ────────────────────────────────────────────────────────────────
- * `ok: true` avec `examUrl` (relative, locale incluse) — le CEO la copie ou
- * l'envoie telle quelle. `created` distingue « lien neuf » de « lien déjà
- * existant » pour l'affichage.
+ * `ok: true` avec `examUrl` (**absolue**, locale incluse : `SITE_URL` +
+ * `/{locale}/examen/{token}`) — le CEO la copie ou l'envoie telle quelle.
+ * `created` distingue « lien neuf » de « lien déjà existant » pour
+ * l'affichage.
+ *
+ * ─── Statut (retour client) ────────────────────────────────────────────────
+ * Générer un lien n'écrit AUCUN statut : la bascule `exam_pending` est
+ * portée par `sendExamInviteEmail`, **après** envoi effectif de l'e-mail. Le
+ * flux de dépôt (`careers.ts`) pose toujours `exam_pending` lui-même à la
+ * création de la session auto — inchangé, hors périmètre.
  *
  * @param applicationId Id de candidature (validé par Zod avant toute requête).
  */
@@ -500,6 +533,12 @@ export async function generateExamLink(
 
     const locale = asLocale(application.locale);
 
+    // SEUL helper d'absolutisation du repo : `absoluteInterviewUrl`
+    // (repli `https://atheris-labs.sofianeasma.me`) — aucun second helper
+    // n'est créé ici, la relative de `lib/exam.ts` est réutilisée telle quelle.
+    const toAbsoluteExamUrl = (token: string): string =>
+      absoluteInterviewUrl(examRelativeUrl(token, locale));
+
     // 4. Session existante ? → RÉUTILISATION (idempotence).
     const existing = await db
       .select({ token: examSessions.token, status: examSessions.status })
@@ -512,21 +551,18 @@ export async function generateExamLink(
       // Session déjà SOUMISE : verrouillée, un nouveau lien ne la rouvrirait
       // pas — le CEO doit trancher le dossier, pas relancer le test.
       if (session.status === "submitted") return { ok: false, code: "conflict" };
-      return { ok: true, examUrl: examRelativeUrl(session.token, locale), created: false };
+      return { ok: true, examUrl: toAbsoluteExamUrl(session.token), created: false };
     }
 
     // 5. Création (candidature antérieure au pipeline, ou création auto échouée).
     const token = await startExam(application.id, locale);
     if (token === null) return { ok: false, code: "failed" };
 
-    // Bascule en `exam_pending` — ne JAMAIS promettre un examen qui n'existe
-    // pas : le statut ne suit que si la session est bien là.
-    await db
-      .update(jobApplications)
-      .set({ status: "exam_pending", updatedAt: sql`now()` })
-      .where(eq(jobApplications.id, application.id));
-
-    return { ok: true, examUrl: examRelativeUrl(token, locale), created: true };
+    // AUCUNE écriture de statut ici (retour client) : un lien généré n'a
+    // prévenu personne — `exam_pending` n'est posé qu'APRÈS l'envoi réel de
+    // l'e-mail, par `sendExamInviteEmail`. Le dépôt (`careers.ts`) continue
+    // de poser `exam_pending` à la création de la session auto (hors périmètre).
+    return { ok: true, examUrl: toAbsoluteExamUrl(token), created: true };
   } catch (error) {
     console.error("[recrutement] échec de génération du lien d'examen", error);
     return { ok: false, code: "failed" };
@@ -545,14 +581,14 @@ export async function generateExamLink(
  * (valeurs strictes — une valeur forgée est `forbidden`, jamais une requête
  * SQL injectée).
  *
- * @param kind `"reject"` — seul kind encore servi au CEO (parcours
- *   zero-interview : plus d'invitation à un entretien).
+ * @param kind `"reject"` (refus) ou `"exam_invite"` (aperçu du lien
+ *   d'examen avant envoi réel) — seuls kinds servis au formulaire CEO.
  * @param locale `"fr"` ou `"en"`.
  * @returns `{ ok: true; subject; body }` ou `{ ok: false; code: "forbidden" }`.
  * @throws Erreur d'infra DB — journalisée puis propagée → 500.
  */
 export async function getEmailTemplate(
-  kind: "reject",
+  kind: "reject" | "exam_invite",
   locale: "fr" | "en",
 ): Promise<{ ok: true; subject: string; body: string } | { ok: false; code: "forbidden" }> {
   const actor = await activeActor();
@@ -761,6 +797,154 @@ export async function rejectApplication(
   } catch (error) {
     // Erreur d'infra (DB indisponible…) : journalisée, code `failed`.
     console.error("[recrutement] échec de refus de candidature", error);
+    return { ok: false, code: "failed" };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// sendExamInviteEmail — aperçu CEO puis envoi réel de l'invitation d'examen.
+// ---------------------------------------------------------------------------
+
+/**
+ * Envoie l'e-mail d'invitation à l'examen (modèle `exam_invite` édité et
+ * vérifié par le CEO dans `ApplicationEmailModal`) puis — ET SEULEMENT
+ * ENSUITE — fait basculer la candidature en `exam_pending`.
+ *
+ * ─── Séquence (règle invariante **e-mail d'abord, écriture ensuite**) ──────
+ * 1. Zod (`applicationId` uuid, `locale` ∈ `locales`, `subject` 1–200,
+ *    `body` 1–10 000) → `invalid` ; acteur relu (`activeActor()`) →
+ *    `forbidden` ;
+ * 2. candidature relue en base (e-mail LUE EN BASE) → absente → `not_found` ;
+ *    statut terminal (`refuse` / `recrute`) → `conflict` (idempotence,
+ *    aucun double e-mail) ;
+ * 3. session d'examen relue : absente → `not_found` (aucun lien à porter —
+ *    le flux impose d'avoir généré le lien avant d'ouvrir le modal) ; déjà
+ *    soumise → `conflict` (lien verrouillé, miroir de `generateExamLink`) ;
+ * 4. lien **absolu** reconstruit côté serveur :
+ *    `examRelativeUrl(token, localeRelueEnBase)` → `absoluteInterviewUrl`
+ *    (SEUL helper d'absolutisation du repo). La `locale` du payload est
+ *    validée mais n'influence ni le lien ni la langue de destination ;
+ * 5. `renderTemplate` substitue `{{prenom}}`/`{{nom}}`/`{{lien}}` dans le
+ *    corps (**le lien manquant est réinjecté en fin de message** — exigence
+ *    métier, identique aux e-mails d'examen de `exams.ts`) ; `sendMail` →
+ *    échec → `mail_failed` **SANS AUCUNE ÉCRITURE** ;
+ * 6. envoi OK → si `status = 'nouveau'` : UPDATE conditionnel → `exam_pending`
+ *    + `{ ok: true }` ; sinon (déjà `exam_pending` ou tout autre statut non
+ *    terminal) : aucun changement de statut, `{ ok: true }`.
+ *
+ * ─── `MAIL_DISABLED` (dev local) ───────────────────────────────────────────
+ * `sendMail` répond `{ ok: false, error: "disabled" }` en mode désactivé →
+ * l'action renvoie `mail_failed` et **ne bascule pas** le statut : comportement
+ * strictement identique à `rejectApplication` (aucun statut n'est promis sans
+ * transmission). La règle « envoi désactivé = succès » ne s'applique donc pas
+ * ici, puisque `sendMail` ne rapporte PAS de succès en mode disabled.
+ *
+ * ─── Atomicité (driver `neon-http`) ────────────────────────────────────────
+ * Statements séquentiels, pas de `db.transaction()` : l'ordre ci-dessus
+ * garantit qu'aucun `exam_pending` n'est posé sans e-mail effectivement parti.
+ *
+ * @param input `applicationId` (uuid), `locale` (validée), `subject` (1–200),
+ *   `body` (1–10 000) — corps déjà substitué côté client, resubstitué ici
+ *   (idempotent) pour garantir la présence du lien.
+ * @returns `{ ok: true; url: "" }` ou `{ ok: false; code }`.
+ */
+export async function sendExamInviteEmail(input: {
+  applicationId: string;
+  locale: Locale;
+  subject: string;
+  body: string;
+}): Promise<SendApplicationEmailResult> {
+  // 1. Validation Zod — avant tout accès DB.
+  const parsed = sendExamInviteEmailSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, code: "invalid" };
+  const { applicationId, subject, body } = parsed.data;
+
+  const actor = await activeActor();
+  if (actor === null) return { ok: false, code: "forbidden" };
+
+  try {
+    const db = getDb();
+
+    // 2. Lecture de la ligne — e-mail LUE EN BASE, id inconnu = `not_found`.
+    const rows = await db
+      .select({
+        id: jobApplications.id,
+        firstName: jobApplications.firstName,
+        lastName: jobApplications.lastName,
+        email: jobApplications.email,
+        locale: jobApplications.locale,
+        status: jobApplications.status,
+      })
+      .from(jobApplications)
+      .where(eq(jobApplications.id, applicationId))
+      .limit(1);
+    const application = rows[0];
+    if (application === undefined) return { ok: false, code: "not_found" };
+    // Statuts TERMINAUX : plus rien à inviter (idempotence du double clic).
+    if (application.status === "refuse" || application.status === "recrute") {
+      return { ok: false, code: "conflict" };
+    }
+
+    // 3. Session d'examen — c'est ELLE qui porte le jeton du lien.
+    const sessionRows = await db
+      .select({ token: examSessions.token, status: examSessions.status })
+      .from(examSessions)
+      .where(eq(examSessions.applicationId, applicationId))
+      .limit(1);
+    const session = sessionRows[0];
+    // Aucun lien ne peut être porté sans session : le CEO doit d'abord
+    // appeler `generateExamLink` (le modal n'est ouvert qu'après génération).
+    if (session === undefined) return { ok: false, code: "not_found" };
+    // Session déjà SOUMISE : lien verrouillé, miroir de `generateExamLink`.
+    if (session.status === "submitted") return { ok: false, code: "conflict" };
+
+    // 4. Lien ABSOLU reconstruit ici (jamais issu du payload).
+    const recipientLocale = asLocale(application.locale);
+    const lien = absoluteInterviewUrl(examRelativeUrl(session.token, recipientLocale));
+    const text = renderTemplate(body, {
+      prenom: application.firstName,
+      nom: application.lastName,
+      lien,
+    });
+    // Le sujet n'est rendu qu'avec `prenom`/`nom` : `renderTemplate` réinjecte
+    // le lien en FIN de texte quand `{{lien}}` est absent — acceptable dans un
+    // corps de message, jamais dans un objet d'e-mail.
+    const renderedSubject = renderTemplate(subject, {
+      prenom: application.firstName,
+      nom: application.lastName,
+    });
+
+    // 5. E-mail — AUCUNE écriture avant ce point (règle invariante).
+    const mail = await sendMail({ to: application.email, subject: renderedSubject, text });
+    if (!mail.ok) {
+      console.error(
+        "[recrutement] invitation d'examen non envoyée (candidature inchangée)",
+        mail.error,
+      );
+      return { ok: false, code: "mail_failed" };
+    }
+
+    // 6. Écriture UNIQUEMENT après transmission effective — et seulement si la
+    //    candidature était encore `nouveau` (statut déjà avancé → inchangé).
+    if (application.status === "nouveau") {
+      await db
+        .update(jobApplications)
+        .set({ status: "exam_pending", updatedAt: sql`now()` })
+        .where(and(eq(jobApplications.id, applicationId), eq(jobApplications.status, "nouveau")));
+    }
+
+    // Audit NON FATAL (e-mail déjà parti) — jamais le contenu du message.
+    await writeAuditActivity(db, {
+      actorId: actor.id,
+      action: "application.exam_invite_sent",
+      entityId: applicationId,
+      meta: { applicationId, actorId: actor.id, locale: recipientLocale },
+    });
+
+    return { ok: true, url: "" };
+  } catch (error) {
+    // Erreur d'infra (DB indisponible…) : journalisée, code `failed`.
+    console.error("[recrutement] échec d'envoi de l'invitation d'examen", error);
     return { ok: false, code: "failed" };
   }
 }

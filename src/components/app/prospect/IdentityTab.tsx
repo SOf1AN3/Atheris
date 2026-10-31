@@ -13,7 +13,6 @@ export type IdentityTabLabels = {
   email: string;
   phone: string;
   company: string;
-  source: string;
   /** `dict.prospect.labels.owner` (bénéficiaire `sourceUserId`). */
   owner: string;
   /** `dict.prospect.labels.createdAt`. */
@@ -32,7 +31,6 @@ export type IdentityTabValues = {
   email: string;
   phone: string;
   company: string;
-  source: string;
   owner: string;
   createdAt: string;
   updatedAt: string;
@@ -67,10 +65,6 @@ function Field({
 const LINK_CLASSES =
   "rounded-md underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
 
-/** Badge neutre « source » — même format que la colonne du tableau pipeline. */
-const NEUTRAL_BADGE_CLASSES =
-  "inline-flex items-center whitespace-nowrap rounded-lg border border-line bg-surface-2 px-2.5 py-[5px] text-xs font-medium text-muted";
-
 export function IdentityTab({
   labels,
   values,
@@ -90,9 +84,6 @@ export function IdentityTab({
           </a>
         </Field>
         <Field label={labels.company}>{values.company}</Field>
-        <Field label={labels.source}>
-          <span className={NEUTRAL_BADGE_CLASSES}>{values.source}</span>
-        </Field>
         <Field label={labels.owner}>{values.owner}</Field>
         <Field label={labels.createdAt}>{values.createdAt}</Field>
         <Field label={labels.updatedAt}>{values.updatedAt}</Field>

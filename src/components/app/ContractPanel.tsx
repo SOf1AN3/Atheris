@@ -87,7 +87,7 @@ export function ContractPanel({ labels }: ContractPanelProps): React.JSX.Element
         event.preventDefault();
         void handleAccept();
       }}
-      className="flex max-w-[720px] flex-col gap-5 rounded-[20px] border border-line-2 border-t-white/[0.18] bg-surface p-7 shadow-[0_50px_90px_-60px_rgba(0,0,0,0.9)]"
+      className="flex w-full flex-col gap-5 rounded-[20px] border border-line-2 border-t-white/[0.18] bg-surface p-7 shadow-[0_50px_90px_-60px_rgba(0,0,0,0.9)]"
     >
       {/* Case à cocher obligatoire — label associé, clic = toggle. */}
       <div className="flex items-start gap-3">

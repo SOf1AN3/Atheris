@@ -242,7 +242,6 @@ export const fr: PlatformContent = {
       name: "Nom",
       company: "Entreprise",
       status: "Statut",
-      source: "Source",
       lastActivity: "Dernière activité",
       reminder: "Relance",
     },
@@ -272,7 +271,6 @@ export const fr: PlatformContent = {
       email: "Email",
       phone: "Téléphone",
       company: "Entreprise",
-      source: "Source",
       owner: "Responsable",
       createdAt: "Ajouté le",
       updatedAt: "Dernière mise à jour",
@@ -595,16 +593,25 @@ export const fr: PlatformContent = {
     modal: {
       inviteTitle: "Inviter à un entretien",
       rejectTitle: "Refuser la candidature",
+      examInviteTitle: "Envoyer le lien d’examen",
+      examPreviewLabel:
+        "Aperçu de l’e-mail — le lien d’examen absolu est déjà inséré : c’est exactement ce que le candidat recevra.",
       subjectLabel: "Objet",
       bodyLabel: "Message",
       bodyHint:
         "Variables disponibles : {{prenom}}, {{nom}}, {{lien}} (invitation uniquement). Le lien de réservation est ajouté automatiquement s’il est retiré du message.",
+      bodyHintExam:
+        "Variables disponibles : {{prenom}}, {{nom}}, {{lien}} (lien d’examen). Le lien est réajouté automatiquement en fin de message s’il est retiré.",
       saveTemplateLabel: "Enregistrer comme modèle par défaut",
       send: "Envoyer",
       sending: "Envoi…",
       cancel: "Annuler",
       successInvite: "Invitation envoyée au candidat.",
       successReject: "E-mail de refus envoyé au candidat.",
+      successExamInvite:
+        "Invitation à l’examen envoyée au candidat — la candidature passe en « Examen en cours ».",
+      examEmailAction: "Envoyer par e-mail",
+      examLinkGenerated: "Lien généré.",
       loadError: "Impossible de charger le modèle d’e-mail.",
       errors: {
         forbidden: "Action non autorisée.",

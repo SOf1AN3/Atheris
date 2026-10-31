@@ -1,27 +1,36 @@
 "use client";
 
 /**
- * Atheris — modal d'envoi d'e-mail de recrutement (refus d'une candidature)
- * — espace CEO, `PLAN-RECRUTEMENT-CEO.md` §3.
+ * Atheris — modal d'envoi d'e-mail de recrutement — espace CEO,
+ * `PLAN-RECRUTEMENT-CEO.md` §3.
  *
  * ─── RÔLE ───────────────────────────────────────────────────────────────────
- * Un SEUL composant pour l'e-mail de refus (`kind: "reject"`), rendu par la
- * page d'examen (parcours zero-interview : le modal d'invitation à
- * l'entretien a été retiré avec le parcours entretien). Au montage,
- * `getEmailTemplate(kind, localeCandidature)` préremplit l'objet et le corps
- * (modèle mémorisé en base, sinon défaut) ; le CEO édite librement, puis
- * envoie via `rejectApplication`.
+ * Deux kinds, un SEUL composant :
+ * - `kind: "reject"` — e-mail de refus (rendu par la page `/espace/examen`,
+ *   parcours zero-interview) ;
+ * - `kind: "exam_invite"` — **aperçu avant envoi** de l'invitation d'examen
+ *   (rendu par `ApplicationsPanel` après génération du lien) : le modèle
+ *   `exam_invite` est chargé puis le lien d'examen **absolu** est substitué
+ *   dans l'affichage (`examUrl`, fourni par le panel), de sorte que le CEO
+ *   voit exactement le message qui partira. L'envoi passe par
+ *   `sendExamInviteEmail` — la bascule de statut (`exam_pending`) n'a lieu
+ *   côté serveur qu'APRÈS transmission effective.
+ *
+ * Au montage, `getEmailTemplate(kind, localeCandidature)` préremplit l'objet
+ * et le corps (modèle mémorisé en base, sinon défaut) ; le CEO édite librement.
  *
  * ─── CONTRAT ────────────────────────────────────────────────────────────────
  * - TOUTES les strings viennent de `labels.modal` (`dict.recruitment.modal`) :
  *   zéro string en dur, zéro message serveur (les codes `forbidden` /
  *   `invalid` / `not_found` / `conflict` / `mail_failed` / `failed` sont
  *   traduits localement, `errorText`).
- * - `saveTemplate` (coche) : si active, le CEO enregistre son texte comme
- *   modèle par défaut pour les prochains envois de même type/langue.
+ * - `saveTemplate` (coche, refus UNIQUEMENT) : si active, le CEO enregistre
+ *   son texte comme modèle par défaut pour les prochains envois de même
+ *   type/langue. Non proposé pour `exam_invite` : cette action n'enregistre
+ *   pas de modèle (elle ne porte pas `saveTemplate`).
  * - `onSent` notifie le panel (toast + `router.refresh()`) ; `onClose` ferme.
  * - Un échec d'envoi ne vide JAMAIS le formulaire (la saisie du CEO est
- *   précieuse : `mail_failed` → réessai sans re- saisie).
+ *   précieuse : `mail_failed` → réessai sans re-saisie).
  *
  * ─── A11Y ───────────────────────────────────────────────────────────────────
  * `role="dialog"` + `aria-modal` + `aria-labelledby` · focus initial sur le
@@ -37,19 +46,26 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 
-import { getEmailTemplate, rejectApplication } from "@/actions/recrutement";
+import {
+  getEmailTemplate,
+  rejectApplication,
+  sendExamInviteEmail,
+} from "@/actions/recrutement";
 import { Button } from "@/components/ui/Button";
 import type { RecruitmentContent } from "@/content/platform/types";
+import { renderTemplate } from "@/lib/recruitment-templates";
 
 /** Courbe unique du projet (aucun easing concurrent). */
 const EASE = "ease-[cubic-bezier(0.16,1,0.3,1)]";
 
 /**
- * Nature d'e-mail servie : **refus uniquement** (l'invitation à l'entretien
- * a été retirée avec le parcours entretien). La prop `kind` est conservée
- * pour le contrat d'appel stable.
+ * Nature d'e-mail servie :
+ * - `"reject"` — refus (parcours zero-interview, page `/espace/examen`) ;
+ * - `"exam_invite"` — aperçu puis envoi du lien d'examen (panel
+ *   `/espace/recrutement`). Les kinds `exam_passed` / `exam_failed` restent
+ *   émis automatiquement par `src/actions/exams.ts`, jamais par ce modal.
  */
-type EmailKind = "reject";
+type EmailKind = "reject" | "exam_invite";
 
 export type ApplicationEmailModalProps = {
   kind: EmailKind;
@@ -57,6 +73,13 @@ export type ApplicationEmailModalProps = {
   candidateFirstName: string;
   candidateLastName: string;
   applicationLocale: "fr" | "en";
+  /**
+   * **Requis pour `kind="exam_invite"`** : URL **absolue** du lien d'examen,
+   * telle que renvoyée par `generateExamLink` (SITE_URL + locale incluse).
+   * Elle est substituée à `{{lien}}` dans l'aperçu — le corps affiché est
+   * donc déjà celui qui sera envoyé. Ignorée pour `kind="reject"`.
+   */
+  examUrl?: string;
   labels: { modal: RecruitmentContent["modal"] };
   onClose: () => void;
   onSent: () => void;
@@ -96,6 +119,7 @@ export function ApplicationEmailModal({
   candidateFirstName,
   candidateLastName,
   applicationLocale,
+  examUrl,
   labels,
   onClose,
   onSent,
@@ -124,8 +148,28 @@ export function ApplicationEmailModal({
         const result = await getEmailTemplate(kind, applicationLocale);
         if (cancelled) return;
         if (result.ok) {
-          setSubject(result.subject);
-          setBody(result.body);
+          // `exam_invite` : substitution AVANT affichage — le CEO vérifie le
+          // message EXACT qui partira : `{{prenom}}`/`{{nom}}` remplacés et
+          // `{{lien}}` → lien d'examen **absolu** (prop `examUrl`, déjà
+          // SITE_URL + locale). L'envoi resubstitue de façon idempotente
+          // côté serveur (`sendExamInviteEmail`) : jamais de `{{lien}}` littéral.
+          const subject =
+            kind === "exam_invite"
+              ? renderTemplate(result.subject, {
+                  prenom: candidateFirstName,
+                  nom: candidateLastName,
+                })
+              : result.subject;
+          const body =
+            kind === "exam_invite"
+              ? renderTemplate(result.body, {
+                  prenom: candidateFirstName,
+                  nom: candidateLastName,
+                  lien: examUrl,
+                })
+              : result.body;
+          setSubject(subject);
+          setBody(body);
           setLoading(false);
         } else {
           setLoadFailed(true);
@@ -144,7 +188,7 @@ export function ApplicationEmailModal({
     return () => {
       cancelled = true;
     };
-  }, [kind, applicationLocale]);
+  }, [kind, applicationLocale, examUrl, candidateFirstName, candidateLastName]);
 
   // Focus initial sur le champ Objet (dès que le modèle est chargé).
   useEffect(() => {
@@ -210,7 +254,19 @@ export function ApplicationEmailModal({
     };
 
     try {
-      const result = await rejectApplication(input);
+      // Deux actions, même forme de retour (`SendApplicationEmailResult`) :
+      // - refus → `rejectApplication` (statut `refuse` après envoi) ;
+      // - examen → `sendExamInviteEmail` (statut `exam_pending` posé par le
+      //   serveur UNIQUEMENT après transmission effective — jamais ici).
+      const result =
+        kind === "reject"
+          ? await rejectApplication(input)
+          : await sendExamInviteEmail({
+              applicationId,
+              locale: applicationLocale,
+              subject,
+              body,
+            });
       if (result.ok) {
         onSent();
         onClose();
@@ -226,7 +282,7 @@ export function ApplicationEmailModal({
     }
   }
 
-  const title = modal.rejectTitle;
+  const title = kind === "reject" ? modal.rejectTitle : modal.examInviteTitle;
 
   return (
     <div
@@ -277,6 +333,15 @@ export function ApplicationEmailModal({
           </div>
         ) : (
           <>
+            {/* Rappel d'APERÇU (invitation d'examen) : le corps ci-dessous
+                contient DÉJÀ le lien absolu substitué — le CEO vérifie le
+                message exact qui partira avant d'envoyer. */}
+            {kind === "exam_invite" ? (
+              <p role="status" className="text-[13px] leading-relaxed text-faint">
+                {modal.examPreviewLabel}
+              </p>
+            ) : null}
+
             {/* Objet */}
             <div className="flex flex-col gap-2">
               <label htmlFor={`${titleId}-subject`} className="micro text-faint">
@@ -310,21 +375,26 @@ export function ApplicationEmailModal({
                 }}
                 className={`block w-full resize-y rounded-xl border border-line-2 bg-surface px-4 py-4 text-[15px] leading-relaxed text-fg transition-[border-color,box-shadow] duration-200 ${EASE} focus:border-accent focus:shadow-[0_0_0_3px_rgba(204,255,74,0.16)] focus:outline-none`}
               />
-              <p className="text-[13px] leading-relaxed text-faint">{modal.bodyHint}</p>
+              <p className="text-[13px] leading-relaxed text-faint">
+                {kind === "reject" ? modal.bodyHint : modal.bodyHintExam}
+              </p>
             </div>
 
-            {/* Modèle */}
-            <label className="flex cursor-pointer items-center gap-3 text-[14px] text-muted">
-              <input
-                type="checkbox"
-                checked={saveTemplate}
-                onChange={(event) => {
-                  setSaveTemplate(event.target.checked);
-                }}
-                className="size-4 accent-[var(--color-accent,#CCFF4A)]"
-              />
-              {modal.saveTemplateLabel}
-            </label>
+            {/* Modèle — refus UNIQUEMENT : `sendExamInviteEmail` n'enregistre
+                aucun modèle (pas de champ `saveTemplate` dans son contrat). */}
+            {kind === "reject" ? (
+              <label className="flex cursor-pointer items-center gap-3 text-[14px] text-muted">
+                <input
+                  type="checkbox"
+                  checked={saveTemplate}
+                  onChange={(event) => {
+                    setSaveTemplate(event.target.checked);
+                  }}
+                  className="size-4 accent-[var(--color-accent,#CCFF4A)]"
+                />
+                {modal.saveTemplateLabel}
+              </label>
+            ) : null}
 
             {/* Erreur d'envoi (role="alert", formulaire intact). */}
             {sendError !== null ? (
