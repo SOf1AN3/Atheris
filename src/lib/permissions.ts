@@ -84,6 +84,9 @@ export const ROUTE_ACCESS: ReadonlyArray<{ prefix: string; roles: readonly Role[
   // Examen (revue des tests CEO) : réservé CEO — miroir de la garde de la
   // page /espace/examen (parcours zero-interview).
   { prefix: "/examen", roles: ["ceo"] },
+  // Vérification d'identité (file de revue KYC) : réservé CEO — miroir de la
+  // garde de la page /espace/verification et de src/actions/identity.ts.
+  { prefix: "/verification", roles: ["ceo"] },
   // Contrat de partenariat (consentement SDR) : réservé SDR — miroir de la
   // garde de la page /espace/contrat.
   { prefix: "/contrat", roles: ["sdr"] },

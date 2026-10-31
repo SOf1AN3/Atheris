@@ -1012,6 +1012,219 @@ export interface ExamReviewContent {
 }
 
 // ---------------------------------------------------------------------------
+// Vérification d'identité (KYC, L7) — côté SDR.
+// ---------------------------------------------------------------------------
+
+/** Codes retour traduits de l'upload de pièce d'identité (`uploadIdentityDoc`). */
+export interface IdentityErrorsContent {
+  /** Payload inattendu (fichier absent/malformé). */
+  invalid: string;
+  /** Fichier plus lourd que la limite (5 Mo). */
+  tooLarge: string;
+  /** Format hors liste blanche (images + PDF uniquement). */
+  badType: string;
+  /** Session absente, compte non actif ou rôle ≠ `sdr`. */
+  forbidden: string;
+  /** Échec d'écriture (DB) — aucun détail technique en UI. */
+  failed: string;
+}
+
+/**
+ * Contenu de la section « Vérification d'identité » du profil SDR (L7a).
+ * Un re-upload **écrase** la pièce précédente (D7) et repasse le dossier en
+ * attente de revue.
+ */
+export interface IdentityContent {
+  /** Titre de section (H2, page profil). */
+  sectionTitle: string;
+  /** Chapeau expliquant le cycle dépôt → revue CEO. */
+  intro: string;
+  /** Libellé du champ fichier (« Pièce d'identité »). */
+  uploadLabel: string;
+  /** Formats admis + taille maximale. */
+  uploadHint: string;
+  /** CTA d'envoi. */
+  uploadAction: string;
+  /** Libellé du CTA pendant l'envoi. */
+  uploading: string;
+  /** Toast de succès (dépôt enregistré, en attente de revue). */
+  uploadedToast: string;
+  /** En-tête « Fichier déposé ». */
+  currentFile: string;
+  /** État vide : aucune pièce déposée pour l'instant. */
+  noDoc: string;
+  /** Pastille : pièce déposée, en attente du CEO. */
+  statusPending: string;
+  /** Pastille : pièce validée (`users.verified_at` posé). */
+  statusApproved: string;
+  /** Pastille : pièce refusée (motif affiché, re-upload possible). */
+  statusRejected: string;
+  /** Date de validation — `{{date}}` = date formatée côté serveur. */
+  verifiedAtLabel: string;
+  /** En-tête du motif de refus (`users.identity_rejection_reason`). */
+  rejectionReasonLabel: string;
+  /** Aide sous un refus : un nouveau dépôt remplace la pièce refusée. */
+  reuploadHint: string;
+  /** Codes retour traduits (jamais de message servi par le serveur). */
+  errors: IdentityErrorsContent;
+}
+
+/** Codes retour traduits de la sauvegarde du moyen de paiement. */
+export interface PayoutErrorsContent {
+  /** Payload invalide (champ manquant / format incorrect). */
+  invalid: string;
+  /** Champ requis laissé vide (message de champ, formulaire client). */
+  required: string;
+  /** E-mail mal formé (message de champ, formulaire client). */
+  emailInvalid: string;
+  /** Session absente, compte non actif ou rôle ≠ `sdr`. */
+  forbidden: string;
+  /** Échec d'écriture (DB) — aucun détail technique en UI. */
+  failed: string;
+}
+
+/**
+ * Contenu de la section « Moyen de paiement » du profil SDR (L8).
+ *
+ * D4 : les coordonnées sont stockées en clair et **masquées à l'affichage**
+ * (les valeurs affichées ici sont déjà masquées côté serveur).
+ */
+export interface PayoutContent {
+  /** Titre de section (H2, page profil). */
+  sectionTitle: string;
+  /** Chapeau : un seul moyen de versement, modifiable à tout moment. */
+  intro: string;
+  /** Libellé du sélecteur de méthode. */
+  methodLabel: string;
+  /** Libellés des 3 méthodes (valeurs `wise` / `paypal` / `bank`). */
+  methodWise: string;
+  methodPaypal: string;
+  methodBank: string;
+  /** Champs. */
+  accountEmailLabel: string;
+  currencyLabel: string;
+  holderNameLabel: string;
+  bankNameLabel: string;
+  ibanLabel: string;
+  swiftLabel: string;
+  /** CTA de sauvegarde (+ libellé pendant l'appel). */
+  saveAction: string;
+  saving: string;
+  /** Toast de succès. */
+  savedToast: string;
+  /** Badge : aucun moyen configuré. */
+  badgeEmpty: string;
+  /** Badge : un moyen est enregistré (prêt au versement). */
+  badgeReady: string;
+  /** En-tête « Moyen enregistré » (récapitulatif masqué). */
+  currentLabel: string;
+  /**
+   * Note d'honnêteté D4 : le masquage concerne l'AFFICHAGE, pas le stockage
+   * (les valeurs restent lisibles en base pour permettre le virement).
+   */
+  maskingNote: string;
+  /** Codes retour traduits (jamais de message servi par le serveur). */
+  errors: PayoutErrorsContent;
+}
+
+/** Popup de confirmation « Vérifier » (motif `ExamReviewPanel`). */
+export interface VerificationConfirmContent {
+  title: string;
+  message: string;
+  cancel: string;
+  confirm: string;
+}
+
+/** Popup « Refuser avec motif » — le motif est OBLIGATOIRE (D7). */
+export interface VerificationRejectDialogContent {
+  title: string;
+  message: string;
+  /** Label du textarea (motif lu par le SDR dans sa notification). */
+  reasonLabel: string;
+  /** Aide : longueur minimale. */
+  reasonHint: string;
+  cancel: string;
+  confirm: string;
+}
+
+/** Codes retour traduits de `reviewIdentityDoc`. */
+export interface VerificationErrorsContent {
+  invalid: string;
+  forbidden: string;
+  notFound: string;
+  /** Dossier déjà tranché CONCURREMMENT (UPDATE conditionnel à 0 ligne, C3). */
+  conflict: string;
+  failed: string;
+}
+
+/**
+ * Contenu de la page « Vérification » (file de revue KYC, CEO seul, L7b).
+ */
+export interface VerificationContent {
+  /** Titre de page (H1 + `metadata.title`). */
+  title: string;
+  /** Chapeau : cycle de revue + effet de la validation. */
+  intro: string;
+  /** État vide : aucune pièce déposée. */
+  empty: string;
+  /** Aide sous l'état vide. */
+  emptyHint: string;
+  /** Libellé du groupe de filtres. */
+  filterLabel: string;
+  /** Filtres : Tous / En attente / Approuvées / Refusées. */
+  filterAll: string;
+  filterPending: string;
+  filterApproved: string;
+  filterRejected: string;
+  /** Libellés de champs de la liste et du détail. */
+  columns: {
+    member: string;
+    email: string;
+    role: string;
+    status: string;
+    document: string;
+    size: string;
+    depositedAt: string;
+    reviewedAt: string;
+  };
+  /** Pastilles de statut du dossier (`identity_docs.status`). */
+  status: {
+    pending: string;
+    approved: string;
+    rejected: string;
+  };
+  /** Bouton « Voir la pièce » / « Masquer la pièce ». */
+  openDetail: string;
+  closeDetail: string;
+  /** Titre du bloc déplié (aperçu + décisions). */
+  detailTitle: string;
+  /** Aperçu indisponible (mimetype non rendable) — repli lien. */
+  previewUnavailable: string;
+  /** Lien « Ouvrir la pièce dans un nouvel onglet ». */
+  openInNewTab: string;
+  /** Pastille « Vérifié » (D8) — `{{date}}` = `users.verified_at` formaté. */
+  verifiedBadgeLabel: string;
+  /** En-tête « Motif du refus » (détail, si refusée). */
+  rejectReasonLabel: string;
+  /** CTA « Vérifier ». */
+  approveAction: string;
+  /** Libellé du CTA pendant l'appel. */
+  approving: string;
+  /** Toast de succès de la validation. */
+  approveSuccess: string;
+  /** CTA « Refuser ». */
+  rejectAction: string;
+  /** Toast de succès du refus. */
+  rejectSuccess: string;
+  /** Popup de confirmation « Vérifier ». */
+  confirmApprove: VerificationConfirmContent;
+  /** Popup « Refuser avec motif ». */
+  rejectDialog: VerificationRejectDialogContent;
+  /** Codes retour traduits (jamais de message servi par le serveur). */
+  errors: VerificationErrorsContent;
+}
+
+// ---------------------------------------------------------------------------
 // Portail client.
 // ---------------------------------------------------------------------------
 
@@ -1120,7 +1333,14 @@ export interface ActivitiesContent {
 /** Contenu de la page profil (nom lecture seule, email, téléphone, mot de passe). */
 export interface ProfileContent {
   title: string;
+  /** Titre de la section 1 « Informations personnelles » (L8). */
+  personalSection: string;
   nameReadonlyHint: string;
+  /** Nom verrouillé après vérification d'identité (H5) — rôle `sdr` vérifié. */
+  nameLockedHint: string;
+  /** CTA + toast du formulaire de nom (SDR dont `verified_at` est nul). */
+  saveName: string;
+  nameSaved: string;
   email: string;
   phone: string;
   passwordSection: string;
@@ -1190,6 +1410,12 @@ export interface PlatformContent {
   recruitment: RecruitmentContent;
   /** Page « Examen » (revue des sessions d'examen, CEO seul). */
   examReview: ExamReviewContent;
+  /** Vérification d'identité côté SDR (upload de pièce, L7). */
+  identity: IdentityContent;
+  /** Moyen de paiement du SDR (Wise / PayPal / banque, L8 — D4). */
+  payout: PayoutContent;
+  /** Page « Vérification » (file de revue KYC, CEO seul, L7). */
+  verification: VerificationContent;
   client: ClientContent;
   applications: ApplicationsContent;
   activities: ActivitiesContent;

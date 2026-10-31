@@ -7,6 +7,7 @@ import {
   FileSignature,
   FolderKanban,
   LayoutDashboard,
+  ShieldCheck,
   Target,
   UsersRound,
   X,
@@ -58,6 +59,7 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   "/espace/equipe": UsersRound,
   "/espace/projet": FolderKanban,
   "/espace/examen": FileCheck2,
+  "/espace/verification": ShieldCheck,
   "/espace/contrat": FileSignature,
 };
 
