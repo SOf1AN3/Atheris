@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 
-import { desc, ne, sql } from "drizzle-orm";
+import { desc, inArray, ne, sql } from "drizzle-orm";
+import { ChevronDown } from "lucide-react";
 
 import { getEmployeeStats, type DashboardActor, type EmployeeStatsRow } from "@/actions/dashboard";
 import { auth } from "@/auth";
@@ -10,6 +11,7 @@ import {
   type ApplicationListLabels,
   type ApplicationRow,
 } from "@/components/app/applications/ApplicationList";
+import { Badge } from "@/components/ui/Badge";
 import {
   Table,
   TableBody,
@@ -18,10 +20,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import type { PayoutContent } from "@/content/platform/types";
 import { isValidLocale, type Locale } from "@/i18n/config";
 import { getPlatformDictionary } from "@/i18n/platform-dictionaries";
 import { getDb } from "@/lib/db";
-import { users } from "@/lib/db/schema";
+import { payoutDetails, users } from "@/lib/db/schema";
+import { maskEmail, maskIban } from "@/lib/payout-mask";
 import { isRole } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 
@@ -33,28 +37,42 @@ export const dynamic = "force-dynamic";
 const APPLICATIONS_LIMIT = 50;
 
 /**
- * Atheris — page « Équipe » (FE-10 · T11 + T31 · PLAN.md §3.2).
+ * Atheris — page « Équipe » (FE-10 · T11 + T31 · PLAN.md §3.2 · L9 VAGUE 3).
  *
  * RÔLES : `ceo` (décision) et `manager` (lecture seule) uniquement — tout
  * autre rôle → `notFound()` (la route RBAC `/equipe` du middleware est le
  * premier filet, ce garde est le second).
  *
- * DEUX BLOCS, DANS LA PAGE (spec : aucun composant supplémentaire) :
+ * TROIS BLOCS, DANS LA PAGE (spec : aucun composant supplémentaire) :
  * 1. **Candidatures** — `users WHERE role != 'client'`, colonnes
  *    EXPLICITES (jamais `passwordHash`), tri `(status='pending') DESC,
- *    created_at DESC`, `LIMIT 50` → `ApplicationList` (client) qui reçoit
- *    `canDecide = (role === 'ceo')` : le manager ne voit **aucun bouton** ;
- * 2. **Stats équipe** — `getEmployeeStats(actor)` (ceo|manager) rendu en
- *    tableau sous les candidatures.
+ *    created_at DESC`, `LIMIT 50`, **filtré `pending`** → `ApplicationList`
+ *    (client, **hors périmètre L9**) qui reçoit `canDecide = (role === 'ceo')`
+ *    : le manager ne voit **aucun bouton**. C'est la file d'approbation,
+ *    plus la « liste d'équipe » ;
+ * 2. **Membres** (L9 · D8 + D4) — même SELECT, TOUS les non-clients :
+ *    - **D8** : la colonne statut devient une **pastille « Vérifié »**
+ *      (`users.verified_at != null`), le statut de compte ne servant plus
+ *      qu'au **tri** (et à un badge secondaire discret pour `pending`) ;
+ *    - **D4** : clic sur un membre (`<details>` natif, accessible clavier) →
+ *      ses **coordonnées bancaires masquées** (`maskIban` / `maskEmail`).
+ *      **Portée CEO** (arbitrage Lead) : le manager n'exécute aucune requête
+ *      `payout_details` et ne voit qu'une mention « réservé au CEO » ;
+ * 3. **Stats équipe** — `getEmployeeStats(actor)` (ceo|manager) rendu en
+ *    tableau sous la liste des membres.
  *
  * SÉCURITÉ : la lecture est scopée ICI (params de requête figés, aucun
  * paramètre client) ; la décision passe par `decideApplication`
  * (`@/actions/applications`) qui revalide uuid + rôle `ceo` + état
  * `pending`. `actor` est construit depuis `await auth()` (contrat C-5).
+ * Les coordonnées bancaires sont lues et MASQUÉES **côté serveur** : seul
+ * un sous-ensemble déjà masqué franchit la frontière RSC (D4).
  *
- * ERREURS : lecture candidatures en échec → `console.error` + bloc sobre
- * `common.retry` ; `{ ok: false }` de `getEmployeeStats` → même traitement
- * sur son bloc. Une erreur d'infra DB non interceptée est propagée → 500.
+ * ERREURS : lecture candidatures/membres en échec → `console.error` + bloc
+ * sobre `common.retry` ; lecture `payout_details` en échec → détail du
+ * membre sur `common.retry` (jamais un faux « aucun moyen ») ;
+ * `{ ok: false }` de `getEmployeeStats` → même traitement sur son bloc.
+ * Une erreur d'infra DB non interceptée est propagée → 500.
  */
 
 // ---------------------------------------------------------------------------
@@ -103,6 +121,241 @@ function errorBlock(retryLabel: string): React.JSX.Element {
         {retryLabel}
       </p>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Section « Membres » (L9 · D8 pastille Vérifié + D4 coordonnées masquées).
+// ---------------------------------------------------------------------------
+
+/** Un champ de coordonnées DEJÀ masqué — jamais une valeur en clair. */
+type PayoutField = { label: string; value: string };
+
+/** Coordonnées de versement projetées pour l'affichage (murmé côté serveur). */
+type PayoutView = { methodLabel: string; fields: PayoutField[] };
+
+/** Une ligne de la liste « Membres » (100 % sérialisable, dates formatées). */
+type TeamMemberRow = {
+  id: string;
+  name: string;
+  email: string;
+  /** Nullable en DB — déjà basculé en « — ». */
+  phone: string;
+  /** `dict.statuses.role[role]`. */
+  roleLabel: string;
+  /** `users.verified_at != null` → pastille « Vérifié » (D8). */
+  verified: boolean;
+  /** `users.status === 'pending'` — badge secondaire discret (traçabilité). */
+  isPending: boolean;
+  createdLabel: string;
+  /** CEO uniquement : coordonnées masquées, `null` = aucun moyen. */
+  payout: PayoutView | null;
+};
+
+/** Libellés résolus server (100 % dict). */
+type TeamSectionLabels = {
+  title: string;
+  verified: string;
+  notVerified: string;
+  showPayout: string;
+  payoutTitle: string;
+  ceoOnly: string;
+  /** `dict.statuses.userStatus.pending` — pastille secondaire. */
+  pending: string;
+  /** `common.retry` (lecture `payout_details` en échec). */
+  retry: string;
+  /** `common.noData` (liste vide). */
+  empty: string;
+};
+
+/**
+ * Projette une ligne `payout_details` en vue AFFICHABLE — **uniquement appelée
+ * côté serveur** (page server component) : les identifiants sensibles passent
+ * par `maskEmail` / `maskIban` (D4, `@/lib/payout-mask`), si bien qu'aucune
+ * valeur en clair n'atteint le JSX ni la charge RSC envoyée au navigateur.
+ *
+ * Motif aligné sur `espace/profil/page.tsx` (L8) : `wise` → e-mail + devise ;
+ * `paypal` → e-mail ; `bank` → titulaire + banque + IBAN (masqué) + BIC.
+ *
+ * @param row Ligne `payout_details` lue en base (valeurs en clair, D4 assumé).
+ * @param labels Bloc `dict.payout.*` — libellés réutilisés tels quels.
+ * @returns Méthode + champs déjà masqués, prêts à rendre.
+ */
+function buildPayoutView(
+  row: {
+    method: "wise" | "paypal" | "bank";
+    accountEmail: string | null;
+    currency: string | null;
+    holderName: string | null;
+    bankName: string | null;
+    iban: string | null;
+    swiftBic: string | null;
+  },
+  labels: PayoutContent,
+): PayoutView {
+  const methodLabel =
+    row.method === "wise"
+      ? labels.methodWise
+      : row.method === "paypal"
+        ? labels.methodPaypal
+        : labels.methodBank;
+
+  const fields: PayoutField[] = [];
+  if (row.method === "wise") {
+    if (row.accountEmail !== null) {
+      fields.push({ label: labels.accountEmailLabel, value: maskEmail(row.accountEmail) });
+    }
+    if (row.currency !== null) {
+      fields.push({ label: labels.currencyLabel, value: row.currency });
+    }
+  } else if (row.method === "paypal") {
+    if (row.accountEmail !== null) {
+      fields.push({ label: labels.accountEmailLabel, value: maskEmail(row.accountEmail) });
+    }
+  } else {
+    if (row.holderName !== null) {
+      fields.push({ label: labels.holderNameLabel, value: row.holderName });
+    }
+    if (row.bankName !== null) {
+      fields.push({ label: labels.bankNameLabel, value: row.bankName });
+    }
+    if (row.iban !== null) {
+      fields.push({ label: labels.ibanLabel, value: maskIban(row.iban) });
+    }
+    if (row.swiftBic !== null) {
+      fields.push({ label: labels.swiftLabel, value: row.swiftBic });
+    }
+  }
+
+  return { methodLabel, fields };
+}
+
+type TeamMembersSectionProps = {
+  rows: TeamMemberRow[];
+  labels: TeamSectionLabels;
+  payoutLabels: PayoutContent;
+  /** `true` (CEO) → détail dépliable avec coordonnées ; `false` (manager). */
+  canViewPayout: boolean;
+  /** Lecture `payout_details` en échec → `common.retry` au lieu d'un vide. */
+  payoutReadFailed: boolean;
+};
+
+/**
+ * Liste des membres — **server component** (rendu par `espace/equipe/page.tsx`).
+ *
+ * ARBITRAGE UI : `<details>` / `<summary>` natif plutôt qu'un `<button
+ * aria-expanded>` + state client, car la page est un server component et je ne
+ * crée aucun fichier de composant client (périmètre strict). Le disclosure
+ * natif est focusable au clavier, se déplie sur Entrée/Espace et expose son
+ * état étendu aux lecteurs d'écran — zéro JS, aucun octet sensible embarqué.
+ *
+ * PORTÉE (D4, arbitrage Lead) : les coordonnées bancaires sont **réservées au
+ * CEO**. Le manager voit le membre + les badges, sans dépliable — l'indication
+ * discrète `ceoOnly` remplace le détail. Le CEO obtient, au clic, la méthode
+ * et les champs **déjà masqués** (jamais une valeur en clair dans le JSX).
+ *
+ * ÉTATS : vide (`common.noData`), erreur de lecture payout (`common.retry`),
+ * « aucun moyen » (`payout.badgeEmpty`). Badges : couleur **ET** texte.
+ */
+function TeamMembersSection({
+  rows,
+  labels,
+  payoutLabels,
+  canViewPayout,
+  payoutReadFailed,
+}: TeamMembersSectionProps): React.JSX.Element {
+  if (rows.length === 0) {
+    return (
+      <div className="rounded-xl border border-line bg-surface px-6 py-10 text-center">
+        <p className="text-[15px] font-semibold text-fg">{labels.empty}</p>
+      </div>
+    );
+  }
+
+  /** Identité du membre (nom + e-mail + téléphone/date). */
+  function identity(row: TeamMemberRow): React.JSX.Element {
+    return (
+      <span className="flex min-w-0 flex-col gap-0.5">
+        <span className="text-[15px] font-semibold text-fg">{row.name}</span>
+        <span className="truncate text-sm text-muted">{row.email}</span>
+        <span className="text-xs tabular-nums text-faint">
+          {row.phone} · {row.createdLabel}
+        </span>
+      </span>
+    );
+  }
+
+  /** Badges : rôle, « en attente » (secondaire) et Vérifié / Non vérifié. */
+  function badges(row: TeamMemberRow): React.JSX.Element {
+    return (
+      <span className="flex flex-wrap items-center gap-2">
+        <Badge variant="tech">{row.roleLabel}</Badge>
+        {row.isPending ? <Badge variant="tech">{labels.pending}</Badge> : null}
+        <Badge variant={row.verified ? "verified" : "tech"}>
+          {row.verified ? labels.verified : labels.notVerified}
+        </Badge>
+      </span>
+    );
+  }
+
+  /** Contenu du détail (CEO) : coordonnées masquées / vide / erreur. */
+  function payoutPanel(row: TeamMemberRow): React.JSX.Element {
+    if (payoutReadFailed) {
+      return <p className="text-sm text-muted">{labels.retry}</p>;
+    }
+    if (row.payout === null) {
+      return <p className="text-sm text-muted">{payoutLabels.badgeEmpty}</p>;
+    }
+    return (
+      <div className="flex flex-col gap-3">
+        <p className="text-[13px] font-semibold text-fg">
+          {labels.payoutTitle} — {row.payout.methodLabel}
+        </p>
+        <dl className="flex flex-col gap-2">
+          {row.payout.fields.map((field) => (
+            <div key={field.label} className="flex flex-col gap-0.5">
+              <dt className="micro text-faint">{field.label}</dt>
+              <dd className="break-all text-[14px] text-fg">{field.value}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+    );
+  }
+
+  return (
+    <ul className="flex flex-col gap-3">
+      {rows.map((row) => (
+        <li key={row.id}>
+          {canViewPayout ? (
+            <details className="group rounded-xl border border-line bg-surface">
+              <summary className="flex cursor-pointer list-none flex-col gap-3 p-4 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 md:flex-row md:items-start md:justify-between [&::-webkit-details-marker]:hidden">
+                {identity(row)}
+                <span className="flex flex-wrap items-center gap-2">
+                  {badges(row)}
+                  <span className="inline-flex items-center gap-1 micro text-faint">
+                    {labels.showPayout}
+                    <ChevronDown
+                      aria-hidden="true"
+                      className="size-3.5 shrink-0 transition-transform duration-150 group-open:rotate-180"
+                    />
+                  </span>
+                </span>
+              </summary>
+              <div className="border-t border-line p-4">{payoutPanel(row)}</div>
+            </details>
+          ) : (
+            <div className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-4 md:flex-row md:items-start md:justify-between">
+              {identity(row)}
+              <span className="flex flex-wrap items-center gap-2">
+                {badges(row)}
+                <span className="micro text-faint">{labels.ceoOnly}</span>
+              </span>
+            </div>
+          )}
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -316,9 +569,13 @@ export default async function EquipePage({
   // Identité chargée EN SESSION côté serveur (contrat C-5).
   const actor: DashboardActor = { id: session.user.id, role };
 
-  // --- 1. Candidatures (colonnes explicites — `passwordHash` JAMAIS lu) ----
+  // --- 1. Candidatures + Membres (colonnes explicites — `passwordHash` JAMAIS lu)
+  // Un SEUL SELECT alimente les deux vues (L9) : tri `pending` d'abord
+  // conservé — il pilote l'ordre d'appel des nouveaux, inchangé.
   const db = getDb();
   let applicationRows: ApplicationRow[] | null = null;
+  let memberRows: TeamMemberRow[] | null = null;
+  let payoutReadFailed = false;
   try {
     const rows = await db
       .select({
@@ -328,6 +585,8 @@ export default async function EquipePage({
         phone: users.phone,
         role: users.role,
         status: users.status,
+        // D8 : pastille « Vérifié » = `verified_at` renseigné.
+        verifiedAt: users.verifiedAt,
         createdAt: users.createdAt,
       })
       .from(users)
@@ -336,21 +595,79 @@ export default async function EquipePage({
       .orderBy(sql`(${users.status} = 'pending') DESC`, desc(users.createdAt))
       .limit(APPLICATIONS_LIMIT);
 
-    applicationRows = rows.map((row) => ({
+    // File d'approbation : SEULEMENT les `pending`. `ApplicationList` (hors
+    // périmètre de ce lot) ne sert donc plus de « liste d'équipe » : sa
+    // colonne statut ne reflète que la file en attente — le statut de compte
+    // n'est plus une colonne de présentation des membres (D8).
+    applicationRows = rows
+      .filter((row) => row.status === "pending")
+      .map((row) => ({
+        id: row.id,
+        name: row.name,
+        email: row.email,
+        phone: row.phone ?? "—",
+        roleLabel: dict.statuses.role[row.role],
+        status: row.status,
+        statusLabel: dict.statuses.userStatus[row.status],
+        isPending: row.status === "pending",
+        createdLabel: formatDate(row.createdAt, locale),
+      }));
+
+    // Liste « Membres » : tous les non-clients, pastille Vérifié (D8).
+    memberRows = rows.map((row) => ({
       id: row.id,
       name: row.name,
       email: row.email,
       phone: row.phone ?? "—",
       roleLabel: dict.statuses.role[row.role],
-      status: row.status,
-      statusLabel: dict.statuses.userStatus[row.status],
+      verified: row.verifiedAt !== null,
       isPending: row.status === "pending",
       createdLabel: formatDate(row.createdAt, locale),
+      payout: null,
     }));
   } catch (error) {
     // Erreur d'infra DB : journalisée puis présentée comme un bloc « Réessayer »
     // (aucun détail technique en UI, aucune donnée de compte affichée).
     console.error("[equipe] échec de la lecture des candidatures", error);
+  }
+
+  // --- 1b. Coordonnées de versement — CEO SEULEMENT (D4 : PII sensible) ----
+  // Le manager n'exécute AUCUNE requête `payout_details` : aucun octet de
+  // coordonnée n'est lu, ni lu puis projeté, pour un rôle non-CEO (le rôle est
+  // connu en session, avant toute requête). Les valeurs lues ici sont masquées
+  // immédiatement (`buildPayoutView` → `maskIban`/`maskEmail`) : seules des
+  // chaînes masquées rejoignent le JSX et la charge RSC.
+  if (canDecide && memberRows !== null && memberRows.length > 0) {
+    try {
+      const memberIds = memberRows.map((member) => member.id);
+      const payoutRows = await db
+        .select({
+          userId: payoutDetails.userId,
+          method: payoutDetails.method,
+          accountEmail: payoutDetails.accountEmail,
+          currency: payoutDetails.currency,
+          holderName: payoutDetails.holderName,
+          bankName: payoutDetails.bankName,
+          iban: payoutDetails.iban,
+          swiftBic: payoutDetails.swiftBic,
+        })
+        .from(payoutDetails)
+        .where(inArray(payoutDetails.userId, memberIds));
+
+      const payoutByMember = new Map<string, PayoutView>();
+      for (const row of payoutRows) {
+        payoutByMember.set(row.userId, buildPayoutView(row, dict.payout));
+      }
+      memberRows = memberRows.map((member) => ({
+        ...member,
+        payout: payoutByMember.get(member.id) ?? null,
+      }));
+    } catch (error) {
+      // Lecture non destructrice : la liste reste visible, seul le détail
+      // tombe sur `common.retry` (jamais sur « aucun moyen », qui mentirait).
+      console.error("[equipe] échec de la lecture des coordonnées de versement", error);
+      payoutReadFailed = true;
+    }
   }
 
   const applicationLabels: ApplicationListLabels = {
@@ -375,7 +692,20 @@ export default async function EquipePage({
     forbidden: dict.applications.forbidden,
   };
 
-  // --- 2. Stats équipe (ceo | manager) ------------------------------------
+  // Libellés de la section « Membres » (L9) — 100 % dict, zéro string en dur.
+  const teamLabels: TeamSectionLabels = {
+    title: dict.team.title,
+    verified: dict.team.verified,
+    notVerified: dict.team.notVerified,
+    showPayout: dict.team.showPayout,
+    payoutTitle: dict.team.payoutTitle,
+    ceoOnly: dict.team.ceoOnly,
+    pending: dict.statuses.userStatus.pending,
+    retry: dict.common.retry,
+    empty: dict.common.noData,
+  };
+
+  // --- 3. Stats équipe (ceo | manager) ------------------------------------
   const statsResult = await getEmployeeStats(actor);
   if (!statsResult.ok) {
     console.error("[equipe] échec des statistiques équipe", statsResult.code);
@@ -410,17 +740,43 @@ export default async function EquipePage({
         </h2>
         {applicationRows === null ? (
           errorBlock(dict.common.retry)
-        ) : (
+        ) : applicationRows.length > 0 ? (
           <ApplicationList
             rows={applicationRows}
             labels={applicationLabels}
             canDecide={canDecide}
             actor={actor}
           />
+        ) : (
+          /* File vidée : message exact « en attente », pas un vide générique. */
+          <div className="rounded-xl border border-line bg-surface px-6 py-12 text-center">
+            <p className="text-[15px] font-semibold text-fg">{dict.applications.empty}</p>
+          </div>
         )}
       </section>
 
-      {/* --------------------------------- 2. Stats équipe ---------------- */}
+      {/* --------------------------------- 2. Membres (L9 · D8 + D4) -------- */}
+      <section aria-labelledby="team-members-title" className="flex flex-col gap-4">
+        <h2
+          id="team-members-title"
+          className="text-lg font-semibold tracking-[-0.015em] text-fg"
+        >
+          {teamLabels.title}
+        </h2>
+        {memberRows === null ? (
+          errorBlock(dict.common.retry)
+        ) : (
+          <TeamMembersSection
+            rows={memberRows}
+            labels={teamLabels}
+            payoutLabels={dict.payout}
+            canViewPayout={canDecide}
+            payoutReadFailed={payoutReadFailed}
+          />
+        )}
+      </section>
+
+      {/* --------------------------------- 3. Stats équipe ---------------- */}
       {statsResult.ok ? (
         <EmployeeStatsSection rows={statsResult.data} labels={employeeLabels} locale={locale} />
       ) : (

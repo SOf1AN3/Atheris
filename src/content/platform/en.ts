@@ -824,6 +824,15 @@ export const en = {
     forbidden: "Not allowed.",
   },
 
+  team: {
+    title: "Members",
+    verified: "Verified",
+    notVerified: "Not verified",
+    showPayout: "View payout details",
+    payoutTitle: "Payout details",
+    ceoOnly: "Reserved to the CEO",
+  },
+
   activities: {
     statusChanged: "{actor} changed the status from {from} to {to}",
     prospectCreated: "{actor} added a prospect to the pipeline",

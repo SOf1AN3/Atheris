@@ -834,6 +834,15 @@ export const fr: PlatformContent = {
     forbidden: "Action non autorisée.",
   },
 
+  team: {
+    title: "Membres",
+    verified: "Vérifié",
+    notVerified: "Non vérifié",
+    showPayout: "Voir les coordonnées",
+    payoutTitle: "Coordonnées de versement",
+    ceoOnly: "Réservé au CEO",
+  },
+
   activities: {
     statusChanged: "{actor} a passé le statut de {from} à {to}",
     prospectCreated: "{actor} a ajouté un prospect au pipeline",

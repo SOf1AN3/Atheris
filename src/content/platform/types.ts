@@ -1277,6 +1277,37 @@ export interface ApplicationsContent {
 }
 
 // ---------------------------------------------------------------------------
+// Équipe (page /espace/equipe — L9).
+// ---------------------------------------------------------------------------
+
+/**
+ * Contenu de la section « Membres » de la page Équipe (L9 · D8 + D4).
+ *
+ * - **D8** : la pastille « Vérifié » (pilotée par `users.verified_at != null`)
+ *   remplace la colonne statut ; le statut de compte ne sert plus qu'au tri.
+ * - **D4** : les coordonnées de versement sont masquées à l'affichage
+ *   (`@/lib/payout-mask`) et **réservées au CEO** — le manager ne voit que la
+ *   mention `ceoOnly`, jamais de champ ni de preuve d'existence.
+ *
+ * Les libellés de CHAMPS et de MÉTHODE ainsi que l'état « aucun moyen » sont
+ * réutilisés tels quels depuis `payout.*` (lecture seule, pas de doublon).
+ */
+export interface TeamContent {
+  /** Titre de section (H2) « Membres ». */
+  title: string;
+  /** Pastille : identité vérifiée (`verified_at` renseigné). */
+  verified: string;
+  /** Pastille : identité non vérifiée. */
+  notVerified: string;
+  /** Affordance du détail (summary, CEO) — voir les coordonnées. */
+  showPayout: string;
+  /** Titre du bloc coordonnées déplié. */
+  payoutTitle: string;
+  /** Mention discrète : coordonnées de versement réservées au CEO. */
+  ceoOnly: string;
+}
+
+// ---------------------------------------------------------------------------
 // Journal d'audit (activités).
 // ---------------------------------------------------------------------------
 
@@ -1418,6 +1449,8 @@ export interface PlatformContent {
   verification: VerificationContent;
   client: ClientContent;
   applications: ApplicationsContent;
+  /** Section « Membres » de la page Équipe (L9 — D8 pastille Vérifié + D4). */
+  team: TeamContent;
   activities: ActivitiesContent;
   profile: ProfileContent;
   footer: PlatformFooterContent;
